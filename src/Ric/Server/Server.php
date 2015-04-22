@@ -219,9 +219,9 @@ class Ric_Server_Server {
 		if( file_exists(__DIR__.'/config.json') ){
 			$localConfig = json_decode(file_get_contents(__DIR__.'/config.json'), true);
 			if( !is_array($localConfig) ){
-				throw new RuntimeException('config.json is invalid (user "{}" for empty config)');
+				throw new RuntimeException('config.json is invalid (use "{}" for empty config)');
 			}
-			$this->config =  + $this->config;
+			$this->config = $localConfig + $this->config;
 		}
 	}
 
