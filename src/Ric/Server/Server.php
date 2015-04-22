@@ -15,8 +15,6 @@
 # todo split list in files and versions
 # todo admin joinCluster $serverIps / get servers from server, add to all servers, dump remote restore local
 # todo admin leaveCluster
-# todo find a nice name
-# todo github
 # todo dockerize
 # todo help as mark down
 # todo apache sapi
@@ -25,6 +23,8 @@
 # todo shell script
 # todo think about configstorage also download immer der neusten version, sollte ja einfach gehen (mit 304er)
 
+# ro github
+# find a nice name
 # rename flush to purge
 # get replica count
 # noSync
