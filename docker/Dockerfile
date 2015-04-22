@@ -1,6 +1,6 @@
 FROM php:5.5-cli
 
-COPY ./RestInCloud /usr/src/
+COPY ./RestInCloud/ /usr/src/RestInCloud/
 
 COPY config.json /usr/src/RestInCloud/src/Ric/Server/
 
