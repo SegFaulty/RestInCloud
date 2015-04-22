@@ -1,10 +1,7 @@
 {
     "storeDir": "/var/ric/",
     "quota": 10000,
-    "adminName": "admin",
-    "adminPass": "admin",
-    "writerName": "writer",
-    "writerPass": "writer",
-    "readerName": "",
-    "readerPass": ""
+    "adminToken": "admin",
+    "writerToken": "writer",
+    "readerToken": ""
 }

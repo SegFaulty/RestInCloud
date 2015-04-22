@@ -7,7 +7,6 @@
 
 # todo admin flush
 
-# todo auth http basic auth
 # todo clicommands -> handleCli($argv)
 # todo use H::getIKS
 # todo use H::getPR
@@ -22,6 +21,7 @@
 # todo shell script
 # todo think about configstorage also download immer der neusten version, sollte ja einfach gehen (mit 304er)
 
+# auth http basic auth
 # reader/writer/admin roles
 # to github
 # find a nice name
@@ -92,12 +92,9 @@ class Ric_Server_Server {
 		'storeDir' => '/tmp/',
 		'quota' => 0,
 		'servers' => [],
-		'adminName' => 'admin',
-		'adminPass' => 'admin',
-		'writerName' => 'writer',
-		'writerPass' => 'writer',
-		'readerName' => '',
-		'readerPass' => '',
+		'adminToken' => 'admin',
+		'writerToken' => 'writer',
+		'readerToken' => '',
 		'defaultRetention' => self::RETENTION__LAST3,
 	];
 
@@ -385,6 +382,8 @@ class Ric_Server_Server {
 				$this->actionHelp();
 			}elseif( $action=='info' ){
 				$this->actionInfo();
+			}elseif( $action=='phpInfo' ){
+				phpinfo();
 			}elseif( $action=='addServer' AND $this->auth('admin') ){
 				$this->actionAddServer();
 			}elseif( $action=='removeServer' AND $this->auth('admin') ){
@@ -424,14 +423,15 @@ class Ric_Server_Server {
 
 		$userRole = 'guest';
 
-		// todo implement basic auth
-		if( H::getRP('reader') OR $this->config['readerName']!='' ){
+		$token = H::getRP('token');
+
+		if(  $token==$this->config['readerToken'] OR $this->config['readerToken']=='' ){
 			$userRole = 'reader';
 		}
-		if( H::getRP('writer') OR $this->config['writerName']!='' ){
+		if(  $token==$this->config['writerToken'] OR $this->config['writerToken']=='' ){
 			$userRole = 'writer';
 		}
-		if( H::getRP('admin') ){
+		if(  $token==$this->config['adminToken'] OR $this->config['adminToken']=='' ){
 			$userRole = 'admin';
 		}
 
@@ -442,9 +442,11 @@ class Ric_Server_Server {
 		}elseif( $user=='reader' AND in_array($userRole, ['reader', 'writer', 'admin']) ){
 			$isAuth = true;
 		}
+
 		if( !$isAuth AND $isRequired ){
 			throw new RuntimeException('login needed', 400);
 		}
+
 		return $isAuth;
 	}
 
