@@ -34,6 +34,7 @@
 # renamed usage to info
 
 require_once __DIR__.'/../Rest/Client.php';
+date_default_timezone_set('Europe/Berlin');
 
 
 // Helper syntactic sugar function
@@ -343,17 +344,21 @@ class Ric_Server_Server {
 			/** @noinspection PhpUnusedLocalVariableInspection */
 			list($fileName, $version) = $this->extractVersionFromFullFileName($filePath);
 			foreach( $this->config['servers'] as $server ){
-				$serverUrl = $this->getServerUrl($server);
-				// try to refresh file
-				$url = $serverUrl.$fileName.'?sha1='.sha1_file($filePath).'&timestamp='.$timestamp.'&retention='.$retention.'&noSync=1';
-				$response = Ric_Rest_Client::post($url);
-				if( trim($response)!='1' ){
-					// refresh failed, upload
-					$url = $serverUrl.$fileName.'?timestamp='.$timestamp.'&retention='.$retention.'&noSync=1';
-					$response = Ric_Rest_Client::putFile($url, $filePath);
-					if( trim($response)!='OK' ){
-						$result = trim($result."\n".'failed to upload to '.$server.' :'.$response);
+				try{
+					$serverUrl = $this->getServerUrl($server);
+					// try to refresh file
+					$url = $serverUrl.$fileName.'?sha1='.sha1_file($filePath).'&timestamp='.$timestamp.'&retention='.$retention.'&noSync=1';
+					$response = Ric_Rest_Client::post($url);
+					if( trim($response)!='1' ){
+						// refresh failed, upload
+						$url = $serverUrl.$fileName.'?timestamp='.$timestamp.'&retention='.$retention.'&noSync=1';
+						$response = Ric_Rest_Client::putFile($url, $filePath);
+						if( trim($response)!='OK' ){
+							$result = trim($result."\n".'failed to upload to '.$server.' :'.$response);
+						}
 					}
+				}catch(Exception $e){
+					$result = trim($result."\n".'failed to upload to '.$server);
 				}
 			}
 		}
@@ -365,7 +370,7 @@ class Ric_Server_Server {
 	 */
 	protected function handleGetRequest(){
 		$action = '';
-		if( preg_match('~^(\w+).*~', $_SERVER['QUERY_STRING'], $matches) ){
+		if( preg_match('~^(\w+).*~', H::getIKS($_SERVER, 'QUERY_STRING'), $matches) ){
 			$action = $matches[1];
 		}
 		if( $_SERVER['REQUEST_URI']=='/' ){ // homepage
@@ -564,12 +569,16 @@ class Ric_Server_Server {
 		list($fileName, $version) = $this->extractVersionFromFullFileName($filePath);
 
 		foreach( $this->config['servers'] as $server ){
-			$serverUrl = $this->getServerUrl($server);
-			// verify file
-			$url = $serverUrl.$fileName.'?verify&version='.$version;
-			$response = json_decode(Ric_Rest_Client::get($url), true);
-			if( isset($response['status']) AND $response['status']=='OK' ){
-				$replicas++;
+			try{
+				$serverUrl = $this->getServerUrl($server);
+				// verify file
+				$url = $serverUrl.$fileName.'?verify&version='.$version;
+				$response = json_decode(Ric_Rest_Client::get($url), true);
+				if( isset($response['status']) AND $response['status']=='OK' ){
+					$replicas++;
+				}
+			}catch(Exception $e){
+				// unwichtig
 			}
 		}
 		return $replicas;
