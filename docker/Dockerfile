@@ -4,9 +4,9 @@ COPY ./RestInCloud/ /usr/src/RestInCloud/
 
 COPY config.json /usr/src/RestInCloud/src/Ric/Server/
 
-RUN mkdir -p /tmp/cs \
-    && chmod 777 /tmp/cs
+RUN mkdir -p /var/ric \
+    && chmod 777 /var/ric
 
 WORKDIR /usr/src/RestInCloud/src/Ric/Server/
 
-CMD php -S 0.0.0.0:3070 -t /tmp/cs Server.php
+CMD php -S 0.0.0.0:3070 Server.php

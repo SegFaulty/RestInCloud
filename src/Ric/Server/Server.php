@@ -11,7 +11,6 @@
 # todo clicommands -> handleCli($argv)
 # todo use H::getIKS
 # todo use H::getPR
-# todo basic Auth
 # todo split list in files and versions
 # todo admin joinCluster $serverIps / get servers from server, add to all servers, dump remote restore local
 # todo admin leaveCluster
@@ -23,7 +22,8 @@
 # todo shell script
 # todo think about configstorage also download immer der neusten version, sollte ja einfach gehen (mit 304er)
 
-# ro github
+# reader/writer/admin roles
+# to github
 # find a nice name
 # rename flush to purge
 # get replica count
@@ -51,7 +51,7 @@ if( php_sapi_name()=='cli-server' ){
 	ini_set('log_errors', true);
 	ini_set("error_log", '/home/www/coldStoreErrors.log');
 
-	$coldStore = new Ric_Server_Server($_SERVER["DOCUMENT_ROOT"], H::getIKS($_ENV,'CS_quota'));
+	$coldStore = new Ric_Server_Server(H::getIKS($_ENV, 'Ric_config', './config.json'));
 	$coldStore->handleRequest();
 	return true; // if false, the internal server will serve the REQUEST_URI .. this is dangerous
 
@@ -67,9 +67,9 @@ if( php_sapi_name()=='cli' ){
 		default:
 			die(
 				'please start it as webserver:'."\n"
-				.'php -S 0.0.0.0:3070 -t /path/to/storeDir '.__FILE__."\n"
-				.' with quota (in MB) :  '."\n"
-				.' CS_quota=1000 php -d variables_order=EGPCS -S 0.0.0.0:3070 -t /path/to/docroot '.__FILE__."\n"
+				.'php -S 0.0.0.0:3070 '.__FILE__."\n"
+				.' with config :  '."\n"
+				.' Ric_config=./config.json php -d variables_order=EGPCS -S 0.0.0.0:3070 -t /path/to/docroot '.__FILE__."\n"
 				.'   OR   '."\n"
 				.'php '.__FILE__.' purge /path/to/storeDir {maxTimestamp}'."\n"
 				.'  to purge all files marked for deletion (with fileMtime < maxTimestamp)'."\n"
@@ -94,8 +94,10 @@ class Ric_Server_Server {
 		'servers' => [],
 		'adminName' => 'admin',
 		'adminPass' => 'admin',
-		'userName' => '',
-		'userPass' => '',
+		'writerName' => 'writer',
+		'writerPass' => 'writer',
+		'readerName' => '',
+		'readerPass' => '',
 		'defaultRetention' => self::RETENTION__LAST3,
 	];
 
@@ -109,14 +111,8 @@ class Ric_Server_Server {
 	/**
 	 * construct
 	 */
-	public function __construct($storeDir=null, $quota=null){
-		if( $storeDir!==null ){ // first we set the dir, for the runtime Config
-			$this->config['storeDir'] = rtrim($storeDir,DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR; // make sure of trailing slash
-		}
-		$this->loadConfig();
-		if( $quota!==null ){
-			$this->config['quota'] = intval($quota);
-		}
+	public function __construct($configFilePath=''){
+		$this->loadConfig($configFilePath);
 		if( !is_dir($this->config['storeDir']) OR !is_writable($this->config['storeDir']) ){
 			throw new RuntimeException('document root is not a writable dir!');
 		}
@@ -127,7 +123,7 @@ class Ric_Server_Server {
 	 */
 	public function handleRequest(){
 		try{
-			$this->auth();
+			$this->auth('reader', true);
 			if( $_SERVER['REQUEST_METHOD']=='PUT' ){
 				$this->handlePutRequest();
 			}elseif( $_SERVER['REQUEST_METHOD']=='GET' ){
@@ -209,21 +205,26 @@ class Ric_Server_Server {
 	}
 
 	/**
-	 * load config default->config.json->docRoot/intern/config.json
+	 * load config default->given config -> docRoot/intern/config.json
 	 */
-	protected function loadConfig(){
-		$this->config['storeDir'] = rtrim($this->config['storeDir'],DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR; // make sure of trailing slash
-		$this->config = $this->config + $this->defaultConfig;
-		if( file_exists($this->config['storeDir'].'/intern/config.json') ){
-			$this->config = json_decode(file_get_contents($this->config['storeDir'].'/intern/config.json'), true) + $this->config;
-		}
-		if( file_exists(__DIR__.'/config.json') ){
-			$localConfig = json_decode(file_get_contents(__DIR__.'/config.json'), true);
+	protected function loadConfig($configFilePath=''){
+
+		if( file_exists($configFilePath) ){
+			$localConfig = json_decode(file_get_contents($configFilePath), true);
 			if( !is_array($localConfig) ){
 				throw new RuntimeException('config.json is invalid (use "{}" for empty config)');
 			}
 			$this->config = $localConfig + $this->config;
 		}
+
+		$this->config = $this->config + $this->defaultConfig;
+
+		$this->config['storeDir'] = rtrim($this->config['storeDir'],DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR; // make sure of trailing slash
+
+		if( file_exists($this->config['storeDir'].'/intern/config.json') ){
+			$this->config = json_decode(file_get_contents($this->config['storeDir'].'/intern/config.json'), true) + $this->config;
+		}
+
 	}
 
 	/**
@@ -254,6 +255,7 @@ class Ric_Server_Server {
 	 * handle PUT
 	 */
 	protected function handlePutRequest(){
+		$this->auth('writer');
 		$result = 'OK';
 		$retention = H::getRP('retention', self::RETENTION__LAST3);
 		$timestamp = H::getRP('timestamp', time());
@@ -307,6 +309,7 @@ class Ric_Server_Server {
 	 * handle POST, file refresh
 	 */
 	protected function handlePostRequest(){
+		$this->auth('writer');
 		$result = '0';
 		$sha1 = H::getRP('sha1');
 		$retention = H::getRP('retention', '');
@@ -382,14 +385,14 @@ class Ric_Server_Server {
 				$this->actionHelp();
 			}elseif( $action=='info' ){
 				$this->actionInfo();
-			}elseif( $action=='addServer' AND $this->authIsAdmin() ){
+			}elseif( $action=='addServer' AND $this->auth('admin') ){
 				$this->actionAddServer();
-			}elseif( $action=='removeServer' AND $this->authIsAdmin() ){
+			}elseif( $action=='removeServer' AND $this->auth('admin') ){
 				$this->actionRemoveServer();
 			}else{
 				throw new RuntimeException('unknown action', 400);
 			}
-		}elseif( $action=='delete' ){
+		}elseif( $action=='delete' AND $this->auth('writer') ){
 			$this->actionDelete();
 		}elseif( $action=='size' ){
 			echo filesize($this->getFilePath());
@@ -411,28 +414,38 @@ class Ric_Server_Server {
 	}
 
 	/**
+	 * @param string $user
+	 * @param bool $isRequired
+	 * @return bool
 	 * @throws RuntimeException
 	 */
-	protected function auth(){
-		if( $this->config['userName']!='' ){
+	protected function auth($user='reader', $isRequired=true){
+		$isAuth = false;
+
+		$userRole = 'guest';
+
+		// todo implement basic auth
+		if( H::getRP('reader') OR $this->config['readerName']!='' ){
+			$userRole = 'reader';
+		}
+		if( H::getRP('writer') OR $this->config['writerName']!='' ){
+			$userRole = 'writer';
+		}
+		if( H::getRP('admin') ){
+			$userRole = 'admin';
+		}
+
+		if( $user=='admin' AND $userRole=='admin' ){
+			$isAuth = true;
+		}elseif( $user=='writer' AND in_array($userRole, ['writer', 'admin']) ){
+			$isAuth = true;
+		}elseif( $user=='reader' AND in_array($userRole, ['reader', 'writer', 'admin']) ){
+			$isAuth = true;
+		}
+		if( !$isAuth AND $isRequired ){
 			throw new RuntimeException('login needed', 400);
 		}
-	}
-
-	/**
-	 * @param bool $required
-	 * @throws RuntimeException
-	 * @return bool
-	 */
-	protected function authIsAdmin($required=true){
-		$isAdmin = false;
-		if( H::getRP('admin') ){
-			$isAdmin = true;
-		}
-		if( !$isAdmin AND $required ){
-			throw new RuntimeException('admin privileges needed', 400);
-		}
-		return $isAdmin;
+		return $isAuth;
 	}
 
 	/**
@@ -455,31 +468,35 @@ class Ric_Server_Server {
 	/**
 	 * build url for remote server
 	 * @param string $server
-	 * @param bool $withAdmin
+	 * @param string $user
 	 * @return string
 	 */
-	protected function getServerUrl($server, $withAdmin=false){
+	protected function getServerUrl($server, $user='reader'){
 		$serverUrl = 'http://';
-		if( $withAdmin ){
-			if( $this->config['adminName']!='' ){
-				$serverUrl.= $this->config['adminName'];
-				if( $this->config['adminPass']!='' ){
-					$serverUrl.= $this->config['adminPass'];
-				}
-				$serverUrl.= '@';
+		switch( $user ){
+			case 'admin':
+				$name = $this->config['adminName'];
+				$pass = $this->config['adminPass'];
+				break;
+			case 'writer':
+				$name = $this->config['writerName'];
+				$pass = $this->config['writerPass'];
+				break;
+			default:
+				$name = $this->config['readerName'];
+				$pass = $this->config['readerPass'];
+		}
+		if( $name!='' ){
+			$serverUrl.= $name;
+			if( $pass!='' ){
+				$serverUrl.= $pass;
 			}
-		}else{
-			if( $this->config['userName']!='' ){
-				$serverUrl.= $this->config['userName'];
-				if( $this->config['userPass']!='' ){
-					$serverUrl.= $this->config['userPass'];
-				}
-				$serverUrl.= '@';
-			}
+			$serverUrl.= '@';
 		}
 		$serverUrl.= $server.'/';
 		return $serverUrl;
 	}
+
 	/**
 	 * remove selected or "all" servers
 	 * @throws RuntimeException
@@ -698,7 +715,7 @@ class Ric_Server_Server {
 			$info['quotaFree'] = max(0, intval($this->config['quota']-$directorySizeMb));
 		}
 		// only for admins
-		if( $this->authIsAdmin(false) ){
+		if( $this->auth('admin', false) ){
 			$info['config'] = $this->config;
 			$info['runtimeConfig'] = false;
 			if( file_exists($this->config['storeDir'].'intern/config.json') ){
