@@ -1,7 +1,9 @@
 <?php
 
+# todo docker add volume support, reboot save persistence
+
 # todo admin flush
-# todo admin dump
+# todo admin dump http://de2.php.net/manual/en/function.readfile.php
 # todo admin restore
 # todo admin joinCluster $serverIps / get servers from server, add to all servers, dump remote restore local
 # todo admin leaveCluster
@@ -17,6 +19,10 @@
 # todo php shell script
 # todo shell script
 # todo think about configstorage also download immer der neusten version, sollte ja einfach gehen (mit 304er)
+
+# todo coreos add weave layer howto
+# todo coreos cloud.config single host
+# todo coreos fleet
 
 # dockerized
 # splitted list in files and versions
