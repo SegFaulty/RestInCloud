@@ -1,26 +1,26 @@
 <?php
 
+# todo admin flush
 # todo admin dump
 # todo admin restore
-# todo sync command push to all server
-# todo pull command dump, local restore
-
-# todo admin flush
-
-# todo clicommands -> handleCli($argv)
-# todo use H::getIKS
-# todo use H::getPR
-# todo split list in files and versions
 # todo admin joinCluster $serverIps / get servers from server, add to all servers, dump remote restore local
 # todo admin leaveCluster
-# todo dockerize
+# todo sync command push to all server
+# todo pull command dump, local restore
+# todo verifyCluster
+
 # todo help as mark down
+# todo clicommands -> handleCli($argv)
 # todo apache sapi
+# todo https (docker)
 # todo php client
 # todo php shell script
 # todo shell script
 # todo think about configstorage also download immer der neusten version, sollte ja einfach gehen (mit 304er)
 
+# dockerized
+# splitted list in files and versions
+# use H::getPR
 # auth http basic auth
 # reader/writer/admin roles
 # to github
@@ -317,7 +317,7 @@ class Ric_Server_Server {
 			throw new RuntimeException('?sha1=1342.. is required', 400);
 		}
 
-		$filePath = $this->getFilePath($_REQUEST['sha1']);
+		$filePath = $this->getFilePath($sha1);
 		if( file_exists($filePath) ){
 			$syncResult = $this->syncFile($filePath, $timestamp, $retention, $noSync);
 			$this->executeRetention($filePath, $retention);
@@ -345,13 +345,13 @@ class Ric_Server_Server {
 			list($fileName, $version) = $this->extractVersionFromFullFileName($filePath);
 			foreach( $this->config['servers'] as $server ){
 				try{
-					$serverUrl = $this->getServerUrl($server);
+					$serverUrl = 'http://'.$server.'/';
 					// try to refresh file
-					$url = $serverUrl.$fileName.'?sha1='.sha1_file($filePath).'&timestamp='.$timestamp.'&retention='.$retention.'&noSync=1';
+					$url = $serverUrl.$fileName.'?sha1='.sha1_file($filePath).'&timestamp='.$timestamp.'&retention='.$retention.'&noSync=1&token='.$this->config['writerToken'];
 					$response = Ric_Rest_Client::post($url);
 					if( trim($response)!='1' ){
 						// refresh failed, upload
-						$url = $serverUrl.$fileName.'?timestamp='.$timestamp.'&retention='.$retention.'&noSync=1';
+						$url = $serverUrl.$fileName.'?timestamp='.$timestamp.'&retention='.$retention.'&noSync=1&token='.$this->config['writerToken'];
 						$response = Ric_Rest_Client::putFile($url, $filePath);
 						if( trim($response)!='OK' ){
 							$result = trim($result."\n".'failed to upload to '.$server.' :'.$response);
@@ -377,7 +377,7 @@ class Ric_Server_Server {
 			$this->actionHelp();
 		}elseif( parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)=='/' ){ // no file
 			if( $action=='list' ){
-				$this->actionList();
+				$this->actionListVersions();
 			}elseif( $action=='help' ){
 				$this->actionHelp();
 			}elseif( $action=='info' ){
@@ -456,7 +456,8 @@ class Ric_Server_Server {
 	protected function actionAddServer(){
 		$server = H::getRP('addServer');
 
-		$info = json_decode(Ric_Rest_Client::get($this->getServerUrl($server), ['info'=>1]), true);
+
+		$info = json_decode(Ric_Rest_Client::get('http://'.$server.'/', ['info'=>1,'token'=>$this->config['readerToken']]), true);
 		if( $info AND H::getIKS($info, 'serverTimestamp') ){
 			$this->config['servers'][] = $server;
 			$this->setRuntimeConfig('servers', $this->config['servers']);
@@ -465,38 +466,6 @@ class Ric_Server_Server {
 		}
 		header('Content-Type: application/json');
 		echo H::json(['Status' => 'OK']);
-	}
-
-	/**
-	 * build url for remote server
-	 * @param string $server
-	 * @param string $user
-	 * @return string
-	 */
-	protected function getServerUrl($server, $user='reader'){
-		$serverUrl = 'http://';
-		switch( $user ){
-			case 'admin':
-				$name = $this->config['adminName'];
-				$pass = $this->config['adminPass'];
-				break;
-			case 'writer':
-				$name = $this->config['writerName'];
-				$pass = $this->config['writerPass'];
-				break;
-			default:
-				$name = $this->config['readerName'];
-				$pass = $this->config['readerPass'];
-		}
-		if( $name!='' ){
-			$serverUrl.= $name;
-			if( $pass!='' ){
-				$serverUrl.= $pass;
-			}
-			$serverUrl.= '@';
-		}
-		$serverUrl.= $server.'/';
-		return $serverUrl;
 	}
 
 	/**
@@ -589,11 +558,11 @@ class Ric_Server_Server {
 
 		foreach( $this->config['servers'] as $server ){
 			try{
-				$serverUrl = $this->getServerUrl($server);
+				$serverUrl = 'http://'.$server.'/';
 				// verify file
-				$url = $serverUrl.$fileName.'?verify&version='.$version;
+				$url = $serverUrl.$fileName.'?verify&version='.$version.'&token='.$this->config['readerToken'];
 				$response = json_decode(Ric_Rest_Client::get($url), true);
-				if( isset($response['status']) AND $response['status']=='OK' ){
+				if( H::getIKS($response, 'status')=='OK' ){
 					$replicas++;
 				}
 			}catch(Exception $e){
@@ -604,60 +573,65 @@ class Ric_Server_Server {
 	}
 
 	/**
-	 * list files or version of file
+	 * list files
 	 * @throws RuntimeException
 	 */
 	protected function actionList(){
 		$pattern = (isset($_REQUEST['pattern']) ? self::validateRegex($_REQUEST['pattern']) : '' );
-		$showDeleted = isset($_REQUEST['showDeleted']);
-		$start = (isset($_REQUEST['start']) ? $_REQUEST['start'] : 0 );
-		$limit = (isset($_REQUEST['limit']) ? min(10000, $_REQUEST['limit']) : 1000 );
+		$showDeleted = H::getRP('showDeleted');
+		$start = H::getRP('start', 0);
+		$limit = min(1000, H::getRP('limit', 100));
+
+		$lines = [];
+		$dirIterator = new RecursiveDirectoryIterator($this->config['storeDir']);
+		$iterator = new RecursiveIteratorIterator($dirIterator, RecursiveIteratorIterator::SELF_FIRST);
+		$index = -1;
+		foreach( $iterator as $splFileInfo ){ /** @var SplFileInfo $splFileInfo */
+			if( $splFileInfo->getPath()==$this->config['storeDir'].'intern' ){
+				continue; // skip our internal files
+			}
+			if( $splFileInfo->isFile() ){
+				/** @noinspection PhpUnusedLocalVariableInspection */
+				list($fileName, $version) = $this->extractVersionFromFullFileName($splFileInfo->getFilename());
+				if( $pattern!='' AND !preg_match($pattern, $fileName) ){
+					continue;
+				}
+				$fileInfo = $this->getFileInfo($splFileInfo->getRealPath());
+				if( $fileInfo['timestamp']!=self::$markDeletedTimestamp OR $showDeleted ){
+					$index++;
+					if( $index<$start ){
+						continue;
+					}
+					$lines[] = ['index' => $index] + $fileInfo;
+					if( count($lines)>=$limit ){
+						break;
+					}
+				}
+			}
+		}
+
+		header('Content-Type: application/json');
+		echo H::json($lines);
+	}
+
+	/**
+	 * list versions of file
+	 * @throws RuntimeException
+	 */
+	protected function actionListVersions(){
+		$showDeleted = H::getRP('showDeleted');
+		$limit = min(1000, H::getRP('limit', 100));
 
 		$filePath = $this->getFilePath();
 
 		$lines = [];
-
-		// if we ?list on a fileName we return all versions
-		if( $filePath ){
-			if($pattern!='' OR $start>0 ){
-				throw new RuntimeException('pattern and start not supported for version list', 400);
-			}
-			$baseFilePath = preg_replace('~___\w+$~', '', $filePath);
-			$index = 1;
-			foreach( $this->getAllVersions($baseFilePath, $showDeleted) as $version=>$timeStamp ){
-				$filePath = $baseFilePath.'___'.$version;
-				$lines[] = ['index' => $index++] + $this->getFileInfo($filePath);
-				if( $limit>0 AND $limit<$index ){
-					break;
-				}
-			}
-		}else{
-			$dirIterator = new RecursiveDirectoryIterator($this->config['storeDir']);
-			$iterator = new RecursiveIteratorIterator($dirIterator, RecursiveIteratorIterator::SELF_FIRST);
-			$lines = array();
-			$index = -1;
-			foreach( $iterator as $splFileInfo ){ /** @var SplFileInfo $splFileInfo */
-				if( $splFileInfo->getPath()==$this->config['storeDir'].'intern' ){
-					continue; // skip our internal files
-				}
-				if( $splFileInfo->isFile() ){
-					/** @noinspection PhpUnusedLocalVariableInspection */
-					list($fileName, $version) = $this->extractVersionFromFullFileName($splFileInfo->getFilename());
-					if( $pattern!='' AND !preg_match($pattern, $fileName) ){
-						continue;
-					}
-					$fileInfo = $this->getFileInfo($splFileInfo->getRealPath());
-					if( $fileInfo['timestamp']!=self::$markDeletedTimestamp OR $showDeleted ){
-						$index++;
-						if( $index<$start ){
-							continue;
-						}
-						$lines[] = ['index' => $index] + $fileInfo;
-						if( count($lines)>=$limit ){
-							break;
-						}
-					}
-				}
+		$baseFilePath = preg_replace('~___\w+$~', '', $filePath);
+		$index = 1;
+		foreach( $this->getAllVersions($baseFilePath, $showDeleted) as $version=>$timeStamp ){
+			$filePath = $baseFilePath.'___'.$version;
+			$lines[] = ['index' => $index++] + $this->getFileInfo($filePath);
+			if( $limit>0 AND $limit<$index ){
+				break;
 			}
 		}
 		header('Content-Type: application/json');
@@ -675,7 +649,7 @@ class Ric_Server_Server {
 		if( !$fp ){
 			throw new RuntimeException('open file failed');
 		}
-		$lines = ($_REQUEST['head']>0? $_REQUEST['head'] : 10);
+		$lines = H::getRP('head', 10);
 		while($lines-- AND ($line = gzgets($fp, 100000))){
 			echo $line;
 		}
@@ -692,7 +666,7 @@ class Ric_Server_Server {
 			throw new RuntimeException('open file failed');
 		}
 		// grep
-		$regex = self::validateRegex($_REQUEST['grep']);
+		$regex = self::validateRegex(H::getRP('grep'));
 		while(($line = gzgets($fp,100000))){
 			if( preg_match($regex, $line) ){
 				echo $line;
