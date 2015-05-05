@@ -721,7 +721,7 @@ class Ric_Server_Server {
    - use ?timestamp=1422653.. to set correct modificationTime [default:requestTime]
    - use &retention=last3 to select the backup retention strategy [default:last3]
    - use &noSync to suppress syncronisation to replication servers (used for internal sync)
-   - retension strategies (versions sorted by timestamp):
+   - retention strategies (versions sorted by timestamp):
 {retentionList}
    - with curl:
      curl -X PUT --upload /home/www/phperror.log http://my.coldstore.server.de/error.log
@@ -750,6 +750,9 @@ class Ric_Server_Server {
  * addServer=s1.cs.io:3723 - add Server to local list,
  * removeServer=s1.cs.io:3723 - remove Server from local list
  * removeServer=all - remove all Servers from local list
+
+ auth (only as parameter supported yet)
+ * use &token=YourAdminToken to authenticate as admin (e.g. for info command)
 
 EOT;
 		$help = str_replace('my.coldstore.server.de', $_SERVER['HTTP_HOST'], $help);
