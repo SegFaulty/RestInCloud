@@ -1,0 +1,21 @@
+#cloud-config
+hostname: coreos-1
+
+coreos:
+  etcd:
+    # get new hash from https://discovery.etcd.io/new
+    discovery: https://discovery.etcd.io/02ae.....e213ae5
+  units:
+    - name: etcd.service
+      command: start
+    - name: fleet.service
+      command: start
+
+write_files:
+  - path: /etc/environment
+    permissions: 0644
+    content: |
+      PUBLIC_IPV4=1.2.3.4
+
+ssh_authorized_keys:
+  - ssh-rsa AAAA.....

@@ -4,7 +4,6 @@
 rm -rf tmpBuild
 mkdir -p tmpBuild
 cp Dockerfile tmpBuild/
-cp php.ini tmpBuild/
 cp config.json tmpBuild/
 cd tmpBuild
 
