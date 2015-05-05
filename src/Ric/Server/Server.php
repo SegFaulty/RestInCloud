@@ -744,6 +744,7 @@ class Ric_Server_Server {
     - verify that the file (1) exists, (2) sha1, (3) size >40k [default:1], (4) fileTime>=minTimestamp [default:8d], (5) min 2 replicas (3 files) [default:0]
     - returns json result with status: OK/WARNING/CRITICAL, a msg and fileInfo
 
+
  * check php Server.php for commandline (purge)
 
  admin Commands:
