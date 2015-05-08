@@ -4,7 +4,7 @@ tested on coreos
 ## Build
 * login to your docker host
 * git clone https://github.com/SegFaulty/RestInCloud.git
-* cd RestInCloud
+* cd RestInCloud/docker
 * change config.json
 * sh docker.sh
 

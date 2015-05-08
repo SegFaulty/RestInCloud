@@ -1,46 +1,8 @@
 <?php
 
-# todo docker add volume support, reboot save persistence
-
-# todo admin flush
-# todo admin dump http://de2.php.net/manual/en/function.readfile.php
-# todo admin restore
-# todo admin joinCluster $serverIps / get servers from server, add to all servers, dump remote restore local
-# todo admin leaveCluster
-# todo sync command push to all server
-# todo pull command dump, local restore
-# todo verifyCluster
-
-# todo help as mark down
-# todo clicommands -> handleCli($argv)
-# todo apache sapi
-# todo https (docker)
-# todo php client
-# todo php shell script
-# todo shell script
-# todo think about configstorage also download immer der neusten version, sollte ja einfach gehen (mit 304er)
-
-# todo coreos add weave layer howto
-# todo coreos cloud.config single host
-# todo coreos fleet
-
-# dockerized
-# splitted list in files and versions
-# use H::getPR
-# auth http basic auth
-# reader/writer/admin roles
-# to github
-# find a nice name
-# rename flush to purge
-# get replica count
-# noSync
-# synchronize put and post
-# admin removeServer added
-# admin commands require user admin or show less or block
-# renamed usage to info
 
 require_once __DIR__.'/../Rest/Client.php';
-date_default_timezone_set('Europe/Berlin');
+date_default_timezone_set(@date_default_timezone_get()); // Suppress DateTime warnings
 
 
 // Helper syntactic sugar function
@@ -73,9 +35,7 @@ if( php_sapi_name()=='cli' ){
 		default:
 			die(
 				'please start it as webserver:'."\n"
-				.'php -S 0.0.0.0:3070 '.__FILE__."\n"
-				.' with config :  '."\n"
-				.' Ric_config=./config.json php -d variables_order=EGPCS -S 0.0.0.0:3070 -t /path/to/docroot '.__FILE__."\n"
+				.' Ric_config=./config.json php -d variables_order=GPCSE -S 0.0.0.0:3070 '.__FILE__."\n"
 				.'   OR   '."\n"
 				.'php '.__FILE__.' purge /path/to/storeDir {maxTimestamp}'."\n"
 				.'  to purge all files marked for deletion (with fileMtime < maxTimestamp)'."\n"
@@ -129,10 +89,14 @@ class Ric_Server_Server {
 			$this->auth('reader', true);
 			if( $_SERVER['REQUEST_METHOD']=='PUT' ){
 				$this->handlePutRequest();
+			}elseif( $_SERVER['REQUEST_METHOD']=='POST' OR H::getRP('method')=='post' ){
+				$this->handlePostRequest();
 			}elseif( $_SERVER['REQUEST_METHOD']=='GET' ){
 				$this->handleGetRequest();
-			}elseif( $_SERVER['REQUEST_METHOD']=='POST' ){
-				$this->handlePostRequest();
+			}elseif( $_SERVER['REQUEST_METHOD']=='DELETE' ){
+				if( $this->auth('writer') ){
+					$this->actionDelete();
+				}
 			}else{
 				throw new RuntimeException('unsupported http-method', 400);
 			}
@@ -309,10 +273,77 @@ class Ric_Server_Server {
 	}
 
 	/**
+	 * handle get
+	 */
+	protected function handleGetRequest(){
+		$action = '';
+		if( preg_match('~^(\w+).*~', H::getIKS($_SERVER, 'QUERY_STRING'), $matches) ){
+			$action = $matches[1];
+		}
+		if( $_SERVER['REQUEST_URI']=='/' ){ // homepage
+			$this->actionHelp();
+		}elseif( parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)=='/' ){ // no file
+			if( $action=='list' AND $this->auth('admin') ){
+				$this->actionList();
+			}elseif( $action=='listDetails' AND $this->auth('admin') ){
+				$this->actionList(true);
+			}elseif( $action=='help' ){
+				$this->actionHelp();
+			}elseif( $action=='info' ){
+				$this->actionInfo();
+			}elseif( $action=='phpInfo' ){
+				phpinfo();
+			}else{
+				throw new RuntimeException('unknown action', 400);
+			}
+		}elseif( $action=='size' ){
+			echo filesize($this->getFilePath());
+		}elseif( $action=='verify' ){
+			$this->actionVerify();
+		}elseif( $action=='list' ){
+			$this->actionListVersions();
+		}elseif( $action=='head' ){
+			$this->actionHead();
+		}elseif( $action=='grep' ){
+			$this->actionGrep();
+		}elseif( $action=='help' ){
+			$this->actionHelp();
+		}elseif( $action=='' AND ($filePath=$this->getFilePath()) ){
+			$this->actionSendFile();
+		}else{
+			throw new RuntimeException('unknown action or no file given', 400);
+		}
+	}
+
+	/**
 	 * handle POST, file refresh
 	 */
 	protected function handlePostRequest(){
 		$this->auth('writer');
+		$action = H::getRP('action');
+		if( parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)=='/' ){ // homepage
+			// post actions
+			if( $action=='addServer' AND $this->auth('admin') ){
+				$this->actionAddServer();
+			}elseif( $action=='removeServer' AND $this->auth('admin') ){
+				$this->actionRemoveServer();
+			}else{
+				throw new RuntimeException('unknown action or no file given', 400);
+			}
+		}elseif( $action=='delete' ){
+			$this->actionDelete();
+		}else{
+			// not "/" .. this is a file, refresh action
+			$this->actionPostRefresh();
+		}
+	}
+
+	/**
+	 * check and refresh a with a post request
+	 * @throws RuntimeException
+	 */
+	protected function actionPostRefresh(){
+		// not / .. this is a file, refresh action
 		$result = '0';
 		$sha1 = H::getRP('sha1');
 		$retention = H::getRP('retention', '');
@@ -330,6 +361,8 @@ class Ric_Server_Server {
 			if( $syncResult=='' ){
 				$result = '1';
 			}
+		}else{
+			throw new RuntimeException('file not found', 404);
 		}
 		echo $result.PHP_EOL;
 	}
@@ -372,53 +405,7 @@ class Ric_Server_Server {
 	}
 
 	/**
-	 * handle get
-	 */
-	protected function handleGetRequest(){
-		$action = '';
-		if( preg_match('~^(\w+).*~', H::getIKS($_SERVER, 'QUERY_STRING'), $matches) ){
-			$action = $matches[1];
-		}
-		if( $_SERVER['REQUEST_URI']=='/' ){ // homepage
-			$this->actionHelp();
-		}elseif( parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)=='/' ){ // no file
-			if( $action=='list' ){
-				$this->actionListVersions();
-			}elseif( $action=='help' ){
-				$this->actionHelp();
-			}elseif( $action=='info' ){
-				$this->actionInfo();
-			}elseif( $action=='phpInfo' ){
-				phpinfo();
-			}elseif( $action=='addServer' AND $this->auth('admin') ){
-				$this->actionAddServer();
-			}elseif( $action=='removeServer' AND $this->auth('admin') ){
-				$this->actionRemoveServer();
-			}else{
-				throw new RuntimeException('unknown action', 400);
-			}
-		}elseif( $action=='delete' AND $this->auth('writer') ){
-			$this->actionDelete();
-		}elseif( $action=='size' ){
-			echo filesize($this->getFilePath());
-		}elseif( $action=='verify' ){
-			$this->actionVerify();
-		}elseif( $action=='list' ){
-			$this->actionList();
-		}elseif( $action=='head' ){
-			$this->actionHead();
-		}elseif( $action=='grep' ){
-			$this->actionGrep();
-		}elseif( $action=='help' ){
-			$this->actionHelp();
-		}elseif( $action=='' AND ($filePath=$this->getFilePath()) ){
-			$this->actionSendFile();
-		}else{
-			throw new RuntimeException('unknown action or no file given', 400);
-		}
-	}
-
-	/**
+	 * user admin>writer>reader
 	 * @param string $user
 	 * @param bool $isRequired
 	 * @return bool
@@ -497,7 +484,7 @@ class Ric_Server_Server {
 	protected function actionDelete(){
 		$filePath = $this->getFilePath();
 		$filesDeleted = 0;
-		if( !empty($_REQUEST['version']) ){
+		if( !H::getRP('version') ){
 			$filesDeleted+= $this->markFileDeleted($filePath);
 		}else{
 			$baseFilePath = preg_replace('~___\w+$~', '', $filePath);
@@ -582,7 +569,7 @@ class Ric_Server_Server {
 	 * list files
 	 * @throws RuntimeException
 	 */
-	protected function actionList(){
+	protected function actionList($details=false){
 		$pattern = (isset($_REQUEST['pattern']) ? self::validateRegex($_REQUEST['pattern']) : '' );
 		$showDeleted = H::getRP('showDeleted');
 		$start = H::getRP('start', 0);
@@ -608,7 +595,13 @@ class Ric_Server_Server {
 					if( $index<$start ){
 						continue;
 					}
-					$lines[] = ['index' => $index] + $fileInfo;
+					if( $details ){
+						$lines[] = ['index' => $index] + $fileInfo;
+					}else{
+						if( !in_array($fileName, $lines) ){
+							$lines[] = $fileName;
+						}
+					}
 					if( count($lines)>=$limit ){
 						break;
 					}
@@ -650,13 +643,15 @@ class Ric_Server_Server {
 	 */
 	protected function actionHead(){
 		$filePath = $this->getFilePath();
-
 		$fp = gzopen($filePath, 'r');
 		if( !$fp ){
 			throw new RuntimeException('open file failed');
 		}
 		$lines = H::getRP('head', 10);
-		while($lines-- AND ($line = gzgets($fp, 100000))){
+		if( $lines==0 ){
+			$lines = 10;
+		}
+		while($lines-- AND ($line = gzgets($fp, 100000))!==false){
 			echo $line;
 		}
 		gzclose($fp);
@@ -712,57 +707,20 @@ class Ric_Server_Server {
 	 * help
 	 */
 	protected function actionHelp(){
-		$help = <<< EOT
- * GET http://my.coldstore.server.de/?help - show this help
- * GET http://my.coldstore.server.de/?list - list all files ... &pattern=~regEx~i&limit=100&start=100&showDeleted (ordered by random!)
- * GET http://my.coldstore.server.de/?info - show server infos (and quota if set)
-
- * PUT http://my.coldstore.server.de/error.log - upload a file to the store
-   - use ?timestamp=1422653.. to set correct modificationTime [default:requestTime]
-   - use &retention=last3 to select the backup retention strategy [default:last3]
-   - use &noSync to suppress syncronisation to replication servers (used for internal sync)
-   - retention strategies (versions sorted by timestamp):
-{retentionList}
-   - with curl:
-     curl -X PUT --upload /home/www/phperror.log http://my.coldstore.server.de/error.log
-     curl -X PUT --upload "/home/www/phperror.log" "http://my.coldstore.server.de/error.log&retention=last7&timestamp=1429628531"
-
- * POST http://my.coldstore.server.de/error.log?sha1=23423ef3d..&timestamp=1422653.. - check and refresh a file
-   - use &noSync to suppress syncronisation to replication servers (used for internal sync)
-   - check if version exists and updates timestamp, no need to upload the same version
-   - returns 1 if version was updated, 0 if version not exists
-
- * GET http://my.coldstore.server.de/error.log - download a file (etag and lastmodified supported)
- * GET http://my.coldstore.server.de/error.log?version=13445afe23423423 - version selects a specific version, if omitted the latest version is assumed
- * GET http://my.coldstore.server.de/error.log?list - show all (or &limit) versions for this file; (ordered by latest); &showDeleted to include files marked for deletion
- * GET http://my.coldstore.server.de/error.log?delete - delete a file !! Attention if version is omitted, ALL Versions will be deleted (Files are marked for deletion, purge will delete them)
- * GET http://my.coldstore.server.de/error.log?head - show first (10) lines of file
- * GET http://my.coldstore.server.de/error.log?head=20 - show first n lines of the file
- * GET http://my.coldstore.server.de/error.log?size - return the filesize
- * GET http://my.coldstore.server.de/error.log?grep=EAN:.*\d+501 - scan the file for this (regex) pattern
- * GET http://my.coldstore.server.de/error.log?verify&sha=1234ef23&minSize=40000&minReplicas=2&minTimestamp=14234234
-    - verify that the file (1) exists, (2) sha1, (3) size >40k [default:1], (4) fileTime>=minTimestamp [default:8d], (5) min 2 replicas (3 files) [default:0]
-    - returns json result with status: OK/WARNING/CRITICAL, a msg and fileInfo
-
- * check php Server.php for commandline (purge)
-
- admin Commands:
- * addServer=s1.cs.io:3723 - add Server to local list,
- * removeServer=s1.cs.io:3723 - remove Server from local list
- * removeServer=all - remove all Servers from local list
-
- auth (only as parameter supported yet)
- * use &token=YourAdminToken to authenticate as admin (e.g. for info command)
-
-EOT;
-		$help = str_replace('my.coldstore.server.de', $_SERVER['HTTP_HOST'], $help);
+		$helpString = '';
+		// extract from README-md
+		$readMePath = __DIR__.'/../../../README.md';
+		if( file_exists($readMePath) and preg_match('~\n## Help(.*?)(\n## |$)~s', file_get_contents($readMePath), $matches) ){
+			$helpString = $matches[1];
+		}
+		$helpString = str_replace('my.coldstore.server.de', $_SERVER['HTTP_HOST'], $helpString);
 		$retentions = '';
 		$retentions.= '     '.self::RETENTION__OFF.' : keep only the last version'.PHP_EOL;
 		$retentions.= '     '.self::RETENTION__LAST3.' : keep last 3 versions'.PHP_EOL;
 		$retentions.= '     '.self::RETENTION__LAST7.' : keep last 7 versions'.PHP_EOL;
 		$retentions.= '     '.self::RETENTION__3L7D4W12M.' : keep last 3 versions then last of 7 days, 4 weeks, 12 month (max 23 Versions)'.PHP_EOL;
-		$help = str_replace('{retentionList}', $retentions, $help);
-		echo '<pre>'.htmlentities($help).'</pre>';
+		$helpString = str_replace('{retentionList}', $retentions, $helpString);
+		echo '<pre>'.htmlentities($helpString).'</pre>';
 	}
 
 	/**

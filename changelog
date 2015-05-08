@@ -1,0 +1,18 @@
+2015-05-08
+- help as mark down
+- POST commands
+2015-05-05
+- dockerized
+- splitted list in files and versions
+- use H::getPR
+- auth http basic auth
+- reader/writer/admin roles
+- to github
+- find a nice name
+- rename flush to purge
+- get replica count
+- noSync
+- synchronize put and post
+- admin removeServer added
+- admin commands require user admin or show less or block
+- renamed usage to info
