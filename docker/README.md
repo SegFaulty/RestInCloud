@@ -3,8 +3,10 @@ tested on coreos
 
 ## Build
 * login to your docker host
-* git clone https://github.com/SegFaulty/RestInCloud.git
-* cd RestInCloud/docker
+* wget https://github.com/SegFaulty/RestInCloud/archive/master.tar.gz
+* tar -xzf master.tar.gz
+* cd RestInCloud-master
+* cd docker
 * change config.json
 * sh docker.sh
 
