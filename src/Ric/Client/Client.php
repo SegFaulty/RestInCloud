@@ -1,5 +1,13 @@
 <?php
 
+/**
+ * encryption
+ * http://www.shellhacks.com/en/Encrypt-And-Decrypt-Files-With-A-Password-Using-OpenSSL
+ * openssl enc -aes-256-cbc -salt -in file.txt -out file.txt.enc -k PASS
+ * openssl enc -aes-256-cbc -d -in file.txt.enc -out file.txt -k PASS
+ *
+ * Class Ric_Client_Client
+ */
 class Ric_Client_Client{
 
 	protected $server = '';

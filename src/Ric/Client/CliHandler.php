@@ -1,10 +1,6 @@
 <?php
 
 /**
- * encryption
- * http://www.shellhacks.com/en/Encrypt-And-Decrypt-Files-With-A-Password-Using-OpenSSL
- *
- *
  *
  * Class Ric_Client_CliHandler
  */
