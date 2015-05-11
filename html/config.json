@@ -1,6 +1,6 @@
 {
-    "hostPort": "0.0.0.0:3070",
-    "storeDir": "/var/ric/",
+    "hostPort": "ric1.local",
+    "storeDir": "/home/www/ric/html/data/",
     "quota": 10000,
     "adminToken": "admin",
     "writerToken": "writer",

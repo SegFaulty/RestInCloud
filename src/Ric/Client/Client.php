@@ -148,11 +148,13 @@ echo $msg.PHP_EOL; //todo logger
 		$fileUrl = $this->buildUrl($targetFileName, '', $params);
 		// Post
 		$this->logDebug('POST refresh to: '.$fileUrl.' with timestamp: '.$timestamp.'('.date('Y-m-d H:i:s', $timestamp).')');
+		$headers = [];
 		$response = trim(Ric_Rest_Client::post($fileUrl, [], $headers));
 		$this->checkServerResponse($response, $headers);
 		if( $response!=='1' ){
 			// Put
 			$this->logDebug('POST refresh failed, file has to be sent via PUT');
+			$headers = [];
 			$response = Ric_Rest_Client::putFile($fileUrl, $filePath, $headers);
 			$this->checkServerResponse($response, $headers);
 			$this->logDebug('PUT result:'. $response);
@@ -160,10 +162,33 @@ echo $msg.PHP_EOL; //todo logger
 			$this->logDebug('POST refresh succeeded, no file transfer necessary');
 		}
 		// Verify
+		$this->verify($targetFileName, $minReplicas, $sha1);
+		return true;
+	}
+
+	/**
+	 * @param $targetFileName
+	 * @param int $minReplicas
+	 * @param string $sha1
+	 * @param int $minSize
+	 * @param int $minTimestamp
+	 * @throws RuntimeException
+	 * @return bool
+	 */
+	public function verify($targetFileName, $minReplicas=null, $sha1=null, $minSize=null, $minTimestamp=null){
+		// Verify
 		$params = [];
-		$params['sha1'] = $sha1;
-		if( $minReplicas!==0 ){
+		if( $minReplicas!==null ){
 			$params['minReplicas'] = $minReplicas;
+		}
+		if( $sha1!==null ){
+			$params['sha1'] = $sha1;
+		}
+		if( $minSize!==null ){
+			$params['minSize'] = $minSize;
+		}
+		if( $minTimestamp!==null ){
+			$params['minTimestamp'] = $minTimestamp;
 		}
 		$fileUrl = $this->buildUrl($targetFileName, 'verify', $params);
 		$response = trim(Ric_Rest_Client::get($fileUrl, [], $headers));

@@ -3,12 +3,13 @@ tested on coreos
 
 ## Build
 * login to your docker host
-* wget https://github.com/SegFaulty/RestInCloud/archive/master.tar.gz
-* tar -xzf master.tar.gz
-* cd RestInCloud-master
-* cd docker
-* change config.json
-* sh docker.sh
+
+    wget https://github.com/SegFaulty/RestInCloud/archive/master.tar.gz
+    tar -xzf master.tar.gz
+    cd RestInCloud-master
+    cd docker
+    vi config.json
+    sh docker.sh
 
 ## Run
 * docker run -d -p 3070:3070 -v /var/ric3070:/var/ric/ ric-server

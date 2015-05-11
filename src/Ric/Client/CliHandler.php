@@ -1,5 +1,13 @@
 <?php
 
+/**
+ * encryption
+ * http://www.shellhacks.com/en/Encrypt-And-Decrypt-Files-With-A-Password-Using-OpenSSL
+ *
+ *
+ *
+ * Class Ric_Client_CliHandler
+ */
 class Ric_Client_CliHandler{
 
 	/**
@@ -37,6 +45,9 @@ class Ric_Client_CliHandler{
 			switch($command){
 				case 'backup':
 					$msg = self::commandBackup($client, $cli);
+					break;
+				case 'verify':
+					$msg = self::commandVerify($client, $cli);
 					break;
 				case 'restore':
 					$msg = self::commandRestore($client, $cli);
@@ -87,6 +98,18 @@ class Ric_Client_CliHandler{
 			$targetFileName = $cli->arguments[1];
 		}
 		$client->backup($resource, $targetFileName, $cli->getOption('retention'), $cli->getOption('timestamp'), $cli->getOption('minReplicas'), $cli->getOption('minSize'));
+		return 'OK';
+	}
+
+	/**
+	 * @param Ric_Client_Client $client
+	 * @param Ric_Client_Cli $cli
+	 * @return string
+	 * @throws RuntimeException
+	 */
+	static protected function commandVerify($client, $cli){
+		$targetFileName = $cli->arguments[0];
+		$client->verify($targetFileName, $cli->getOption('minReplicas'), $cli->getOption('sha1'), $cli->getOption('minSize'), $cli->getOption('minTimestamp'));
 		return 'OK';
 	}
 

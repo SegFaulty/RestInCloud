@@ -17,10 +17,10 @@ if( php_sapi_name()=='cli-server' ){
 
 	ini_set('display_errors', true);
 	ini_set('log_errors', true);
-	ini_set("error_log", '/home/www/coldStoreErrors.log');
+	ini_set("error_log", '/home/www/ricServerErrors.log');
 
-	$coldStore = new Ric_Server_Server(H::getIKS($_ENV, 'Ric_config', './config.json'));
-	$coldStore->handleRequest();
+	$ricServer = new Ric_Server_Server(H::getIKS($_ENV, 'Ric_config', './config.json'));
+	$ricServer->handleRequest();
 	return true; // if false, the internal server will serve the REQUEST_URI .. this is dangerous
 
 }
@@ -44,7 +44,11 @@ if( php_sapi_name()=='cli' ){
 	return 1;
 }
 
-die('unsupported php_sapi_name');
+// use in http or what ever sapi
+# $ricServer = new Ric_Server_Server('path_to/config.json'));
+# $ricServer->handleRequest();
+
+
 
 
 /**
@@ -130,8 +134,8 @@ class Ric_Server_Server {
 		if( $maxTimestamp<=1 OR $maxTimestamp>time()+86400 ){
 			throw new RuntimeException('invalid timestamp (now:'.time().')');
 		}
-		$coldStore = new Ric_Server_Server($storeDir);
-		echo H::json($coldStore->purge($maxTimestamp));
+		$ricServer = new Ric_Server_Server($storeDir);
+		echo H::json($ricServer->purge($maxTimestamp));
 	}
 
 	/**
@@ -235,9 +239,12 @@ class Ric_Server_Server {
 		$tmpFilePath = $tmpFile = sys_get_temp_dir().'/_'.__CLASS__.'_'.uniqid('', true);
 		$putData = fopen("php://input", "r");
 		$fp = fopen($tmpFilePath, "w");
-		stream_copy_to_stream($putData, $fp);
+		$bytesCopied = stream_copy_to_stream($putData, $fp);
 		fclose($fp);
 		fclose($putData);
+echo $bytesCopied.' bytes'.PHP_EOL;
+echo filesize($tmpFilePath).' tmp bytes'.PHP_EOL;
+
 
 		// get correct filePath
 		$filePath = $this->getFilePath(sha1_file($tmpFile));
@@ -266,7 +273,6 @@ class Ric_Server_Server {
 		if( $syncResult!='' ){
 			$result = 'WARNING'.' :'.$syncResult;
 		}
-
 		// todo verify
 
 		$this->executeRetention($filePath, $retention);
@@ -334,6 +340,8 @@ class Ric_Server_Server {
 				$this->actionRemoveServer();
 			}elseif( $action=='joinCluster' AND $this->auth('admin') ){
 				$this->actionJoinCluster();
+			}elseif( $action=='leaveCluster' AND $this->auth('admin') ){
+				$this->actionLeaveCluster();
 			}else{
 				throw new RuntimeException('unknown action or no file given [Post]', 400);
 			}
@@ -492,10 +500,11 @@ class Ric_Server_Server {
 	protected function actionJoinCluster(){
 		$server = H::getRP('joinCluster');
 		$ownServer = $this->getOwnHostPort();
-		$info = json_decode(Ric_Rest_Client::get('http://'.$server.'/', ['info'=>1,'token'=>$this->config['adminToken']]), true);
-		if( H::getIKS($info, 'serverTimestamp') ){
+		$response = Ric_Rest_Client::get('http://' . $server . '/', ['info' => 1, 'token' => $this->config['adminToken']]);
+		$info = json_decode($response, true);
+		if( isset($info['config']['servers']) ){
+			$servers = $info['config']['servers'];
 			$joinedServers = [];
-			$servers = H::getIKS($info, 'servers');
 			$servers[] = $server;
 			foreach( $servers as $clusterServer ){
 				$response = Ric_Rest_Client::post('http://' . $clusterServer . '/', ['action' => 'addServer', 'addServer' => $ownServer, 'token' => $this->config['adminToken']]);
@@ -512,6 +521,35 @@ class Ric_Server_Server {
 
 		}else{
 			throw new RuntimeException('cluster node is not responding properly', 400);
+		}
+		header('Content-Type: application/json');
+		echo H::json(['Status' => 'OK']);
+	}
+
+	/**
+	 * leaving a cluster
+	 * send removeServer to all servers
+	 * if it fails, the cluster is in inconsistent state, send leaveCluster command
+	 * @throws RuntimeException
+	 */
+	protected function actionLeaveCluster(){
+		$ownServer = $this->getOwnHostPort();
+		$errorMsg = '';
+		$leavedServers = [];
+		foreach( $this->config['servers'] as $clusterServer ){
+			$response = Ric_Rest_Client::post('http://' . $clusterServer . '/', ['action' => 'removeServer', 'removeServer' => $ownServer, 'token' => $this->config['adminToken']]);
+			$result = json_decode($response, true);
+			if( H::getIKS($result, 'Status')!='OK' ){
+				$errorMsg.= 'removeServer failed from '.$clusterServer.' failed! ['.$response.']';
+			}else{
+				$leavedServers[] = $clusterServer;
+			}
+		}
+		$this->config['servers'] = [];
+		$this->setRuntimeConfig('servers', $this->config['servers']);
+
+		if( $errorMsg!='' ){
+			throw new RuntimeException('leaveCluster failed! '.$errorMsg.' Inconsitent cluster state! (please remove me manually) succesfully removed from: '.join('; ', $leavedServers), 400);
 		}
 		header('Content-Type: application/json');
 		echo H::json(['Status' => 'OK']);
@@ -589,12 +627,12 @@ class Ric_Server_Server {
 	protected function getReplicaCount($filePath){
 		$replicas = 0;
 		list($fileName, $version) = $this->extractVersionFromFullFileName($filePath);
-
+		$sha1 = sha1_file($filePath);
 		foreach( $this->config['servers'] as $server ){
 			try{
 				$serverUrl = 'http://'.$server.'/';
 				// verify file
-				$url = $serverUrl.$fileName.'?verify&version='.$version.'&token='.$this->config['readerToken'];
+				$url = $serverUrl.$fileName.'?verify&version='.$version.'&sha1='.$sha1.'&minReplicas=0&token='.$this->config['readerToken']; // &minReplicas=0  otherwise loopOfDeath
 				$response = json_decode(Ric_Rest_Client::get($url), true);
 				if( H::getIKS($response, 'status')=='OK' ){
 					$replicas++;
@@ -666,13 +704,14 @@ class Ric_Server_Server {
 
 		$lines = [];
 		$baseFilePath = preg_replace('~___\w+$~', '', $filePath);
-		$index = 1;
+		$index = -1;
 		foreach( $this->getAllVersions($baseFilePath, $showDeleted) as $version=>$timeStamp ){
 			$filePath = $baseFilePath.'___'.$version;
-			$lines[] = ['index' => $index++] + $this->getFileInfo($filePath);
-			if( $limit>0 AND $limit<$index ){
+			$index++;
+			if( $limit<=$index ){
 				break;
 			}
+			$lines[] = ['index' => $index] + $this->getFileInfo($filePath);
 		}
 		header('Content-Type: application/json');
 		echo H::json($lines);
