@@ -36,6 +36,7 @@ class Ric_Client_Client{
 	 */
 	protected function log($msg){
 		$this->log.= $msg.PHP_EOL;
+echo $msg.PHP_EOL; //todo logger
 	}
 
 	/**
@@ -68,18 +69,22 @@ class Ric_Client_Client{
 	}
 
 	/**
-	 * @param string $result
+	 * @param string $response
 	 * @param array $headers
+	 * @param string $responseFilePAth
 	 * @throws RuntimeException
 	 */
-	protected function checkServerResult($result, $headers){
+	protected function checkServerResult($response, $headers, $responseFilePAth=''){
 		if( $headers['Http-Code']>=400 ){
 			$msg = 'Failed: with code: '.$headers['Http-Code'];
-			$result = json_decode($result, true);
+			if( $response=='' AND $responseFilePAth!='' AND file_exists($responseFilePAth) AND filesize($responseFilePAth)<100000 ){
+				$response = file_get_contents($responseFilePAth);
+			}
+			$result = json_decode($response, true);
 			if( !empty($result['error']) ){
 				$msg.= ' Error: '.$result['error'];
 			}else{
-				$msg.= $result;
+				$msg.= $response;
 			}
 			throw new RuntimeException($msg);
 		}
@@ -134,7 +139,7 @@ class Ric_Client_Client{
 		$params['sha1'] = $sha1;
 		$params['timestamp'] = $timestamp;
 		if( $retention ){
-			$params['$retention'] = $retention;
+			$params['retention'] = $retention;
 		}
 		$fileUrl = $this->buildUrl($targetFileName, '', $params);
 		// Post
@@ -165,6 +170,53 @@ class Ric_Client_Client{
 			throw new RuntimeException('verify failed: '.$response);
 		}
 		return true;
+	}
+
+	/**
+	 *
+	 * @param string $targetFileName
+	 * @param string $resource
+	 * @param string $version
+	 * @throws RuntimeException
+	 * @return bool
+	 */
+	public function restore($targetFileName, $resource, $version=null){
+		$tmpFilePath = $this->getTmpFilePath();
+		$params = [];
+		if( $version ){
+			$params['version'] = $version;
+		}
+		$fileUrl = $this->buildUrl($targetFileName, '', $params);
+		// get
+		$oFH = fopen($tmpFilePath, 'w+');
+		$this->logDebug('get: '.$fileUrl);
+		Ric_Rest_Client::get($fileUrl, [], $headers, $oFH);
+		$this->checkServerResult('', $headers, $tmpFilePath);
+		$this->restoreResourceFromFile($tmpFilePath, $resource);
+		return true;
+	}
+
+	/**
+	 * @param string $filePath
+	 * @param string $resource
+	 * @throws RuntimeException
+	 */
+	protected function restoreResourceFromFile($filePath, $resource){
+		$this->logDebug('downloaded as tmpFile: '.$filePath. '['.filesize($filePath).']');
+		if( file_exists($resource) ){
+			throw new RuntimeException('resource ['.realpath($resource).'] (file or dir) already exists! restore skipped');
+		}
+		if( preg_match('~^mysql://~', $resource) ){
+			throw new RuntimeException('resource type mysql not implemented');
+		}elseif( preg_match('~^redis://~', $resource) ){ // redis://pass@123.234.23.23:3343/mykeys_* <- dump as msgpack (ttls?)
+			throw new RuntimeException('resource type mysql not implemented');
+		}else{
+			// restore as file
+			$this->logDebug('restore as file: '.$resource);
+			if( !copy($filePath, $resource) ){
+				throw new RuntimeException('restore as file: '.$resource.' failed!');
+			}
+		}
 	}
 
 	/**
@@ -201,5 +253,33 @@ class Ric_Client_Client{
 	public function getHelp($command){
 		$helpString = 'help '.$command;
 		return $helpString;
+	}
+
+
+	static protected $tmpFilePaths = [];
+
+	/**
+	 * return filePath
+	 * file will be delete on script termination (via register_shutdown_function deleteTmpFiles)
+	 * extension ".jpg" for imagemagick zum beispiel
+	 * @param string $extension
+	 * @return string
+	 */
+	static public function getTmpFilePath($extension=''){
+		$tmpFile = sys_get_temp_dir().'/_'.__CLASS__.'_'.uniqid('', true).$extension;
+		register_shutdown_function(array(__CLASS__, 'deleteTmpFiles'));
+		self::$tmpFilePaths[] = $tmpFile;
+		return $tmpFile;
+	}
+
+	/**
+	 * bereinige all tmpFiles
+	 */
+	static public function deleteTmpFiles(){
+		foreach( self::$tmpFilePaths as $tmpFilePath ){
+			if( file_exists($tmpFilePath) ){
+				unlink($tmpFilePath);
+			}
+		}
 	}
 }

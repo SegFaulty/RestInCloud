@@ -19,6 +19,9 @@ class Ric_Client_CliHandler{
 				case 'backup':
 					$msg = self::commandBackup($client, $cli);
 					break;
+				case 'restore':
+					$msg = self::commandRestore($client, $cli);
+					break;
 				case 'help':
 					$msg = $client->getHelp(reset($cli->arguments));
 					break;
@@ -58,6 +61,23 @@ class Ric_Client_CliHandler{
 			$targetFileName = $cli->arguments[1];
 		}
 		$client->backup($resource, $targetFileName, $cli->getOption('retention'), $cli->getOption('timestamp'), $cli->getOption('minReplicas'), $cli->getOption('minSize'));
+		return 'OK';
+	}
+
+	/**
+	 * @param Ric_Client_Client $client
+	 * @param Ric_Client_Cli $cli
+	 * @return string
+	 * @throws RuntimeException
+	 */
+	static protected function commandRestore($client, $cli){
+		$targetFileName = $cli->arguments[0];
+		if( count($cli->arguments[0])==1 ){
+			$resource = getcwd().'/'.basename($targetFileName);
+		}else{
+			$resource = $cli->arguments[1];
+		}
+		$client->restore($targetFileName, $resource, $cli->getOption('version'));
 		return 'OK';
 	}
 
