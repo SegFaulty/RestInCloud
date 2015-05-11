@@ -55,7 +55,7 @@ class Ric_Server_Server {
 	static $markDeletedTimestamp = 1422222222; // 2015-01-25 22:43:42
 
 	protected $defaultConfig = [
-		'storeDir' => '/tmp/',
+		'storeDir' => '/tmp/ric/',
 		'quota' => 0,
 		'servers' => [],
 		'adminToken' => 'admin',
@@ -103,6 +103,8 @@ class Ric_Server_Server {
 		}catch(Exception $e){
 			if( $e->getCode()===400 ){
 				header('HTTP/1.1 400 Bad Request', true, 400);
+			}elseif( $e->getCode()===403 ){
+				header('HTTP/1.1 403 Forbidden', true, 403);
 			}elseif( $e->getCode()===404 ){
 				header('HTTP/1.1 404 Not found', true, 404);
 			}elseif( $e->getCode()===507 ){
@@ -437,7 +439,7 @@ class Ric_Server_Server {
 		}
 
 		if( !$isAuth AND $isRequired ){
-			throw new RuntimeException('login needed', 400);
+			throw new RuntimeException('login needed', 403);
 		}
 
 		return $isAuth;
@@ -509,11 +511,12 @@ class Ric_Server_Server {
 		$sha1 = H::getRP('sha1', '');
 		$minSize = H::getRP('minSize', 1);
 		$minTimestamp = H::getRP('minTimestamp', 0); // default no check
-		$minReplicas = H::getRP('minReplicas'); // if parameter omitted, don't check replicas!!!! or deadlock
+		$minReplicasDefault = max(1, count($this->config['servers'])-1); // min 1, or 1 invalid of current servers
+		$minReplicas = H::getRP('minReplicas', $minReplicasDefault); // if parameter omitted, don't check replicas!!!! or deadlock
 
 		$fileInfo = $this->getFileInfo($filePath);
 		$fileInfo['replicas'] = false;
-		if( $minReplicas!==null ){
+		if( $minReplicas>0 ){
 			$fileInfo['replicas'] = $this->getReplicaCount($filePath);
 		}
 		if( $sha1!='' AND $fileInfo['sha1']!=$sha1 ){

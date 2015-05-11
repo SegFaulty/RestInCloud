@@ -16,7 +16,7 @@ class Ric_Rest_Client {
 	 * @param string $url
 	 * @param array $parameters
 	 * @param array $headers
-	 * @return array
+	 * @return string
 	 */
 	static public function head($url, $parameters=[], &$headers=[]){
 		return self::doRequest($url, 'HEAD', $parameters, $headers);
@@ -27,7 +27,7 @@ class Ric_Rest_Client {
 	 * @param array $parameters
 	 * @param array $headers
 	 * @param null|resource $outputFileHandle
-	 * @return array
+	 * @return string
 	 */
 	static public function get($url, $parameters=[], &$headers=[], $outputFileHandle=null){
 		return self::doRequest($url, 'GET', $parameters, $headers, $curl, $outputFileHandle);
@@ -41,7 +41,7 @@ class Ric_Rest_Client {
 	 * @param string|array $dataStringOrArray
 	 * @param array $headers
 	 * @param null|resource $outputFileHandle
-	 * @return array
+	 * @return string
 	 */
 	static public function post($url, $dataStringOrArray=null, &$headers=[], $outputFileHandle=null){
 		return self::doRequest($url, 'POST', $dataStringOrArray, $headers, $curl, $outputFileHandle);
@@ -52,7 +52,7 @@ class Ric_Rest_Client {
 	 * @param string|array $dataStringOrArray
 	 * @param array $headers
 	 * @param null|resource $outputFileHandle
-	 * @return array
+	 * @return string
 	 */
 	static public function put($url, $dataStringOrArray=null, &$headers=[], $outputFileHandle=null){
 		return self::doRequest($url, 'PUT', $dataStringOrArray, $headers, $curl, $outputFileHandle);
@@ -63,7 +63,7 @@ class Ric_Rest_Client {
 	 * @param string $filePath
 	 * @param array $headers
 	 * @param null|resource $outputFileHandle
-	 * @return array
+	 * @return string
 	 */
 	static public function putFile($url, $filePath, &$headers=[], $outputFileHandle=null){
 		return self::doRequest($url, 'PUT-FILE', $filePath, $headers, $curl, $outputFileHandle);
@@ -73,7 +73,7 @@ class Ric_Rest_Client {
 	 * @param string $url
 	 * @param array $data
 	 * @param array $headers
-	 * @return array
+	 * @return string
 	 */
 	static public function delete($url, $data=[], &$headers=[]){
 		return self::doRequest($url, 'DELETE', $data, $headers);
@@ -90,7 +90,7 @@ class Ric_Rest_Client {
 	 * @param bool|null|resource $curl
 	 * @param null|resource $outputFileHandle
 	 * @throws RuntimeException
-	 * @return array
+	 * @return string
 	 */
 	static public function doRequest($url, $method='GET', $data, &$headers=[], &$curl=false, $outputFileHandle=null){
 
@@ -143,8 +143,8 @@ class Ric_Rest_Client {
 				break;
 			case 'PUT-FILE':
 				$filePath = $data;
-				if( !file_exists($filePath) ){
-					throw new RuntimeException('put file: file '.$filePath.' not found!');
+				if( !is_file($filePath) ){
+					throw new RuntimeException('put file: file '.$filePath.' not found or not a regular file');
 				}
 				$fh = fopen($filePath, 'rb');
 				curl_setopt($ch, CURLOPT_PUT, true);

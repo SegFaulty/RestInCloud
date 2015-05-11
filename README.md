@@ -35,8 +35,13 @@ simple restfully dockerized distributed open source cloud backup server ;-)
  * GET http://my.coldstore.server.de/error.log?head=20 - show first n lines of the file
  * GET http://my.coldstore.server.de/error.log?size - return the filesize
  * GET http://my.coldstore.server.de/error.log?grep=EAN:.*\d+501 - scan the file for this (regex) pattern
- * GET http://my.coldstore.server.de/error.log?verify&sha=1234ef23&minSize=40000&minReplicas=2&minTimestamp=14234234
-    - verify that the file (1) exists, (2) sha1, (3) size >40k [default:1], (4) fileTime>=minTimestamp [default:8d], (5) min 2 replicas (3 files) [default:0]
+ * GET http://my.coldstore.server.de/error.log?verify&minSize=40000&minReplicas=2&minTimestamp=14234234&sha=1234ef23
+    - verify that the file
+    - (1) exists,
+    - (2) size >40k [default:1],
+    - (3) fileTime>=minTimestamp [default:8d],
+    - (4) min 2 replicas (3 files) [default:max(1,count(servers)-1)]
+    - (5) sha1, (if sha give, the size is irrelevant)
     - returns json result with status: OK/WARNING/CRITICAL, a msg and fileInfo
 
  * check php Server.php for commandline (purge)

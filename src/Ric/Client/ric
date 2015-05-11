@@ -1,0 +1,14 @@
+#!/usr/bin/php -d variables_order=EGPCS
+<?php
+
+require_once __DIR__.'/CliHandler.php';
+require_once __DIR__.'/Client.php';
+require_once __DIR__.'/Cli.php';
+require_once __DIR__.'/../Rest/Client.php';
+exit(Ric_Client_CliHandler::handleExecute($argv, $_ENV)); // command line status
+
+
+
+
+
+
