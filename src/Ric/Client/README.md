@@ -1,23 +1,27 @@
 # RestInCloud Client
 
 
-## help global
+## Help global
 
 ### commands
 
+* ric help - show help
 * ric backup - store a a resource (file/dir/dump) in RestInCloud Backup Server
 * ric restore - restore a backuped resource
 * ric verify - verify if a resource is valid backuped
 * ric delete - delete a resource
 * ric admin - configure RestInCloud-Cluster
 
+use ric help {command} for command details
+
 ### global options
 
-* --auth token  default: ENV ricAuth
+* --verbose show debug details
+* --auth {token}  default: ENV ricAuth
 * --server RicServer default: ENV ricServer
 * / --host hostname default: ENV hostname (for default targetnames)
 
-## help backup
+## Help backup
     ric backup {resource} [{targetFaileName}] [options]
 
     ric backup /home/www/ric/config/
@@ -38,7 +42,7 @@ ablauf:
 * --minReplicas default: max(1, count(servers)-1)
 * --minSize default: 1
 
-## help restore
+## Help restore
 
     ric restore hostname%??%??homewww/ric/config.tar.gz --target=/tmp/restore/
 
@@ -48,7 +52,7 @@ ablauf:
 * --name zielname im backup default: hostname:encode(source)
 * --target local target  (file/dir/database)
 
-## help verify
+## Help verify
 
     ric verify /home/www/ric/config/ --server=ric.example.com
 
@@ -66,9 +70,12 @@ ablauf:
 * --sicServer default ENV: sicServer
 // setzt sic auf critical, if verified failed
 
-## help admin
+## Help admin
 
-ric adminAddServer
+    ric admin info
+    ric admin health
+    ric admin addServer {host:port}
+    ric admin removeServer {host:port}
 
 ## Sic integration
 

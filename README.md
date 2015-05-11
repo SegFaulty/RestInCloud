@@ -47,7 +47,7 @@ simple restfully dockerized distributed open source cloud backup server ;-)
  * check php Server.php for commandline (purge)
 
  admin Commands:
- * addServer=s1.cs.io:3723 - add Server to local list,
+ * action=addServer =s1.cs.io:3723 - add Server to local list,
  * removeServer=s1.cs.io:3723 - remove Server from local list
  * removeServer=all - remove all Servers from local list
 

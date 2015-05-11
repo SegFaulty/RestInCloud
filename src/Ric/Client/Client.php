@@ -13,7 +13,7 @@ class Ric_Client_Client{
 	 */
 	public function __construct($serverHostPort, $auth){
 		$this->server = $serverHostPort;
-		$this->log('server:'.$serverHostPort);
+		$this->logDebug('server:'.$serverHostPort);
 		$this->auth = $auth;
 	}
 
@@ -28,7 +28,7 @@ class Ric_Client_Client{
 	 * @param $bool
 	 */
 	public function setDebug($bool){
-		$this->debug = true AND $bool;
+		$this->debug = (true AND $bool);
 	}
 
 	/**
@@ -36,7 +36,6 @@ class Ric_Client_Client{
 	 */
 	protected function log($msg){
 		$this->log.= $msg.PHP_EOL;
-echo $msg.PHP_EOL; //todo logger
 	}
 
 	/**
@@ -45,6 +44,7 @@ echo $msg.PHP_EOL; //todo logger
 	protected function logDebug($msg){
 		if( $this->debug ){
 			$this->log.= date('Y-m-d H:i:s').' '.$msg.PHP_EOL;
+echo $msg.PHP_EOL; //todo logger
 		}
 	}
 
@@ -61,10 +61,11 @@ echo $msg.PHP_EOL; //todo logger
 		if( $this->auth!='' ){
 			$parameters+= ['token'=>$this->auth];  // add token
 		}
+		$url.= '?'.$command;
 		if( !empty($parameters) ){
-			$url.= '?'.$command.'&'.http_build_query($parameters);
+			$url.= '&'.http_build_query($parameters);
 		}
-		$this->log(__METHOD__.' url:'.$url);
+		$this->logDebug(__METHOD__.' url:'.$url);
 		return $url;
 	}
 
@@ -74,7 +75,10 @@ echo $msg.PHP_EOL; //todo logger
 	 * @param string $responseFilePAth
 	 * @throws RuntimeException
 	 */
-	protected function checkServerResult($response, $headers, $responseFilePAth=''){
+	protected function checkServerResponse($response, $headers, $responseFilePAth=''){
+		if( !isset($headers['Http-Code']) ){
+			throw new RuntimeException('no api response code');
+		}
 		if( $headers['Http-Code']>=400 ){
 			$msg = 'Failed: with code: '.$headers['Http-Code'];
 			if( $response=='' AND $responseFilePAth!='' AND file_exists($responseFilePAth) AND filesize($responseFilePAth)<100000 ){
@@ -111,7 +115,7 @@ echo $msg.PHP_EOL; //todo logger
 			$params['noSync'] = 1;
 		}
 		$result = Ric_Rest_Client::putFile($this->buildUrl($name, '', $params), $filePath, $headers);
-		$this->checkServerResult($result, $headers);
+		$this->checkServerResponse($result, $headers);
 		return $result;
 	}
 
@@ -145,12 +149,12 @@ echo $msg.PHP_EOL; //todo logger
 		// Post
 		$this->logDebug('POST refresh to: '.$fileUrl.' with timestamp: '.$timestamp.'('.date('Y-m-d H:i:s', $timestamp).')');
 		$response = trim(Ric_Rest_Client::post($fileUrl, [], $headers));
-		$this->checkServerResult($response, $headers);
+		$this->checkServerResponse($response, $headers);
 		if( $response!=='1' ){
 			// Put
 			$this->logDebug('POST refresh failed, file has to be sent via PUT');
 			$response = Ric_Rest_Client::putFile($fileUrl, $filePath, $headers);
-			$this->checkServerResult($response, $headers);
+			$this->checkServerResponse($response, $headers);
 			$this->logDebug('PUT result:'. $response);
 		}else{
 			$this->logDebug('POST refresh succeeded, no file transfer necessary');
@@ -163,7 +167,7 @@ echo $msg.PHP_EOL; //todo logger
 		}
 		$fileUrl = $this->buildUrl($targetFileName, 'verify', $params);
 		$response = trim(Ric_Rest_Client::get($fileUrl, [], $headers));
-		$this->checkServerResult($response, $headers);
+		$this->checkServerResponse($response, $headers);
 		$this->logDebug('Verify ('.$fileUrl.') result: '.$response);
 		$result = json_decode($response, true);
 		if( !isset($result['status']) OR $result['status']!='OK' ){
@@ -191,7 +195,7 @@ echo $msg.PHP_EOL; //todo logger
 		$oFH = fopen($tmpFilePath, 'w+');
 		$this->logDebug('get: '.$fileUrl);
 		Ric_Rest_Client::get($fileUrl, [], $headers, $oFH);
-		$this->checkServerResult('', $headers, $tmpFilePath);
+		$this->checkServerResponse('', $headers, $tmpFilePath);
 		$this->restoreResourceFromFile($tmpFilePath, $resource);
 		return true;
 	}
@@ -247,11 +251,96 @@ echo $msg.PHP_EOL; //todo logger
 	}
 
 	/**
+	 * delete on backupClster
+	 * @param string $targetFileName
+	 * @param string|null $version
+	 * @return string
+	 */
+	public function delete($targetFileName, $version=null){
+		$params = [];
+		if( $version!==null ){
+			$params['version'] = $version;
+		}
+		$response = Ric_Rest_Client::delete($this->buildUrl($targetFileName, 'delete'), [], $headers);
+		$this->checkServerResponse($response, $headers);
+		return $response;
+	}
+
+	/**
+	 * get server info
+	 * if admin, you get more info
+	 * @return array
+	 */
+	public function info(){
+		$response = Ric_Rest_Client::get($this->buildUrl('', 'info'), [], $headers);
+		$this->checkServerResponse($response, $headers);
+		return json_decode($response, true);
+	}
+
+	/**
+	 * check cluster health
+	 * @return string
+	 */
+	public function health(){
+		$response = Ric_Rest_Client::get($this->buildUrl('', 'health'), [], $headers);
+		$this->checkServerResponse($response, $headers);
+		return $response;
+	}
+
+	/**
+	 * @param $serverHostPort
+	 * @return string
+	 */
+	public function addServer($serverHostPort){
+		$response = Ric_Rest_Client::post($this->buildUrl('', '', ['action'=>'addServer', 'addServer'=>$serverHostPort]), [], $headers);
+		$this->checkServerResponse($response, $headers);
+		return $response;
+	}
+
+	/**
+	 * @param $serverHostPort
+	 * @return string
+	 */
+	public function removeServer($serverHostPort){
+		$response = Ric_Rest_Client::post($this->buildUrl('', '', ['action'=>'removeServer', 'removeServer'=>$serverHostPort]), [], $headers);
+		$this->checkServerResponse($response, $headers);
+		return $response;
+	}
+
+	/**
+	 * @param $serverHostPort
+	 * @return string
+	 */
+	public function joinCluster($serverHostPort){
+		$response = Ric_Rest_Client::post($this->buildUrl('', '', ['action'=>'joinCluster', 'joinCluster'=>$serverHostPort]), [], $headers);
+		$this->checkServerResponse($response, $headers);
+		return $response;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function leaveCluster(){
+		$response = Ric_Rest_Client::post($this->buildUrl('', '', ['action'=>'leaveCluster']), [], $headers);
+		$this->checkServerResponse($response, $headers);
+		return $response;
+	}
+
+
+	/**
 	 * @param string $command
 	 * @return string
 	 */
-	public function getHelp($command){
-		$helpString = 'help '.$command;
+	public function getHelp($command='global'){
+		$helpString = '';
+		// extract from README-md
+		$readMePath = __DIR__.'/README.md';
+		if( file_exists($readMePath) ){
+			$helpString = file_get_contents($readMePath);
+		}
+		if($command and preg_match('~\n## Help '.preg_quote($command, '~').'(.*?)(\n## |$)~s', $helpString, $matches) ){
+			$helpString = $matches[1];
+		}
 		return $helpString;
 	}
 

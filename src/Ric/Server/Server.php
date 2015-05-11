@@ -55,6 +55,7 @@ class Ric_Server_Server {
 	static $markDeletedTimestamp = 1422222222; // 2015-01-25 22:43:42
 
 	protected $defaultConfig = [
+		'hostPort' => '', // h172.17.8.101:3070
 		'storeDir' => '/tmp/ric/',
 		'quota' => 0,
 		'servers' => [],
@@ -93,7 +94,7 @@ class Ric_Server_Server {
 				$this->handlePostRequest();
 			}elseif( $_SERVER['REQUEST_METHOD']=='GET' ){
 				$this->handleGetRequest();
-			}elseif( $_SERVER['REQUEST_METHOD']=='DELETE' ){
+			}elseif( $_SERVER['REQUEST_METHOD']=='DELETE' OR H::getRP('method')=='delete' ){
 				if( $this->auth('writer') ){
 					$this->actionDelete();
 				}
@@ -293,6 +294,8 @@ class Ric_Server_Server {
 				$this->actionHelp();
 			}elseif( $action=='info' ){
 				$this->actionInfo();
+			}elseif( $action=='health' ){
+				$this->actionHealth();
 			}elseif( $action=='phpInfo' ){
 				phpinfo();
 			}else{
@@ -329,11 +332,11 @@ class Ric_Server_Server {
 				$this->actionAddServer();
 			}elseif( $action=='removeServer' AND $this->auth('admin') ){
 				$this->actionRemoveServer();
+			}elseif( $action=='joinCluster' AND $this->auth('admin') ){
+				$this->actionJoinCluster();
 			}else{
-				throw new RuntimeException('unknown action or no file given', 400);
+				throw new RuntimeException('unknown action or no file given [Post]', 400);
 			}
-		}elseif( $action=='delete' ){
-			$this->actionDelete();
 		}else{
 			// not "/" .. this is a file, refresh action
 			$this->actionPostRefresh();
@@ -364,7 +367,7 @@ class Ric_Server_Server {
 				$result = '1';
 			}
 		}else{
-			throw new RuntimeException('file not found', 404);
+			// file not found  > $result = '0';
 		}
 		echo $result.PHP_EOL;
 	}
@@ -481,6 +484,41 @@ class Ric_Server_Server {
 	}
 
 	/**
+	 * join a existing cluster
+	 * get all servers of the given clusterMember an send an addServer to all
+	 * if it fails, the cluster is in inconsistent state, send leaveCluster command
+	 * @throws RuntimeException
+	 */
+	protected function actionJoinCluster(){
+		$server = H::getRP('joinCluster');
+		$ownServer = $this->getOwnHostPort();
+		$info = json_decode(Ric_Rest_Client::get('http://'.$server.'/', ['info'=>1,'token'=>$this->config['adminToken']]), true);
+		if( H::getIKS($info, 'serverTimestamp') ){
+			$joinedServers = [];
+			$servers = H::getIKS($info, 'servers');
+			$servers[] = $server;
+			foreach( $servers as $clusterServer ){
+				$response = Ric_Rest_Client::post('http://' . $clusterServer . '/', ['action' => 'addServer', 'addServer' => $ownServer, 'token' => $this->config['adminToken']]);
+				$result = json_decode($response, true);
+				if( H::getIKS($result, 'Status')!='OK' ){
+					throw new RuntimeException('join cluster failed! addServer to '.$clusterServer.' failed! ['.$response.'] Inconsitent cluster state! I\'m added to this servers (please remove me): '.join('; ', $joinedServers), 400);
+				}
+				$joinedServers[] = $clusterServer;
+			}
+			$this->config['servers'] = $servers;
+			$this->setRuntimeConfig('servers', $this->config['servers']);
+
+			// todo  pull a dump and restore
+
+		}else{
+			throw new RuntimeException('cluster node is not responding properly', 400);
+		}
+		header('Content-Type: application/json');
+		echo H::json(['Status' => 'OK']);
+	}
+
+
+	/**
 	 * mark one or all versions of the File as deleted
 	 */
 	protected function actionDelete(){
@@ -495,7 +533,7 @@ class Ric_Server_Server {
 			}
 		}
 		header('Content-Type: application/json');
-		echo H::json(['fileDeleted' => $filesDeleted]);
+		echo H::json(['filesDeleted' => $filesDeleted]);
 	}
 
 	/**
@@ -683,6 +721,14 @@ class Ric_Server_Server {
 	 * get server info
 	 */
 	protected function actionInfo(){
+		header('Content-Type: application/json');
+		echo H::json($this->buildInfo());
+	}
+
+	/**
+	 * get server info
+	 */
+	protected function buildInfo(){
 		$info['serverTimestamp'] = time();
 		$directorySize = $this->getDirectorySize();
 		$directorySizeMb = ceil($directorySize /1024/1024); // IN MB
@@ -703,9 +749,48 @@ class Ric_Server_Server {
 			}
 			$info['defaultConfig'] = $this->defaultConfig;
 		}
-		header('Content-Type: application/json');
-		echo H::json($info);
+		return $info;
 	}
+
+	/**
+	 * get server info
+	 */
+	protected function actionHealth(){
+		$status = 'OK';
+		$msg = '';
+
+		$failedServers = [];
+		$serverInfos = [];
+		$serverInfos[] = $this->buildInfo();
+		foreach( $this->config['servers'] as $server ){
+			try{
+				$url = 'http://'.$server.'/?info&token='.$this->config['adminToken'];
+				$result = json_decode(Ric_Rest_Client::get($url), true);
+				if( !array_key_exists('usageByte', $result) ){
+					throw new HttpRuntimeException('info failed');
+				}
+				if( array_key_exists('quotaFreeLevel', $result) AND $result['quotaFreeLevel'] ){
+					throw new HttpRuntimeException('quotaFreeLevel:'. $result['quotaFreeLevel'].'%');
+				}
+				$serverInfos[] = $result;
+			}catch(Exception $e){
+				$failedServers[$server] = $e->getMessage();
+			}
+		}
+		if( !empty($failedServers) ){
+			$status = 'WARNING';
+			foreach( $failedServers as $server=>$serverError ){
+				$msg.= $server.' '.$serverError.PHP_EOL;
+			}
+		}
+		if( count($serverInfos)<2 OR count($failedServers)>1 ){
+			$status = 'CRITICAL';
+			$msg.= 'replication critical servers running: '.count($serverInfos).' remoteServer configured: '.count($this->config['servers']).PHP_EOL;
+		}
+
+		echo $status.PHP_EOL.$msg;
+	}
+
 	/**
 	 * help
 	 */
@@ -860,14 +945,14 @@ class Ric_Server_Server {
 			if( !$version ){ // get the newest version
 				$version = reset(array_keys($this->getAllVersions($fileDir.$fileName)));
 				if( !$version ){
-					throw new RuntimeException('file not found');
+					throw new RuntimeException('no version of file not found', 404);
 				}
 			}
 			$filePath.= $fileDir.$fileName.'___'.$version;
 		}
 		// if we not create a new file, it must exists
 		if( $sha1=='' AND $filePath AND !file_exists($filePath) ){
-			throw new RuntimeException('File not found!'.$filePath, 404);
+			throw new RuntimeException('File not found! '.$filePath, 404);
 		}
 
 		return $filePath;
@@ -908,8 +993,16 @@ class Ric_Server_Server {
 		return [$fileName, $version];
 	}
 
-
-
+	/**
+	 * get the own address
+	 * @throws RuntimeException
+	 */
+	protected function getOwnHostPort(){
+		if( empty($this->config['hostPort']) ){
+			throw new RuntimeException('hostPort in config is missing, can not perform remote operation, please set "hostPort" to a reachable value (ric.example.com:3333)');
+		}
+		return $this->config['hostPort'];
+	}
 
 	/**
 	 * return same regEx if valid

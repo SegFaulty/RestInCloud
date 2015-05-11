@@ -12,6 +12,25 @@ class Ric_Client_CliHandler{
 		$msg = '';
 		$cli = new Ric_Client_Cli($argv, $env);
 		$command = array_shift($cli->arguments);
+		if( $cli->getOption('verbose') ){
+			echo 'command: '.$command.PHP_EOL;
+			echo 'arguments: ';
+			foreach( $cli->arguments as $value ){
+				echo '"'.$value.'", ';
+			}
+			echo PHP_EOL;
+			echo 'options: ';
+			foreach( $cli->options as $key=>$value ){
+				echo $key.': "'.$value.'", ';
+			}
+			echo PHP_EOL;
+			echo 'environment: ';
+			foreach( $cli->env as $key=>$value ){
+				echo $key.': "'.$value.'", ';
+			}
+			echo PHP_EOL;
+		}
+
 		try{
 			$client = new Ric_Client_Client($cli->getOption('server'), $cli->getOption('auth'));
 			$client->setDebug($cli->getOption('verbose'));
@@ -22,11 +41,18 @@ class Ric_Client_CliHandler{
 				case 'restore':
 					$msg = self::commandRestore($client, $cli);
 					break;
+				case 'delete':
+					$msg = self::commandDelete($client, $cli);
+					break;
+				case 'admin':
+					$msg = self::commandAdmin($client, $cli);
+					break;
 				case 'help':
 					$msg = $client->getHelp(reset($cli->arguments));
 					break;
 				default:
-					throw new RuntimeException('command not found');
+					throw new RuntimeException('command expected'.PHP_EOL.$client->getHelp());
+
 			}
 			if( $cli->getOption('verbose') ){
 				echo $client->getLog();
@@ -79,6 +105,47 @@ class Ric_Client_CliHandler{
 		}
 		$client->restore($targetFileName, $resource, $cli->getOption('version'));
 		return 'OK';
+	}
+
+	/**
+	 * @param Ric_Client_Client $client
+	 * @param Ric_Client_Cli $cli
+	 * @return string
+	 * @throws RuntimeException
+	 */
+	static protected function commandDelete($client, $cli){
+		$targetFileName = $cli->arguments[0];
+		return $client->delete($targetFileName, $cli->getOption('version'));
+	}
+
+	/**
+	 * @param Ric_Client_Client $client
+	 * @param Ric_Client_Cli $cli
+	 * @return string
+	 * @throws RuntimeException
+	 */
+	static protected function commandAdmin($client, $cli){
+		$msg = '';
+		if( count($cli->arguments)==0 ){
+			throw new RuntimeException('admin command expected'.PHP_EOL.$client->getHelp('admin'));
+		}
+		$adminCommand = $cli->arguments[0];
+		if( $adminCommand=='info' ){
+			$msg = json_encode($client->info(), JSON_PRETTY_PRINT);
+		}elseif( $adminCommand=='health' ){
+			$msg = $client->health();
+		}elseif( $adminCommand=='addServer' ){
+			$msg = $client->addServer($cli->arguments[1]);
+		}elseif( $adminCommand=='removeServer' ){
+			$msg = $client->removeServer($cli->arguments[1]);
+		}elseif( $adminCommand=='joinCluster' ){
+			$msg = $client->joinCluster($cli->arguments[1]);
+		}elseif( $adminCommand=='leaveCluster' ){
+			$msg = $client->leaveCluster();
+		}else{
+			throw new RuntimeException('unknown admin command');
+		}
+		return $msg;
 	}
 
 	/**
