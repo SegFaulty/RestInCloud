@@ -1,7 +1,7 @@
 <?php
 
 /**
- *
+ * todo check for to many arguments, helperFunction ?
  * Class Ric_Client_CliHandler
  */
 class Ric_Client_CliHandler{
@@ -13,7 +13,6 @@ class Ric_Client_CliHandler{
 	 */
 	static public function handleExecute($argv, $env){
 		$status = true;
-		$msg = '';
 		$cli = new Ric_Client_Cli($argv, $env);
 		$command = array_shift($cli->arguments);
 		if( $cli->getOption('verbose') ){
@@ -44,6 +43,9 @@ class Ric_Client_CliHandler{
 					break;
 				case 'verify':
 					$msg = self::commandVerify($client, $cli);
+					break;
+				case 'list':
+					$msg = self::commandList($client, $cli);
 					break;
 				case 'restore':
 					$msg = self::commandRestore($client, $cli);
@@ -84,7 +86,7 @@ class Ric_Client_CliHandler{
 	 */
 	static protected function commandBackup($client, $cli){
 		$resource = $cli->arguments[0];
-		if( count($cli->arguments[0])==1 ){
+		if( count($cli->arguments)==1 ){
 			if( is_file($resource) ){
 				$targetFileName = basename($resource);
 			}else{
@@ -93,7 +95,7 @@ class Ric_Client_CliHandler{
 		}else{
 			$targetFileName = $cli->arguments[1];
 		}
-		$client->backup($resource, $targetFileName, $cli->getOption('retention'), $cli->getOption('timestamp'), $cli->getOption('minReplicas'), $cli->getOption('minSize'));
+		$client->backup($resource, $targetFileName, $cli->getOption('pass'), $cli->getOption('retention'), $cli->getOption('timestamp'), $cli->getOption('minReplicas'), $cli->getOption('minSize'));
 		return 'OK';
 	}
 
@@ -115,14 +117,37 @@ class Ric_Client_CliHandler{
 	 * @return string
 	 * @throws RuntimeException
 	 */
+	static protected function commandList($client, $cli){
+		$msg = '';
+		$targetFileName = $cli->arguments[0];
+		$versions = $client->versions($targetFileName);
+		$msg.= $targetFileName.PHP_EOL;
+		$msg.= 'Date       Time     Version (sha1)                           Size'.PHP_EOL;
+		$msg.= '----------|--------|----------------------------------------|--------------'.PHP_EOL;
+		$size = 0;
+		foreach( $versions as $fileVersion ){
+			$msg.= date('Y-m-d H:i:s', $fileVersion['timestamp']).' '.$fileVersion['version'].' '.sprintf('%14d', $fileVersion['size']).PHP_EOL;
+			$size+=  $fileVersion['size'];
+		}
+		$msg.= '------------------------------------------------------------|--------------'.PHP_EOL;
+		$msg.= sprintf('versions: %-4d ', count($versions)).'                                              '.sprintf('%14d', $size).PHP_EOL;
+		return $msg;
+	}
+
+	/**
+	 * @param Ric_Client_Client $client
+	 * @param Ric_Client_Cli $cli
+	 * @return string
+	 * @throws RuntimeException
+	 */
 	static protected function commandRestore($client, $cli){
 		$targetFileName = $cli->arguments[0];
-		if( count($cli->arguments[0])==1 ){
+		if( count($cli->arguments)==1 ){
 			$resource = getcwd().'/'.basename($targetFileName);
 		}else{
 			$resource = $cli->arguments[1];
 		}
-		$client->restore($targetFileName, $resource, $cli->getOption('version'));
+		$client->restore($targetFileName, $resource, $cli->getOption('pass'), $cli->getOption('version'), (true AND $cli->getOption('overwrite')));
 		return 'OK';
 	}
 
@@ -134,7 +159,15 @@ class Ric_Client_CliHandler{
 	 */
 	static protected function commandDelete($client, $cli){
 		$targetFileName = $cli->arguments[0];
-		return $client->delete($targetFileName, $cli->getOption('version'));
+		$version = null;
+		if( count($cli->arguments)==1 ){
+			$version = null;
+		}elseif(count($cli->arguments)==2){
+			$version = $cli->arguments[1];
+		}else{
+			throw new RuntimeException('to many arguments');
+		}
+		return $client->delete($targetFileName, $version);
 	}
 
 	/**
@@ -144,13 +177,14 @@ class Ric_Client_CliHandler{
 	 * @throws RuntimeException
 	 */
 	static protected function commandAdmin($client, $cli){
-		$msg = '';
 		if( count($cli->arguments)==0 ){
 			throw new RuntimeException('admin command expected'.PHP_EOL.$client->getHelp('admin'));
 		}
 		$adminCommand = $cli->arguments[0];
 		if( $adminCommand=='info' ){
 			$msg = json_encode($client->info(), JSON_PRETTY_PRINT);
+		}elseif( $adminCommand=='list' ){
+			$msg = join(PHP_EOL, $client->listFiles());
 		}elseif( $adminCommand=='health' ){
 			$msg = $client->health();
 		}elseif( $adminCommand=='addServer' ){
@@ -165,38 +199,6 @@ class Ric_Client_CliHandler{
 			throw new RuntimeException('unknown admin command');
 		}
 		return $msg;
-	}
-
-	/**
-	 * @param array $arguments
-	 * @param array $options
-	 * @return array [$success, $msg]
-	 */
-	public function testTrue($arguments, $options ){
-		return 'alles fein';
-	}
-
-	/**
-	 * @param array $arguments
-	 * @param array $options
-	 * @return array [$success, $msg]
-	 */
-	public function testFalse($arguments, $options ){
-		return [false, 'fehler false triggered'];
-	}
-
-	/**
-	 * @param array $arguments
-	 * @param array $options
-	 * @return array [$success, $msg]
-	 */
-	public function testCli($arguments, $options ){
-		$msg = 'cli:'.PHP_EOL;
-		$msg.= '$arguments:'.print_r($arguments, true).PHP_EOL;
-		$msg.= '$options:'.print_r($options, true).PHP_EOL;
-		$msg.= '$_SERVER:'.print_r($_SERVER, true).PHP_EOL;
-		$msg.= '$_ENV:'.print_r($_ENV, true).PHP_EOL;
-		return [true, $msg];
 	}
 
 }
