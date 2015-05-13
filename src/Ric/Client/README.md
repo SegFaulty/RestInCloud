@@ -18,16 +18,18 @@ aus einer resource wird immer eine datei generiert, diese wird gzipped und encry
 * ric list - all versions of a resource
 * ric restore - restore a backuped resource
 * ric delete - delete a resource
-* ric admin - configure RestInCloud-Cluster
+* ric admin - manage RestInCloud Server and Cluster
 
 use ric help {command} for command details
 
 ### global options
 
+you can define every option as environment variable with prefix "ric" (server -> ricServer)
+
 * --verbose show debug details
 * --auth {token}  default: ENV ricAuth
 * --server RicServer default: ENV ricServer
-* / --host hostname default: ENV hostname (for default targetnames)
+* --prefix prefix all target names default: ENV ricPrefix
 
 ## Help backup
     ric backup {resource} [{targetFileName}] [options]
@@ -38,13 +40,15 @@ use ric help {command} for command details
 backups the config dir (as tar.gz) with last7 versions
 ablauf:
 * detect resource type (file, dir, mysql, redis ..) and make a file of it
-* (optionaly check minFilesize)
+* encrypt the file with salt and (optionally) password
+* (optionaly check minSize)
 * refresh this file with post request
 * if failed store file with put request
-* verify the file
+* verify the file (sha1, minSize, minReplicas)
 
 ### backup options
 
+* --pass Password
 * --retention default: last3
 * --timestamp default: call time
 * --minReplicas default: max(1, count(servers)-1)
@@ -52,13 +56,11 @@ ablauf:
 
 ## Help verify
 
-    ric verify /home/www/ric/config/ --server=ric.example.com
+    ric verify testService_host1_config.tar.gz --minSize=100000
 
 
 ### verify options
 
-* --host
-* --target
 * --minTimestamp 123131231
 * --minSize 23423
 * --sha1
@@ -78,6 +80,7 @@ ablauf:
 
 ## restore options
 
+* --pass Password
 * --overwrite   overwrite existing resource
 
 ## Help list

@@ -871,7 +871,7 @@ echo filesize($tmpFilePath).' tmp bytes'.PHP_EOL;
 		if( file_exists($readMePath) and preg_match('~\n## Help(.*?)(\n## |$)~s', file_get_contents($readMePath), $matches) ){
 			$helpString = $matches[1];
 		}
-		$helpString = str_replace('my.coldstore.server.de', $_SERVER['HTTP_HOST'], $helpString);
+		$helpString = str_replace('ric1.server', $_SERVER['HTTP_HOST'], $helpString);
 		$retentions = '';
 		$retentions.= '     '.self::RETENTION__OFF.' : keep only the last version'.PHP_EOL;
 		$retentions.= '     '.self::RETENTION__LAST3.' : keep last 3 versions'.PHP_EOL;
