@@ -92,8 +92,23 @@ ablauf:
 
 ## Help admin
 
+* info - sever info, as admin config included
+* health - cluster info, as admin with quota infos and failure details  "OK" / "WARNING" / "CRITICAL"
+* list - list all file(name)s
+* listDetails - list all files with details incl. all versions
+* joinCluster - join/build a cluster
+* leaveCluster - disconnect from a cluser and remove from all clusterNodes
+* addServer - add a replication client
+* removeServer - remove a replication client
+
+a cluster is a bunch of servers, where all of them are added (addServer) to all servers, every server is a replicant of every server .. u got it
+
+    ric admin list
+    ric admin listDetails
     ric admin info
     ric admin health
+    ric admin joinCluster {clusterServer}
+    ric admin leaveCluster
     ric admin addServer {host:port}
     ric admin removeServer {host:port}
 

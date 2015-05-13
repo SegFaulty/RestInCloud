@@ -61,9 +61,13 @@ echo $msg.PHP_EOL; //todo logger
 	 * @param string $fileName
 	 * @param string $command
 	 * @param array $parameters
+	 * @throws RuntimeException
 	 * @return string
 	 */
 	protected function buildUrl($fileName, $command='', $parameters=[]){
+		if( $this->server=='' ){
+			throw new RuntimeException('no server given');
+		}
 		$url = 'http://'.$this->server.'/';
 		$url.= $fileName;
 		if( $this->auth!='' ){
@@ -385,10 +389,20 @@ print_r($output);
 
 	/**
 	 * list files
-	 * @return string
+	 * @return array
 	 */
 	public function listFiles(){
 		$response = Ric_Rest_Client::get($this->buildUrl('', 'list'), [], $headers);
+		$this->checkServerResponse($response, $headers);
+		return json_decode($response, true);
+	}
+
+	/**
+	 * list files with details
+	 * @return array
+	 */
+	public function listFileDetails(){
+		$response = Ric_Rest_Client::get($this->buildUrl('', 'listDetails'), [], $headers);
 		$this->checkServerResponse($response, $headers);
 		return json_decode($response, true);
 	}

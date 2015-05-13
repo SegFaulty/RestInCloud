@@ -10,6 +10,7 @@ class H{
 	/* getKeyIfSet */ static public function getIKS(&$array, $key, $default=null){return (array_key_exists($key, $array) ? $array[$key] : $default );}
 	/* getRequestParameter */ static public function getRP($key, $default=null){return H::getIKS($_REQUEST, $key, $default);}
 	/* json_encode */ static public function json($array){return json_encode($array, JSON_PRETTY_PRINT+JSON_UNESCAPED_SLASHES).PHP_EOL;}
+	/* implodeKeyValue */ 	static public function implodeKeyValue($inputArray,$delimiter=', ',$keyValueDelimiter=': '){implode($delimiter,array_map(function($k,$v) use ($keyValueDelimiter)  {return $k.$keyValueDelimiter.$v;},array_keys($inputArray),$inputArray));}
 }
 
 // php server
@@ -668,21 +669,22 @@ echo filesize($tmpFilePath).' tmp bytes'.PHP_EOL;
 				if( $pattern!='' AND !preg_match($pattern, $fileName) ){
 					continue;
 				}
-				$fileInfo = $this->getFileInfo($splFileInfo->getRealPath());
-				if( $fileInfo['timestamp']!=self::$markDeletedTimestamp OR $showDeleted ){
-					$index++;
-					if( $index<$start ){
-						continue;
-					}
-					if( $details ){
-						$lines[] = ['index' => $index] + $fileInfo;
-					}else{
-						if( !in_array($fileName, $lines) ){
-							$lines[] = $fileName;
-						}
-					}
-					if( count($lines)>=$limit ){
-						break;
+				if( $splFileInfo->getMTime()==self::$markDeletedTimestamp AND !$showDeleted ){
+					continue;
+				}
+				$index++;
+				if( $index<$start ){
+					continue;
+				}
+				if( count($lines)>=$limit ){
+					break;
+				}
+				if( $details ){
+					$fileInfo = $this->getFileInfo($splFileInfo->getRealPath());
+					$lines[] = ['index' => $index] + $fileInfo;
+				}else{
+					if( !in_array($fileName, $lines) ){
+						$lines[] = $fileName;
 					}
 				}
 			}
@@ -761,13 +763,13 @@ echo filesize($tmpFilePath).' tmp bytes'.PHP_EOL;
 	 */
 	protected function actionInfo(){
 		header('Content-Type: application/json');
-		echo H::json($this->buildInfo());
+		echo H::json($this->buildInfo($this->auth('admin', false)));
 	}
 
 	/**
 	 * get server info
 	 */
-	protected function buildInfo(){
+	protected function buildInfo($isAdmin=false){
 		$info['serverTimestamp'] = time();
 		$directorySize = $this->getDirectorySize();
 		$directorySizeMb = ceil($directorySize /1024/1024); // IN MB
@@ -779,8 +781,7 @@ echo filesize($tmpFilePath).' tmp bytes'.PHP_EOL;
 			$info['quotaFreeLevel'] = max(0,min(100,100-ceil($directorySizeMb/$this->config['quota']*100)));
 			$info['quotaFree'] = max(0, intval($this->config['quota']-$directorySizeMb));
 		}
-		// only for admins
-		if( $this->auth('admin', false) ){
+		if( $isAdmin ){ // only for admins
 			$info['config'] = $this->config;
 			$info['runtimeConfig'] = false;
 			if( file_exists($this->config['storeDir'].'intern/config.json') ){
@@ -792,43 +793,73 @@ echo filesize($tmpFilePath).' tmp bytes'.PHP_EOL;
 	}
 
 	/**
+	 * check for all servers
+	 * quota <85%; every server knowns every server
+	 *
 	 * get server info
 	 */
 	protected function actionHealth(){
+		$criticalQuotaFreeLevel = 15;
 		$status = 'OK';
 		$msg = '';
 
-		$failedServers = [];
+		$serversFailures = [];
+		$clusterServers = array_merge([$this->getOwnHostPort()], $this->config['servers']);
+		sort($clusterServers);
+		// get serverInfos
 		$serverInfos = [];
-		$serverInfos[] = $this->buildInfo();
+		$serverInfos[$this->getOwnHostPort()] = $this->buildInfo(true);
 		foreach( $this->config['servers'] as $server ){
 			try{
 				$url = 'http://'.$server.'/?info&token='.$this->config['adminToken'];
 				$result = json_decode(Ric_Rest_Client::get($url), true);
 				if( !array_key_exists('usageByte', $result) ){
-					throw new HttpRuntimeException('info failed');
+					throw new RuntimeException('info failed');
 				}
-				if( array_key_exists('quotaFreeLevel', $result) AND $result['quotaFreeLevel'] ){
-					throw new HttpRuntimeException('quotaFreeLevel:'. $result['quotaFreeLevel'].'%');
-				}
-				$serverInfos[] = $result;
+				$serverInfos[$server] = $result;
 			}catch(Exception $e){
-				$failedServers[$server] = $e->getMessage();
+				$serversFailures[$server] = $e->getMessage();
 			}
 		}
-		if( !empty($failedServers) ){
+		// check serverInfos
+		foreach( $serverInfos as $server=>$serverInfo ){
+			// check quota
+			if( array_key_exists('quotaFreeLevel', $serverInfo) AND $serverInfo['quotaFreeLevel']<$criticalQuotaFreeLevel ){
+				$serversFailures[$server][] = 'quotaFreeLevel:'. $serverInfo['quotaFreeLevel'].'%';
+			}
+			// check servers
+			$expectedClusterServers = array_diff($clusterServers, [$server]);
+			rsort($expectedClusterServers);
+			if( array_values($expectedClusterServers)!=array_values($serverInfo['config']['servers']) ){
+				$serversFailures[$server][] = 'unxpected clusterServer: '.join(',', $serverInfo['config']['servers']). ' (expected: '.join(',', $expectedClusterServers).')';
+			}
+		}
+		// build quota info
+		foreach( $serverInfos as $server=>$serverInfo ){
+			$msg.= $server.' '.($serverInfo['quota']-$serverInfo['usage']).' MB free of '.$serverInfo['quota'].' MB '.' used '.$serverInfo['usage'].' MB ('.$serverInfo['quotaLevel'].'%)'.PHP_EOL;
+		}
+		// check failedServers
+		if( !empty($serversFailures) ){
 			$status = 'WARNING';
-			foreach( $failedServers as $server=>$serverError ){
-				$msg.= $server.' '.$serverError.PHP_EOL;
+			$msg.= 'servers with failure: '.count($serversFailures).PHP_EOL;
+			foreach( $serversFailures as $server=>$serverError ){
+				$msg.= $server.' '.implode('; ', $serverError).PHP_EOL;
 			}
 		}
-		if( count($serverInfos)<2 OR count($failedServers)>1 ){
+		// check if cluster in critical state
+		if( count($serverInfos)<2 OR count($serversFailures)>1 ){
 			$status = 'CRITICAL';
-			$msg.= 'replication critical servers running: '.count($serverInfos).' remoteServer configured: '.count($this->config['servers']).PHP_EOL;
+			$msg.= 'replication critical! servers running: '.count($serverInfos).' remoteServer configured: '.count($this->config['servers']).PHP_EOL;
 		}
+		// ok servers:
+		$msg.= 'servers ok: '.(count($this->config['servers'])+1-count($serversFailures)).PHP_EOL;
 
-		echo $status.PHP_EOL.$msg;
+		echo $status.PHP_EOL;
+		if( $this->auth('admin', false) ){
+			echo $msg.PHP_EOL;
+		}
 	}
+
 
 	/**
 	 * help
