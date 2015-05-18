@@ -343,6 +343,8 @@ echo filesize($tmpFilePath).' tmp bytes'.PHP_EOL;
 				$this->actionJoinCluster();
 			}elseif( $action=='leaveCluster' AND $this->auth('admin') ){
 				$this->actionLeaveCluster();
+			}elseif( $action=='removeFromCluster' AND $this->auth('admin') ){
+				$this->actionRemoveFromCluster();
 			}else{
 				throw new RuntimeException('unknown action or no file given [Post]', 400);
 			}
@@ -481,15 +483,22 @@ echo filesize($tmpFilePath).' tmp bytes'.PHP_EOL;
 	 */
 	protected function actionRemoveServer(){
 		$server = H::getRP('removeServer');
-		if( $server=='all' ){
-			$servers = [];
-		}else{
-			$servers = array_diff($this->config['servers'], [$server]);
-		}
-		$this->setRuntimeConfig('servers', $servers);
+		$this->removeServer($server);
 
 		header('Content-Type: application/json');
 		echo H::json(['Status' => 'OK']);
+	}
+
+	/**
+	 * @param $server
+	 */
+	protected function removeServer($server){
+		if( $server=='all' ){
+			$servers = [];
+		} else {
+			$servers = array_diff($this->config['servers'], [$server]);
+		}
+		$this->setRuntimeConfig('servers', $servers);
 	}
 
 	/**
@@ -535,17 +544,7 @@ echo filesize($tmpFilePath).' tmp bytes'.PHP_EOL;
 	 */
 	protected function actionLeaveCluster(){
 		$ownServer = $this->getOwnHostPort();
-		$errorMsg = '';
-		$leavedServers = [];
-		foreach( $this->config['servers'] as $clusterServer ){
-			$response = Ric_Rest_Client::post('http://' . $clusterServer . '/', ['action' => 'removeServer', 'removeServer' => $ownServer, 'token' => $this->config['adminToken']]);
-			$result = json_decode($response, true);
-			if( H::getIKS($result, 'Status')!='OK' ){
-				$errorMsg.= 'removeServer failed from '.$clusterServer.' failed! ['.$response.']';
-			}else{
-				$leavedServers[] = $clusterServer;
-			}
-		}
+		list($leavedServers, $errorMsg) = $this->removeServerFromCluster($ownServer);
 		$this->config['servers'] = [];
 		$this->setRuntimeConfig('servers', $this->config['servers']);
 
@@ -554,6 +553,44 @@ echo filesize($tmpFilePath).' tmp bytes'.PHP_EOL;
 		}
 		header('Content-Type: application/json');
 		echo H::json(['Status' => 'OK']);
+	}
+
+	/**
+	 * remove a server from the cluster
+	 * send removeServer to all servers
+	 * @throws RuntimeException
+	 */
+	protected function actionRemoveFromCluster(){
+		$server = H::getRP('removeFromCluster');
+		list($leavedServers, $errorMsg) = $this->removeServerFromCluster($server);
+		if( $errorMsg!='' ){
+			throw new RuntimeException('removeFromCluster failed! '.$errorMsg.' Inconsitent cluster state! (please remove me manually) succesfully removed from: '.join('; ', $leavedServers), 400);
+		}
+		header('Content-Type: application/json');
+		echo H::json(['Status' => 'OK']);
+	}
+
+	/**
+	 * leaving a cluster
+	 * send removeServer to all servers
+	 * if it fails, the cluster is in inconsistent state, send leaveCluster command
+	 * @param $server
+	 * @return array
+	 */
+	protected function removeServerFromCluster($server){
+		$leavedServers = [];
+		$errorMsg = '';
+		foreach( $this->config['servers'] as $clusterServer ){
+			$response = Ric_Rest_Client::post('http://' . $clusterServer . '/', ['action' => 'removeServer', 'removeServer' => $server, 'token' => $this->config['adminToken']]);
+			$result = json_decode($response, true);
+			if( H::getIKS($result, 'Status')!='OK' ){
+				$errorMsg.= 'removeServer failed from '.$clusterServer.' failed! ['.$response.']';
+			}else{
+				$leavedServers[] = $clusterServer;
+			}
+		}
+		$this->removeServer($server);
+		return [$leavedServers, $errorMsg];
 	}
 
 
@@ -1093,6 +1130,7 @@ echo filesize($tmpFilePath).' tmp bytes'.PHP_EOL;
 		}
 		return $regEx;
 	}
+
 
 }
 

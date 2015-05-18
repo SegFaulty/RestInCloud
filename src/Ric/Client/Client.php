@@ -456,6 +456,16 @@ print_r($output);
 		return $response;
 	}
 
+	/**
+	 * @param string $serverHostPort
+	 * @return string
+	 */
+	public function removeFromCluster($serverHostPort){
+		$response = Ric_Rest_Client::post($this->buildUrl('', '', ['action'=>'removeFromCluster', 'removeFromCluster'=>$serverHostPort]), [], $headers);
+		$this->checkServerResponse($response, $headers);
+		return $response;
+	}
+
 
 	/**
 	 * @param string $command

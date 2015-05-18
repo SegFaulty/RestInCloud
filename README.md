@@ -47,12 +47,16 @@ simple restfully dockerized distributed open source cloud backup server ;-)
  * check php Server.php for commandline (purge)
 
  admin Commands:
- * action=addServer =s1.cs.io:3723 - add Server to local list,
+ * action=addServer=s1.cs.io:3723 - add Server to local list,
  * removeServer=s1.cs.io:3723 - remove Server from local list
  * removeServer=all - remove all Servers from local list
+ * joinCluster=s2.cs.io - join to existing cluster (or join a single node and create a cluster)
+ * leaveCluster - leave a cluster (send removeServer=self to all cluster nodes an clear my servers list)
+ * removeFromCluster=s3.cs.io - kick a server from the servers list of all known nodes (use this if the server is unresponsive and you can't send a leaveCluster)
+
 
  auth (only as parameter supported yet)
- * use &token=YourAdminToken to authenticate as admin (e.g. for info command)
+ * use &token=YourAdminToken to authenticate as admin or writer or reader (e.g. for info command)
 
 ## License
 

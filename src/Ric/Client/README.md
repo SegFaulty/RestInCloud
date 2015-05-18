@@ -101,6 +101,7 @@ ablauf:
 * listDetails - list all files with details incl. all versions
 * joinCluster - join/build a cluster
 * leaveCluster - disconnect from a cluser and remove from all clusterNodes
+* removeFromCluster - remove given server from all clusterNodes
 * addServer - add a replication client
 * removeServer - remove a replication client
 
@@ -112,8 +113,9 @@ a cluster is a bunch of servers, where all of them are added (addServer) to all 
     ric admin health
     ric admin joinCluster {clusterServer}
     ric admin leaveCluster
-    ric admin addServer {host:port}
-    ric admin removeServer {host:port}
+    ric admin removeFromCluster {server}
+    ric admin addServer {server}
+    ric admin removeServer {server}
 
 ## Sic integration
 
