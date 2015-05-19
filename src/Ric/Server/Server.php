@@ -1105,10 +1105,18 @@ echo filesize($tmpFilePath).' tmp bytes'.PHP_EOL;
 	 * @throws RuntimeException
 	 */
 	protected function getOwnHostPort(){
-		if( empty($this->config['hostPort']) ){
+		static $hostName = '';
+		if( empty($hostName) ){
+			if( !empty($this->config['hostPort']) ){
+				$hostName = $this->config['hostPort'];
+			}else{
+				$hostName = gethostname(); // servers host name
+			}
+		}
+		if( empty($hostName) ){
 			throw new RuntimeException('hostPort in config is missing, can not perform remote operation, please set "hostPort" to a reachable value (ric.example.com:3333)');
 		}
-		return $this->config['hostPort'];
+		return $hostName;
 	}
 
 	/**

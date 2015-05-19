@@ -1,0 +1,9 @@
+{
+	"//hostPort": "this is a comment: if hostPort is empty the server will use command hostname and port 80 todetermine the own host name",
+	"hostPort": "ric.lcl",
+	"storeDir": "/usr/share/RestInCloud/nginx/data/",
+	"quota": 10000,
+	"adminToken": "admin",
+	"writerToken": "writer",
+	"readerToken": ""
+}

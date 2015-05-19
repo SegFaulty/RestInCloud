@@ -1,6 +1,12 @@
 # RestInCloud on Docker
 tested on coreos
 
+## digitalocean.com
+* start a coreos instance
+* name the instance like the real host name and dns it
+* (the hostname will be injected into the container and
+
+
 ## Build
 * login to your docker host
 
