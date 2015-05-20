@@ -60,7 +60,7 @@ class Ric_Server_Server {
 	static $markDeletedTimestamp = 1422222222; // 2015-01-25 22:43:42
 
 	protected $defaultConfig = [
-		'hostPort' => '', // h172.17.8.101:3070
+		'hostPort' => '', // if empty use autoDetectSource host with default port
 		'storeDir' => '/tmp/ric/',
 		'quota' => 0,
 		'servers' => [],
@@ -240,11 +240,12 @@ class Ric_Server_Server {
 		$tmpFilePath = $tmpFile = sys_get_temp_dir().'/_'.__CLASS__.'_'.uniqid('', true);
 		$putData = fopen("php://input", "r");
 		$fp = fopen($tmpFilePath, "w");
-		$bytesCopied = stream_copy_to_stream($putData, $fp);
+		stream_copy_to_stream($putData, $fp);
+#$bytesCopied = stream_copy_to_stream($putData, $fp);
+#echo $bytesCopied.' bytes'.PHP_EOL;
+#echo filesize($tmpFilePath).' tmp bytes'.PHP_EOL;
 		fclose($fp);
 		fclose($putData);
-echo $bytesCopied.' bytes'.PHP_EOL;
-echo filesize($tmpFilePath).' tmp bytes'.PHP_EOL;
 
 
 		// get correct filePath
@@ -274,7 +275,6 @@ echo filesize($tmpFilePath).' tmp bytes'.PHP_EOL;
 		if( $syncResult!='' ){
 			$result = 'WARNING'.' :'.$syncResult;
 		}
-		// todo verify
 
 		$this->executeRetention($filePath, $retention);
 
@@ -464,8 +464,6 @@ echo filesize($tmpFilePath).' tmp bytes'.PHP_EOL;
 	 */
 	protected function actionAddServer(){
 		$server = H::getRP('addServer');
-
-
 		$info = json_decode(Ric_Rest_Client::get('http://'.$server.'/', ['info'=>1,'token'=>$this->config['readerToken']]), true);
 		if( $info AND H::getIKS($info, 'serverTimestamp') ){
 			$this->config['servers'][] = $server;
@@ -1113,8 +1111,8 @@ echo filesize($tmpFilePath).' tmp bytes'.PHP_EOL;
 				$hostName = gethostname(); // servers host name
 			}
 		}
-		if( empty($hostName) ){
-			throw new RuntimeException('hostPort in config is missing, can not perform remote operation, please set "hostPort" to a reachable value (ric.example.com:3333)');
+		if( empty($hostName) OR strstr($hostName, '.')===false ){
+			throw new RuntimeException('wrong hostname: ['.$hostName.'] - hostPort in config is missing and "hostname"-command returns not an host name with ".",  can not perform remote operation, please set "hostPort" in config or hostname on host to a reachable value (FQH: ric.example.com:3333)');
 		}
 		return $hostName;
 	}

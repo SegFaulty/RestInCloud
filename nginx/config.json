@@ -1,7 +1,7 @@
 {
-	"//hostPort": "this is a comment: if hostPort is empty the server will use command hostname and port 80 todetermine the own host name",
+	"COMMENT": "this file is only a place holder, will be overwriten in docker context in Dockerfile",
 	"hostPort": "ric.lcl",
-	"storeDir": "/usr/share/RestInCloud/nginx/data/",
+	"storeDir": "/usr/share/RestInCloud/var/data/",
 	"quota": 10000,
 	"adminToken": "admin",
 	"writerToken": "writer",

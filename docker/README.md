@@ -3,8 +3,8 @@ tested on coreos
 
 ## digitalocean.com
 * start a coreos instance
-* name the instance like the real host name and dns it
-* (the hostname will be injected into the container and
+* name the instance like the real host name and dns it, inject to a contianer with
+    docker run -e HOST_HOSTNAME={backtick}hostname{backtick} -d nginx
 
 
 ## Build
@@ -14,13 +14,14 @@ tested on coreos
     tar -xzf master.tar.gz
     cd RestInCloud-master
     cd docker
+    # change hostPort and tokens
     vi config.json
     sh docker.sh
 
 ## Run
 * docker run -d -p 3070:3070 -v /var/ric3070:/var/ric/ ric-server
 * browse to: http://serverIp:3070/?info
-* then: http://serverIp:3070/?info&token=admin
+* then: http://serverIp:3070/?info&token=admin (use your adminToken)
 * help: http://serverIp:3070
 
 ## Upload

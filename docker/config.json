@@ -1,7 +1,6 @@
 {
-	"//hostPort": "this is a comment: if hostPort is empty the server will use command hostname and port 80 todetermine the own host name",
-    "hostPort": "0.0.0.0:3070",
-    "storeDir": "/var/ric/",
+    "hostPort": "",
+    "storeDir": "/usr/share/RestInCloud/var/data/",
     "quota": 10000,
     "adminToken": "admin",
     "writerToken": "writer",
