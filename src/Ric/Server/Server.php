@@ -83,7 +83,7 @@ class Ric_Server_Server {
 	public function __construct($configFilePath=''){
 		$this->loadConfig($configFilePath);
 		if( !is_dir($this->config['storeDir']) OR !is_writable($this->config['storeDir']) ){
-			throw new RuntimeException('document root is not a writable dir!');
+			throw new RuntimeException('document root ['.$this->config['storeDir'].'] is not a writable dir!');
 		}
 	}
 
