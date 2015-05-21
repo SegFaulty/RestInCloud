@@ -1,5 +1,11 @@
 # RestInCloud Client
 
+## install
+
+    git clone https://github.com/SegFaulty/RestInCloud.git
+	cd /usr/local/sbin/
+	ln -s /home/www/RestInCloud/src/Ric/Client/ric
+	ric help
 
 ## Help global
 
