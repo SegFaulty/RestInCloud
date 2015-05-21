@@ -1,0 +1,8 @@
+{
+    "hostPort": "ric1.local",
+    "storeDir": "/home/www/RestInCloud/var/data/",
+    "quota": 10000,
+    "adminToken": "admin",
+    "writerToken": "writer",
+    "readerToken": ""
+}
