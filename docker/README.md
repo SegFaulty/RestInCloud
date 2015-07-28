@@ -1,9 +1,9 @@
 # RestInCloud on Docker
-tested on coreos
+tested on coreOs
 
 ## digitalocean.com
 * start a coreos instance
-* name the instance like the real host name and dns it, inject to a contianer with
+* name the instance like the real host name and dns it, inject to a container with
     docker run -e HOST_HOSTNAME={backtick}hostname{backtick} -d nginx
 
 
@@ -41,5 +41,5 @@ this will survive restarts/reboots and you can play with the files, backup ?! ;-
 ## Debugging
 for testing u can use it without the volume:
 docker run -d -p 3070:3070 ric-server
-or for debuging:
+or for debugging:
 docker run -it -p 3070:3070 ric-server /bin/bash
