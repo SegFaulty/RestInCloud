@@ -19,15 +19,10 @@ class Ric_Server_Server {
 		'adminToken' => 'admin',
 		'writerToken' => 'writer',
 		'readerToken' => '',
-		'defaultRetention' => self::RETENTION__LAST3,
+		'defaultRetention' => Ric_Server_Definition::RETENTION__LAST3,
 	];
 
 	protected $config = [];
-
-	const RETENTION__OFF = 'off';
-	const RETENTION__LAST3 = 'last3';
-	const RETENTION__LAST7 = 'last7';
-	const RETENTION__3L7D4W12M = '3l7d4w12m';
 
 	/**
 	 * construct
@@ -185,7 +180,7 @@ class Ric_Server_Server {
 	protected function handlePutRequest(){
 		$this->auth(Ric_Server_Auth_Definition::ROLE__WRITER);
 		$result = 'OK';
-		$retention = H::getRP('retention', self::RETENTION__LAST3);
+		$retention = H::getRP('retention', Ric_Server_Definition::RETENTION__LAST3);
 		$timestamp = H::getRP('timestamp', time());
 		$noSync = (bool) H::getRP('noSync');
 
@@ -833,10 +828,10 @@ class Ric_Server_Server {
 		}
 		$helpString = str_replace('ric1.server', $_SERVER['HTTP_HOST'], $helpString);
 		$retentions = '';
-		$retentions.= '     '.self::RETENTION__OFF.' : keep only the last version'.PHP_EOL;
-		$retentions.= '     '.self::RETENTION__LAST3.' : keep last 3 versions'.PHP_EOL;
-		$retentions.= '     '.self::RETENTION__LAST7.' : keep last 7 versions'.PHP_EOL;
-		$retentions.= '     '.self::RETENTION__3L7D4W12M.' : keep last 3 versions then last of 7 days, 4 weeks, 12 month (max 23 Versions)'.PHP_EOL;
+		$retentions.= '     '.Ric_Server_Definition::RETENTION__OFF.' : keep only the last version'.PHP_EOL;
+		$retentions.= '     '.Ric_Server_Definition::RETENTION__LAST3.' : keep last 3 versions'.PHP_EOL;
+		$retentions.= '     '.Ric_Server_Definition::RETENTION__LAST7.' : keep last 7 versions'.PHP_EOL;
+		$retentions.= '     '.Ric_Server_Definition::RETENTION__3L7D4W12M.' : keep last 3 versions then last of 7 days, 4 weeks, 12 month (max 23 Versions)'.PHP_EOL;
 		$helpString = str_replace('{retentionList}', $retentions, $helpString);
 		echo '<pre>'.htmlentities($helpString).'</pre>';
 	}
@@ -878,13 +873,13 @@ class Ric_Server_Server {
 			case '':
 				// do nothing
 				break;
-			case self::RETENTION__OFF:
+			case Ric_Server_Definition::RETENTION__OFF:
 				$deleteFilePaths = array_slice(array_keys($allVersions),1); // remove from 3
 				break;
-			case self::RETENTION__LAST3:
+			case Ric_Server_Definition::RETENTION__LAST3:
 				$deleteFilePaths = array_slice(array_keys($allVersions),3); // remove from 3
 				break;
-			case self::RETENTION__LAST7:
+			case Ric_Server_Definition::RETENTION__LAST7:
 				$deleteFilePaths = array_slice(array_keys($allVersions),7);
 				break;
 			default:
