@@ -113,7 +113,7 @@ class Ric_Server_Server {
 				}
 				$result['checkedFiles']++;
 				$fileTimestamp = filemtime($splFileInfo->getRealPath());
-				if( $fileTimestamp<=$maxTimestamp AND $fileTimestamp==self::$markDeletedTimestamp ){
+				if( $fileTimestamp<=$maxTimestamp AND $fileTimestamp==Ric_Server_Definition::MAGIC_DELETION_TIMESTAMP ){
 					$fileSize = filesize($splFileInfo->getRealPath());
 					if( unlink($splFileInfo->getRealPath()) ){
 						$result['deletedFiles']++;
@@ -591,7 +591,7 @@ class Ric_Server_Server {
 				if( $pattern!='' AND !preg_match($pattern, $fileName) ){
 					continue;
 				}
-				if( $splFileInfo->getMTime()==self::$markDeletedTimestamp AND !$showDeleted ){
+				if( $splFileInfo->getMTime()==Ric_Server_Definition::MAGIC_DELETION_TIMESTAMP AND !$showDeleted ){
 					continue;
 				}
 				$index++;
@@ -879,8 +879,8 @@ class Ric_Server_Server {
 	 */
 	protected function markFileDeleted($filePath){
 		$result = false;
-		if( file_exists($filePath) AND filemtime($filePath)!=self::$markDeletedTimestamp ){
-			$result = touch($filePath, self::$markDeletedTimestamp) ;
+		if( file_exists($filePath) AND filemtime($filePath)!=Ric_Server_Definition::MAGIC_DELETION_TIMESTAMP ){
+			$result = touch($filePath, Ric_Server_Definition::MAGIC_DELETION_TIMESTAMP) ;
 		}
 		return $result;
 	}
@@ -961,7 +961,7 @@ class Ric_Server_Server {
 			/** @noinspection PhpUnusedLocalVariableInspection */
 			list($fileName, $version) = $this->extractVersionFromFullFileName($entryFileName);
 			$fileTimestamp = filemtime($entryFileName);
-			if( $includeDeleted OR $fileTimestamp!=self::$markDeletedTimestamp ){
+			if( $includeDeleted OR $fileTimestamp!=Ric_Server_Definition::MAGIC_DELETION_TIMESTAMP ){
 				$versions[$version] = $fileTimestamp;
 			}
 		}
