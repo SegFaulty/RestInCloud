@@ -5,6 +5,10 @@
  */
 class Ric_Server_Server {
 
+    /**
+     * @var Ric_Server_Auth_Service
+     */
+    protected $authService;
 	static $markDeletedTimestamp = 1422222222; // 2015-01-25 22:43:42
 
 	protected $defaultConfig = [
@@ -33,6 +37,7 @@ class Ric_Server_Server {
 		if( !is_dir($this->config['storeDir']) OR !is_writable($this->config['storeDir']) ){
 			throw new RuntimeException('document root ['.$this->config['storeDir'].'] is not a writable dir!');
 		}
+        $this->authService = new Ric_Server_Auth_Service($this->config);
 	}
 
 	/**
@@ -376,35 +381,7 @@ class Ric_Server_Server {
 	 * @throws RuntimeException
 	 */
 	protected function auth($user='reader', $isRequired=true){
-		$isAuth = false;
-
-		$userRole = 'guest';
-
-		$token = H::getRP('token');
-
-		if(  $token==$this->config['readerToken'] OR $this->config['readerToken']=='' ){
-			$userRole = 'reader';
-		}
-		if(  $token==$this->config['writerToken'] OR $this->config['writerToken']=='' ){
-			$userRole = 'writer';
-		}
-		if(  $token==$this->config['adminToken'] OR $this->config['adminToken']=='' ){
-			$userRole = 'admin';
-		}
-
-		if( $user=='admin' AND $userRole=='admin' ){
-			$isAuth = true;
-		}elseif( $user=='writer' AND in_array($userRole, ['writer', 'admin']) ){
-			$isAuth = true;
-		}elseif( $user=='reader' AND in_array($userRole, ['reader', 'writer', 'admin']) ){
-			$isAuth = true;
-		}
-
-		if( !$isAuth AND $isRequired ){
-			throw new RuntimeException('login needed', 403);
-		}
-
-		return $isAuth;
+        return $this->authService->auth($user, $isRequired);
 	}
 
 	/**
