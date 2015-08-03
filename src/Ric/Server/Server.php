@@ -22,13 +22,15 @@ class Ric_Server_Server {
 		'defaultRetention' => Ric_Server_Definition::RETENTION__LAST3,
 	];
 
+    protected $configLoader;
 	protected $config = [];
 
 	/**
 	 * construct
 	 */
 	public function __construct($configFilePath=''){
-		$this->loadConfig($configFilePath);
+        $this->configLoader = new Ric_Server_Config($this->defaultConfig);
+		$this->config = $this->configLoader->loadConfig($configFilePath);
 		if( !is_dir($this->config['storeDir']) OR !is_writable($this->config['storeDir']) ){
 			throw new RuntimeException('document root ['.$this->config['storeDir'].'] is not a writable dir!');
 		}
@@ -128,50 +130,15 @@ class Ric_Server_Server {
 	}
 
 	/**
-	 * load config default->given config -> docRoot/intern/config.json
-	 */
-	protected function loadConfig($configFilePath=''){
-
-		if( file_exists($configFilePath) ){
-			$localConfig = json_decode(file_get_contents($configFilePath), true);
-			if( !is_array($localConfig) ){
-				throw new RuntimeException('config.json is invalid (use "{}" for empty config)');
-			}
-			$this->config = $localConfig + $this->config;
-		}
-
-		$this->config = $this->config + $this->defaultConfig;
-
-		$this->config['storeDir'] = rtrim($this->config['storeDir'],DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR; // make sure of trailing slash
-
-		if( file_exists($this->config['storeDir'].'/intern/config.json') ){
-			$this->config = json_decode(file_get_contents($this->config['storeDir'].'/intern/config.json'), true) + $this->config;
-		}
-
-	}
-
-	/**
 	 * set, update, remove (null) a value in runtimeConfig (and config)
 	 * @param string $key
 	 * @param string $value
 	 */
 	protected function setRuntimeConfig($key, $value){
-		$runtimeConfig = [];
-		if( file_exists($this->config['storeDir'].'/intern/config.json') ){
-			$runtimeConfig = json_decode(file_get_contents($this->config['storeDir'].'/intern/config.json'), true);
-		}
-		if( $value===null ){
-			if( isset($runtimeConfig[$key]) ){
-				unset($runtimeConfig[$key]);
-			}
-		}else{
-			$runtimeConfig[$key] = $value;
-			$this->config[$key] = $value;
-		}
-		if( !is_dir($this->config['storeDir'].'/intern/') ){
-			mkdir($this->config['storeDir'].'/intern/');
-		}
-		file_put_contents($this->config['storeDir'].'/intern/config.json', H::json($runtimeConfig));
+        $this->configLoader->setRuntimeConfig($key, $value);
+        if($value!==null){
+            $this->config[$key] = $value;
+        }
 	}
 
 	/**
