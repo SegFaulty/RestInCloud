@@ -45,7 +45,7 @@ class Ric_Server_Server {
 	 */
 	public function handleRequest(){
 		try{
-			$this->auth('reader', true);
+			$this->auth(Ric_Server_Auth_Definition::ROLE__READER, true);
 			if( $_SERVER['REQUEST_METHOD']=='PUT' ){
 				$this->handlePutRequest();
 			}elseif( $_SERVER['REQUEST_METHOD']=='POST' OR H::getRP('method')=='post' ){
@@ -53,7 +53,7 @@ class Ric_Server_Server {
 			}elseif( $_SERVER['REQUEST_METHOD']=='GET' ){
 				$this->handleGetRequest();
 			}elseif( $_SERVER['REQUEST_METHOD']=='DELETE' OR H::getRP('method')=='delete' ){
-				if( $this->auth('writer') ){
+				if( $this->auth(Ric_Server_Auth_Definition::ROLE__WRITER) ){
 					$this->actionDelete();
 				}
 			}else{
@@ -183,7 +183,7 @@ class Ric_Server_Server {
 	 * handle PUT
 	 */
 	protected function handlePutRequest(){
-		$this->auth('writer');
+		$this->auth(Ric_Server_Auth_Definition::ROLE__WRITER);
 		$result = 'OK';
 		$retention = H::getRP('retention', self::RETENTION__LAST3);
 		$timestamp = H::getRP('timestamp', time());
@@ -246,9 +246,9 @@ class Ric_Server_Server {
 		if( $_SERVER['REQUEST_URI']=='/' ){ // homepage
 			$this->actionHelp();
 		}elseif( parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)=='/' ){ // no file
-			if( $action=='list' AND $this->auth('admin') ){
+			if( $action=='list' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
 				$this->actionList();
-			}elseif( $action=='listDetails' AND $this->auth('admin') ){
+			}elseif( $action=='listDetails' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
 				$this->actionList(true);
 			}elseif( $action=='help' ){
 				$this->actionHelp();
@@ -284,19 +284,19 @@ class Ric_Server_Server {
 	 * handle POST, file refresh
 	 */
 	protected function handlePostRequest(){
-		$this->auth('writer');
+		$this->auth(Ric_Server_Auth_Definition::ROLE__WRITER);
 		$action = H::getRP('action');
 		if( parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)=='/' ){ // homepage
 			// post actions
-			if( $action=='addServer' AND $this->auth('admin') ){
+			if( $action=='addServer' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
 				$this->actionAddServer();
-			}elseif( $action=='removeServer' AND $this->auth('admin') ){
+			}elseif( $action=='removeServer' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
 				$this->actionRemoveServer();
-			}elseif( $action=='joinCluster' AND $this->auth('admin') ){
+			}elseif( $action=='joinCluster' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
 				$this->actionJoinCluster();
-			}elseif( $action=='leaveCluster' AND $this->auth('admin') ){
+			}elseif( $action=='leaveCluster' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
 				$this->actionLeaveCluster();
-			}elseif( $action=='removeFromCluster' AND $this->auth('admin') ){
+			}elseif( $action=='removeFromCluster' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
 				$this->actionRemoveFromCluster();
 			}else{
 				throw new RuntimeException('unknown action or no file given [Post]', 400);
@@ -380,7 +380,7 @@ class Ric_Server_Server {
 	 * @return bool
 	 * @throws RuntimeException
 	 */
-	protected function auth($user='reader', $isRequired=true){
+	protected function auth($user=Ric_Server_Auth_Definition::ROLE__READER, $isRequired=true){
         return $this->authService->auth($user, $isRequired);
 	}
 
@@ -723,7 +723,7 @@ class Ric_Server_Server {
 	 */
 	protected function actionInfo(){
 		header('Content-Type: application/json');
-		echo H::json($this->buildInfo($this->auth('admin', false)));
+		echo H::json($this->buildInfo($this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN, false)));
 	}
 
 	/**
@@ -815,7 +815,7 @@ class Ric_Server_Server {
 		$msg.= 'servers ok: '.(count($this->config['servers'])+1-count($serversFailures)).PHP_EOL;
 
 		echo $status.PHP_EOL;
-		if( $this->auth('admin', false) ){
+		if( $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN, false) ){
 			echo $msg.PHP_EOL;
 		}
 	}
