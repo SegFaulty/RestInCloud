@@ -1,57 +1,5 @@
 <?php
 
-
-require_once __DIR__.'/../Rest/Client.php';
-date_default_timezone_set(@date_default_timezone_get()); // Suppress DateTime warnings
-
-
-// Helper syntactic sugar function
-class H{
-	/* getKeyIfSet */ static public function getIKS(&$array, $key, $default=null){return (array_key_exists($key, $array) ? $array[$key] : $default );}
-	/* getRequestParameter */ static public function getRP($key, $default=null){return H::getIKS($_REQUEST, $key, $default);}
-	/* json_encode */ static public function json($array){return json_encode($array, JSON_PRETTY_PRINT+JSON_UNESCAPED_SLASHES).PHP_EOL;}
-	/* implodeKeyValue */ 	static public function implodeKeyValue($inputArray,$delimiter=', ',$keyValueDelimiter=': '){implode($delimiter,array_map(function($k,$v) use ($keyValueDelimiter)  {return $k.$keyValueDelimiter.$v;},array_keys($inputArray),$inputArray));}
-}
-
-// php server
-if( php_sapi_name()=='cli-server' ){
-
-	ini_set('display_errors', true);
-	ini_set('log_errors', true);
-	ini_set("error_log", '/home/www/ricServerErrors.log');
-
-	$ricServer = new Ric_Server_Server(H::getIKS($_ENV, 'Ric_config', './config.json'));
-	$ricServer->handleRequest();
-	return true; // if false, the internal server will serve the REQUEST_URI .. this is dangerous
-
-}
-
-// cli commands
-if( php_sapi_name()=='cli' ){
-
-	switch(H::getIKS($argv,1)){
-		case 'purge':
-			Ric_Server_Server::cliPurge($argv);
-			break;
-		default:
-			die(
-				'please start it as webserver:'."\n"
-				.' Ric_config=./config.json php -d variables_order=GPCSE -S 0.0.0.0:3070 '.__FILE__."\n"
-				.'   OR   '."\n"
-				.'php '.__FILE__.' purge /path/to/storeDir {maxTimestamp}'."\n"
-				.'  to purge all files marked for deletion (with fileMtime < maxTimestamp)'."\n"
-			);
-	}
-	return 1;
-}
-
-// use in http or what ever sapi
-# $ricServer = new Ric_Server_Server('path_to/config.json'));
-# $ricServer->handleRequest();
-
-
-
-
 /**
  * Class Ric_Server_Server
  */
