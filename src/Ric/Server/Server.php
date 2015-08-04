@@ -872,6 +872,20 @@ class Ric_Server_Server {
 		return $result;
 	}
 
+    protected function extractFileNameFromRequest(){
+        $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+        $fileName = basename($path);
+        if( ltrim($path,DIRECTORY_SEPARATOR)!=$fileName ){
+            throw new RuntimeException('a path is not allowed! use server.com/file.name', 400);
+        }
+        $allowedChars = '1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        $allowedChars.= '-_.';
+        if( preg_match('~[^'.preg_quote($allowedChars, '~').']~', $fileName) ){
+            throw new RuntimeException('filename must only use these chars: '.$allowedChars, 400);
+        }
+        return $fileName;
+    }
+
 	/**
 	 * @param string $sha1
 	 * @throws RuntimeException
@@ -879,16 +893,7 @@ class Ric_Server_Server {
 	 */
 	protected function getFilePath($sha1=''){
 		$filePath = '';
-		$path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-		$fileName = basename($path);
-		if( ltrim($path,DIRECTORY_SEPARATOR)!=$fileName ){
-			throw new RuntimeException('a path is not allowed! use server.com/file.name', 400);
-		}
-		$allowedChars = '1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-		$allowedChars.= '-_.';
-		if( preg_match('~[^'.preg_quote($allowedChars, '~').']~', $fileName) ){
-			throw new RuntimeException('filename must only use these chars: '.$allowedChars, 400);
-		}
+        $fileName = $this->extractFileNameFromRequest();
 		if( $fileName!='' ){
 			$version = '';
 			if( $sha1 ){
