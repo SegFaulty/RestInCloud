@@ -412,8 +412,7 @@ class Ric_Server_Server {
 				}
 				$joinedServers[] = $clusterServer;
 			}
-			$this->config['servers'] = $servers;
-			$this->setRuntimeConfig('servers', $this->config['servers']);
+			$this->setRuntimeConfig('servers', $servers);
 
 			// todo  pull a dump and restore
 
@@ -433,8 +432,7 @@ class Ric_Server_Server {
 	protected function actionLeaveCluster(){
 		$ownServer = $this->getOwnHostPort();
 		list($leavedServers, $errorMsg) = $this->removeServerFromCluster($ownServer);
-		$this->config['servers'] = [];
-		$this->setRuntimeConfig('servers', $this->config['servers']);
+		$this->setRuntimeConfig('servers', []);
 
 		if( $errorMsg!='' ){
 			throw new RuntimeException('leaveCluster failed! '.$errorMsg.' Inconsitent cluster state! (please remove me manually) succesfully removed from: '.join('; ', $leavedServers), 400);
