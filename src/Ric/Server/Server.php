@@ -25,6 +25,8 @@ class Ric_Server_Server {
     protected $configLoader;
 	protected $config = [];
 
+    protected $fileManager;
+
 	/**
 	 * construct
 	 */
@@ -35,6 +37,7 @@ class Ric_Server_Server {
 			throw new RuntimeException('document root ['.$this->config['storeDir'].'] is not a writable dir!');
 		}
         $this->authService = new Ric_Server_Auth_Service($this->config);
+        $this->fileManager = new Ric_Server_File_Manager();
 	}
 
 	/**
@@ -179,7 +182,7 @@ class Ric_Server_Server {
 
 		// check quota
 		if( $this->config['quota']>0 ){
-			if( $this->getDirectorySize()>$this->config['quota']*1024*1024 ){
+			if( $this->fileManager->getDirectorySize()>$this->config['quota']*1024*1024 ){
 				unlink($filePath);
 				throw new RuntimeException('Quota exceeded!', 507);
 			}
@@ -489,7 +492,7 @@ class Ric_Server_Server {
 			$filesDeleted+= $this->markFileDeleted($filePath);
 		}else{
 			$baseFilePath = preg_replace('~___\w+$~', '', $filePath);
-			foreach( $this->getAllVersions($baseFilePath) as $version=>$timestamp){
+			foreach( $this->fileManager->getAllVersions($baseFilePath) as $version=>$timestamp){
 				$filesDeleted+= $this->markFileDeleted($baseFilePath.'___'.$version);
 			}
 		}
@@ -513,7 +516,7 @@ class Ric_Server_Server {
 		$minReplicasDefault = max(1, count($this->config['servers'])-1); // min 1, or 1 invalid of current servers
 		$minReplicas = H::getRP('minReplicas', $minReplicasDefault); // if parameter omitted, don't check replicas!!!! or deadlock
 
-		$fileInfo = $this->getFileInfo($filePath);
+		$fileInfo = $this->fileManager->getFileInfo($filePath);
 		$fileInfo['replicas'] = false;
 		if( $minReplicas>0 ){
 			$fileInfo['replicas'] = $this->getReplicaCount($filePath);
@@ -602,7 +605,7 @@ class Ric_Server_Server {
 					break;
 				}
 				if( $details ){
-					$fileInfo = $this->getFileInfo($splFileInfo->getRealPath());
+					$fileInfo = $this->fileManager->getFileInfo($splFileInfo->getRealPath());
 					$lines[] = ['index' => $index] + $fileInfo;
 				}else{
 					if( !in_array($fileName, $lines) ){
@@ -629,13 +632,13 @@ class Ric_Server_Server {
 		$lines = [];
 		$baseFilePath = preg_replace('~___\w+$~', '', $filePath);
 		$index = -1;
-		foreach( $this->getAllVersions($baseFilePath, $showDeleted) as $version=>$timeStamp ){
+		foreach( $this->fileManager->getAllVersions($baseFilePath, $showDeleted) as $version=>$timeStamp ){
 			$filePath = $baseFilePath.'___'.$version;
 			$index++;
 			if( $limit<=$index ){
 				break;
 			}
-			$lines[] = ['index' => $index] + $this->getFileInfo($filePath);
+			$lines[] = ['index' => $index] + $this->fileManager->getFileInfo($filePath);
 		}
 		header('Content-Type: application/json');
 		echo H::json($lines);
@@ -693,7 +696,7 @@ class Ric_Server_Server {
 	 */
 	protected function buildInfo($isAdmin=false){
 		$info['serverTimestamp'] = time();
-		$directorySize = $this->getDirectorySize();
+		$directorySize = $this->fileManager->getDirectorySize();
 		$directorySizeMb = ceil($directorySize /1024/1024); // IN MB
 		$info['usageByte'] = $directorySize;
 		$info['usage'] = $directorySizeMb;
@@ -834,7 +837,7 @@ class Ric_Server_Server {
 	 */
 	protected function executeRetention($filePath, $retention){
 		$baseFilePath = preg_replace('~___\w+$~', '', $filePath);
-		$allVersions = $this->getAllVersions($baseFilePath);
+		$allVersions = $this->fileManager->getAllVersions($baseFilePath);
 		$deleteFilePaths = [];
 		switch( $retention ){
 			case '':
@@ -858,22 +861,6 @@ class Ric_Server_Server {
 	}
 
 	/**
-	 * returns the result of "du storeDir" in bytes
-	 * this is linux dependent, if want it more flexible, make it ;-)
-	 * @throws RuntimeException
-	 * @return int
-	 */
-	protected function getDirectorySize(){
-		$command = '/usr/bin/du -bs '.escapeshellarg($this->config['storeDir']);
-		exec($command, $output, $status);
-		if( $status!==0 OR count($output)!=1 ){
-			throw new RuntimeException('du failed with status: '.$status);
-		}
-		$size = intval(reset($output));
-		return $size;
-	}
-
-	/**
 	 * @param string $filePath
 	 * @return bool
 	 */
@@ -883,24 +870,6 @@ class Ric_Server_Server {
 			$result = touch($filePath, Ric_Server_Definition::MAGIC_DELETION_TIMESTAMP) ;
 		}
 		return $result;
-	}
-
-	/**
-	 * @param string $filePath
-	 * @return array
-	 */
-	protected function getFileInfo($filePath){
-		list($fileName, $version) = $this->extractVersionFromFullFileName($filePath);
-		$fileTimestamp = filemtime($filePath);
-		$info = [
-			'name' => $fileName,
-			'version' => $version,
-			'sha1' => sha1_file($filePath), // ja sollte das selbe wie version sein, das bestätigt aber, das das file noch physisch korrekt ist
-			'size' => filesize($filePath),
-			'timestamp' => $fileTimestamp,
-			'dateTime' => date('Y-m-d H:i:s', $fileTimestamp),
-		];
-		return $info;
 	}
 
 	/**
@@ -935,7 +904,7 @@ class Ric_Server_Server {
 			$fileDir = $this->config['storeDir'].substr($fileNameMd5,-1,1).DIRECTORY_SEPARATOR.substr($fileNameMd5,-2,1).DIRECTORY_SEPARATOR;
 
 			if( !$version ){ // get the newest version
-				$version = reset(array_keys($this->getAllVersions($fileDir.$fileName)));
+				$version = reset(array_keys($this->fileManager->getAllVersions($fileDir.$fileName)));
 				if( !$version ){
 					throw new RuntimeException('no version of file not found', 404);
 				}
@@ -948,25 +917,6 @@ class Ric_Server_Server {
 		}
 
 		return $filePath;
-	}
-
-	/**
-	 * @param string $filePathWithoutVersion
-	 * @param bool $includeDeleted
-	 * @return array|int
-	 */
-	protected function getAllVersions($filePathWithoutVersion, $includeDeleted=false){
-		$versions = [];
-		foreach(glob($filePathWithoutVersion.'___*') as $entryFileName) {
-			/** @noinspection PhpUnusedLocalVariableInspection */
-			list($fileName, $version) = $this->extractVersionFromFullFileName($entryFileName);
-			$fileTimestamp = filemtime($entryFileName);
-			if( $includeDeleted OR $fileTimestamp!=Ric_Server_Definition::MAGIC_DELETION_TIMESTAMP ){
-				$versions[$version] = $fileTimestamp;
-			}
-		}
-		arsort($versions); // order by newest version
-		return $versions;
 	}
 
 	/**
