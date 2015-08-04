@@ -886,38 +886,45 @@ class Ric_Server_Server {
         return $fileName;
     }
 
+    protected function extractVersionFromRequest(){
+        $version = '';
+        if( !empty($_REQUEST['version']) ){
+            if( !ctype_alnum($_REQUEST['version']) ){
+                throw new RuntimeException('invalid version', 400);
+            }
+            $version = $_REQUEST['version'];
+        }
+        return $version;
+    }
+
 	/**
-	 * @param string $sha1
+	 * @param string $version
 	 * @throws RuntimeException
 	 * @return string
 	 */
-	protected function getFilePath($sha1=''){
+	protected function getFilePath($version=''){
 		$filePath = '';
         $fileName = $this->extractFileNameFromRequest();
 		if( $fileName!='' ){
-			$version = '';
-			if( $sha1 ){
-				$version = $sha1;
-			}elseif( !empty($_REQUEST['version']) ){
-				if( !ctype_alnum($_REQUEST['version']) ){
-					throw new RuntimeException('invalid version', 400);
-				}
-				$version = $_REQUEST['version'];
-			}
+            if( $version ){
+                $fileVersion = $version;
+            }else{
+                $fileVersion = $this->extractVersionFromRequest();
+            }
 			// get split dir
 			$fileNameMd5 = md5($fileName);
 			$fileDir = $this->config['storeDir'].substr($fileNameMd5,-1,1).DIRECTORY_SEPARATOR.substr($fileNameMd5,-2,1).DIRECTORY_SEPARATOR;
 
-			if( !$version ){ // get the newest version
-				$version = reset(array_keys($this->fileManager->getAllVersions($fileDir.$fileName)));
-				if( !$version ){
+			if( !$fileVersion ){ // get the newest version
+				$fileVersion = reset(array_keys($this->fileManager->getAllVersions($fileDir.$fileName)));
+				if( !$fileVersion ){
 					throw new RuntimeException('no version of file not found', 404);
 				}
 			}
-			$filePath.= $fileDir.$fileName.'___'.$version;
+			$filePath.= $fileDir.$fileName.'___'.$fileVersion;
 		}
 		// if we not create a new file, it must exists
-		if( $sha1=='' AND $filePath AND !file_exists($filePath) ){
+		if( $version=='' AND $filePath AND !file_exists($filePath) ){
 			throw new RuntimeException('File not found! '.$filePath, 404);
 		}
 
