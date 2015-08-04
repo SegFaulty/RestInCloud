@@ -185,7 +185,7 @@ class Ric_Server_Server {
 			$result = 'WARNING'.' :'.$syncResult;
 		}
 
-		$this->executeRetention($filePath, $retention);
+		$this->executeRetention($fileName, $retention);
 
 		header('HTTP/1.1 201 Created', true, 201);
 		echo $result.PHP_EOL;
@@ -270,19 +270,20 @@ class Ric_Server_Server {
 	protected function actionPostRefresh(){
 		// not / .. this is a file, refresh action
 		$result = '0';
-		$sha1 = H::getRP('sha1');
+		$version = H::getRP('sha1');
 		$retention = H::getRP('retention', '');
 		$timestamp = H::getRP('timestamp', time());
 		$noSync = (bool) H::getRP('noSync');
 
-		if( $sha1=='' ){
+		if( $version=='' ){
 			throw new RuntimeException('?sha1=1342.. is required', 400);
 		}
 
-		$filePath = $this->getFilePath($sha1);
+        $fileName = $this->extractFileNameFromRequest();
+		$filePath = $this->fileManager->getFilePath($fileName, $version);
 		if( file_exists($filePath) ){
 			$syncResult = $this->syncFile($filePath, $timestamp, $retention, $noSync);
-			$this->executeRetention($filePath, $retention);
+			$this->executeRetention($fileName, $retention);
 			if( $syncResult=='' ){
 				$result = '1';
 			}
@@ -475,14 +476,16 @@ class Ric_Server_Server {
 	 * mark one or all versions of the File as deleted
 	 */
 	protected function actionDelete(){
-		$filePath = $this->getFilePath();
+		$fileName = $this->extractFileNameFromRequest();
+		$version = $this->extractVersionFromRequest();
 		$filesDeleted = 0;
-		if( !H::getRP('version') ){
+		if( $version ){
+            $filePath = $this->fileManager->getFilePath($fileName, $version);
 			$filesDeleted+= $this->markFileDeleted($filePath);
 		}else{
-			$baseFilePath = preg_replace('~___\w+$~', '', $filePath);
-			foreach( $this->fileManager->getAllVersions($baseFilePath) as $version=>$timestamp){
-				$filesDeleted+= $this->markFileDeleted($baseFilePath.'___'.$version);
+			foreach( $this->fileManager->getAllVersions($fileName) as $version=>$timestamp){
+                $filePath = $this->fileManager->getFilePath($fileName, $version);
+				$filesDeleted+= $this->markFileDeleted($filePath);
 			}
 		}
 		header('Content-Type: application/json');
@@ -616,18 +619,17 @@ class Ric_Server_Server {
 		$showDeleted = H::getRP('showDeleted');
 		$limit = min(1000, H::getRP('limit', 100));
 
-		$filePath = $this->getFilePath();
+        $fileName = $this->extractFileNameFromRequest();
 
 		$lines = [];
-		$baseFilePath = preg_replace('~___\w+$~', '', $filePath);
 		$index = -1;
-		foreach( $this->fileManager->getAllVersions($baseFilePath, $showDeleted) as $version=>$timeStamp ){
-			$filePath = $baseFilePath.'___'.$version;
-			$index++;
-			if( $limit<=$index ){
-				break;
-			}
-			$lines[] = ['index' => $index] + $this->fileManager->getFileInfo($filePath);
+		foreach( $this->fileManager->getAllVersions($fileName, $showDeleted) as $version=>$timeStamp ){
+            $filePath = $this->fileManager->getFilePath($fileName, $version);
+            $index++;
+            if( $limit<=$index ){
+                break;
+            }
+            $lines[] = ['index' => $index] + $this->fileManager->getFileInfo($filePath);
 		}
 		header('Content-Type: application/json');
 		echo H::json($lines);
@@ -820,13 +822,12 @@ class Ric_Server_Server {
 	}
 
 	/**
-	 * @param string $filePath
+	 * @param string $fileName
 	 * @param string $retention
 	 * @throws RuntimeException
 	 */
-	protected function executeRetention($filePath, $retention){
-		$baseFilePath = preg_replace('~___\w+$~', '', $filePath);
-		$allVersions = $this->fileManager->getAllVersions($baseFilePath);
+	protected function executeRetention($fileName, $retention){
+		$allVersions = $this->fileManager->getAllVersions($fileName);
 		$deleteFilePaths = [];
 		switch( $retention ){
 			case '':
@@ -844,8 +845,9 @@ class Ric_Server_Server {
 			default:
 				throw new RuntimeException('unknown retention strategy', 400);
 		}
-		foreach( $deleteFilePaths as $deleteFilePath ){
-			$this->markFileDeleted($baseFilePath.'___'.$deleteFilePath);
+		foreach( $deleteFilePaths as $version ){
+            $filePath = $this->fileManager->getFilePath($fileName, $version);
+			$this->markFileDeleted($filePath);
 		}
 	}
 

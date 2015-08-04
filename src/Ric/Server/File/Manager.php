@@ -24,7 +24,7 @@ class Ric_Server_File_Manager{
             $fileDir = $this->storeDir.$this->getSplitDirectoryFilePath($fileName);
 
             if( !$version ){ // get the newest version
-                $version = reset(array_keys($this->getAllVersions($fileDir.$fileName)));
+                $version = reset(array_keys($this->getAllVersions($fileName)));
                 if( !$version ){
                     throw new RuntimeException('no version of file not found', 404);
                 }
@@ -32,6 +32,31 @@ class Ric_Server_File_Manager{
             $filePath = $fileDir.$fileName.'___'.$version;
         }
         return $filePath;
+    }
+
+    /**
+     * @param string $fileName
+     * @param string $tmpFilePath
+     * @return string version
+     */
+    public function createVersion($fileName, $tmpFilePath){
+
+        // get correct filePath
+        $version = sha1_file($tmpFilePath);
+        $filePath = $this->getFilePath($fileName, $version);
+
+        // init splitDirectory
+        $fileDir = dirname($filePath);
+        if( !is_dir($fileDir) ){
+            if( !mkdir($fileDir, 0755, true) ){
+                throw new RuntimeException('make splitDirectory failed: '.$fileDir);
+            }
+        }
+
+        if(!rename($tmpFilePath, $filePath)){
+            $version = '';
+        }
+        return $version;
     }
 
     /**
@@ -44,13 +69,14 @@ class Ric_Server_File_Manager{
     }
 
     /**
-     * @param string $filePathWithoutVersion
+     * @param string $fileName
      * @param bool $includeDeleted
      * @return array|int
      */
-    public function getAllVersions($filePathWithoutVersion, $includeDeleted=false){
+    public function getAllVersions($fileName, $includeDeleted=false){
         $versions = [];
-        foreach(glob($filePathWithoutVersion.'___*') as $entryFileName) {
+        $fileDir = $this->storeDir.$this->getSplitDirectoryFilePath($fileName);
+        foreach(glob($fileDir.$fileName.'___*') as $entryFileName) {
             /** @noinspection PhpUnusedLocalVariableInspection */
             list($fileName, $version) = $this->extractVersionFromFullFileName($entryFileName);
             $fileTimestamp = filemtime($entryFileName);
