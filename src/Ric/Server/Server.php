@@ -155,7 +155,7 @@ class Ric_Server_Server {
 		$noSync = (bool) H::getRP('noSync');
 
 		// read stream to tmpFile
-		$tmpFilePath = $tmpFile = sys_get_temp_dir().'/_'.__CLASS__.'_'.uniqid('', true);
+		$tmpFilePath = sys_get_temp_dir().'/_'.__CLASS__.'_'.uniqid('', true);
 		$putData = fopen("php://input", "r");
 		$fp = fopen($tmpFilePath, "w");
 		stream_copy_to_stream($putData, $fp);
@@ -166,29 +166,20 @@ class Ric_Server_Server {
 		fclose($putData);
 
 
-		// get correct filePath
-		$filePath = $this->getFilePath(sha1_file($tmpFile));
-
-		// init splitDirectory
-		$fileDir = dirname($filePath);
-		if( !is_dir($fileDir) ){
-			if( !mkdir($fileDir, 0755, true) ){
-				throw new RuntimeException('make splitDirectory failed: '.$fileDir);
-			}
-		}
-
-		// move file, set modTime
-		rename($tmpFilePath, $filePath);
+        $fileName = $this->extractFileNameFromRequest();
+        $version = $this->fileManager->createVersion($fileName, $tmpFilePath);
 
 		// check quota
 		if( $this->config['quota']>0 ){
 			if( $this->fileManager->getDirectorySize()>$this->config['quota']*1024*1024 ){
+                $filePath = $this->fileManager->getFilePath($fileName, $version);
 				unlink($filePath);
 				throw new RuntimeException('Quota exceeded!', 507);
 			}
 		}
 
 		// replicate
+        $filePath = $this->fileManager->getFilePath($fileName, $version);
 		$syncResult = $this->syncFile($filePath, $timestamp, $retention, $noSync);
 		if( $syncResult!='' ){
 			$result = 'WARNING'.' :'.$syncResult;
