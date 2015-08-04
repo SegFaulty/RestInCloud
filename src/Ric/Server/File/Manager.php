@@ -1,6 +1,48 @@
 <?php
 
 class Ric_Server_File_Manager{
+    protected $storeDir;
+
+    /**
+     * Ric_Server_File_Manager constructor.
+     * @param $storeDir
+     */
+    public function __construct($storeDir)
+    {
+        $this->storeDir = $storeDir;
+    }
+
+
+    /**
+     * @param string $fileName
+     * @param string $version optional
+     * @return string
+     */
+    public function getFilePath($fileName, $version=''){
+        $filePath = '';
+        if( $fileName!='' ){
+            $fileDir = $this->storeDir.$this->getSplitDirectoryFilePath($fileName);
+
+            if( !$version ){ // get the newest version
+                $version = reset(array_keys($this->getAllVersions($fileDir.$fileName)));
+                if( !$version ){
+                    throw new RuntimeException('no version of file not found', 404);
+                }
+            }
+            $filePath = $fileDir.$fileName.'___'.$version;
+        }
+        return $filePath;
+    }
+
+    /**
+     * @param string $fileName
+     * @return string
+     */
+    protected function getSplitDirectoryFilePath($fileName){
+        $fileNameMd5 = md5($fileName);
+        return substr($fileNameMd5,-1,1).DIRECTORY_SEPARATOR.substr($fileNameMd5,-2,1).DIRECTORY_SEPARATOR;
+    }
+
     /**
      * @param string $filePathWithoutVersion
      * @param bool $includeDeleted

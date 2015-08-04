@@ -911,23 +911,12 @@ class Ric_Server_Server {
             }else{
                 $fileVersion = $this->extractVersionFromRequest();
             }
-			// get split dir
-			$fileNameMd5 = md5($fileName);
-			$fileDir = $this->config['storeDir'].substr($fileNameMd5,-1,1).DIRECTORY_SEPARATOR.substr($fileNameMd5,-2,1).DIRECTORY_SEPARATOR;
-
-			if( !$fileVersion ){ // get the newest version
-				$fileVersion = reset(array_keys($this->fileManager->getAllVersions($fileDir.$fileName)));
-				if( !$fileVersion ){
-					throw new RuntimeException('no version of file not found', 404);
-				}
-			}
-			$filePath.= $fileDir.$fileName.'___'.$fileVersion;
+			$filePath = $this->fileManager->getFilePath($fileName, $fileVersion);
 		}
 		// if we not create a new file, it must exists
 		if( $version=='' AND $filePath AND !file_exists($filePath) ){
 			throw new RuntimeException('File not found! '.$filePath, 404);
 		}
-
 		return $filePath;
 	}
 
