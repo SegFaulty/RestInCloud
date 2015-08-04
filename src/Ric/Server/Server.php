@@ -1012,7 +1012,7 @@ class Ric_Server_Server {
 	 * @throws RuntimeException
 	 */
 	static protected function validateRegex($regEx){
-        $validationHelper = new Ric_Server_Helper_RegexPatternValidation();
+        $validationHelper = new Ric_Server_RegexValidation_Validator();
         if(!$validationHelper->validateRegex($regEx)){
             throw new RuntimeException('not a valid regex: '.$validationHelper->getLastErrorMessage(), 400);
         }

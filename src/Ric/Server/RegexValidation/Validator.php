@@ -1,6 +1,6 @@
 <?php
 
-class Ric_Server_Helper_RegexPatternValidation{
+class Ric_Server_RegexValidation_Validator{
     protected $lastErrorMessage = '';
 
     /**
