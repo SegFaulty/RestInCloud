@@ -5,6 +5,14 @@ class Ric_Server_Config{
 
     protected $config = [];
 
+    /**
+     * Ric_Server_Config constructor.
+     * @param array $defaultConfig
+     */
+    public function __construct(array $defaultConfig)
+    {
+        $this->defaultConfig = $defaultConfig;
+    }
 
     /**
      * load config default->given config -> docRoot/intern/config.json
