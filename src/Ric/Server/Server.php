@@ -37,7 +37,7 @@ class Ric_Server_Server {
 			throw new RuntimeException('document root ['.$this->config['storeDir'].'] is not a writable dir!');
 		}
         $this->authService = new Ric_Server_Auth_Service($this->config);
-        $this->fileManager = new Ric_Server_File_Manager();
+        $this->fileManager = new Ric_Server_File_Manager($this->config['storeDir']);
 	}
 
 	/**
