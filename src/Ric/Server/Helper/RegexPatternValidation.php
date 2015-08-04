@@ -1,24 +1,35 @@
 <?php
 
 class Ric_Server_Helper_RegexPatternValidation{
+    protected $lastErrorMessage = '';
+
     /**
-     * return same regEx if valid
-     * or throws Exception if not valid
-     * @param string $regEx
      * @return string
-     * @throws RuntimeException
      */
-    static public function validateRegex($regEx){
+    public function getLastErrorMessage()
+    {
+        return $this->lastErrorMessage;
+    }
+
+
+    /**
+     * validates regex, returns true if valid and false if not
+     *  when a validation error occurs lastErrorMessage gets set
+     * @param string $regEx
+     * @return boolean
+     */
+    public function validateRegex($regEx){
+        $isValid = true;
         // check is valid regex
-        //$errorString = '';
-        set_error_handler(function($errno, $errstr, $errfile, $errline, $errcontext) use(&$errorString){
-            $errorString = $errstr;
+        $this->lastErrorMessage = '';
+        set_error_handler(function($errno, $errstr, $errfile, $errline, $errcontext) use(&$errorMessage){
+            $this->lastErrorMessage = $errstr;
         });
         preg_match($regEx,'');
         restore_error_handler();
-        if($errorString){
-            throw new RuntimeException('not a valid regex: '.$errorString, 400);
+        if($this->lastErrorMessage){
+            $isValid = false;
         }
-        return $regEx;
+        return $isValid;
     }
 }
