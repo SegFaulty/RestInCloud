@@ -87,7 +87,7 @@ class Ric_Server_File_Manager{
      * @return int
      */
     public function getDirectorySize(){
-        $command = '/usr/bin/du -bs '.escapeshellarg($this->config['storeDir']);
+        $command = '/usr/bin/du -bs '.escapeshellarg($this->storeDir);
         exec($command, $output, $status);
         if( $status!==0 OR count($output)!=1 ){
             throw new RuntimeException('du failed with status: '.$status);
