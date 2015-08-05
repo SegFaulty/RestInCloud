@@ -4,9 +4,13 @@ checkout and copy configs
 
     git clone https://github.com/SegFaulty/RestInCloud.git
     cd RestInCloud
-	chown www-data.www-data var/ -R
     cp config/example-config.json config/config.json
     cp deployment/apache/example-apache-ric-vhost.conf config/apache-ric-vhost.conf
+
+create data dir an set permissions
+
+	mkdir -p var/data
+	chown www-data.www-data var/ -R
 
 change: tokens, path, quota
 
