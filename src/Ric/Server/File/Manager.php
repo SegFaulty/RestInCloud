@@ -39,7 +39,7 @@ class Ric_Server_File_Manager{
      * @param string $tmpFilePath
      * @return string version
      */
-    public function createVersion($fileName, $tmpFilePath){
+    public function storeFile($fileName, $tmpFilePath){
 
         // get correct filePath
         $version = sha1_file($tmpFilePath);

@@ -166,7 +166,7 @@ class Ric_Server_Server {
 
 
         $fileName = $this->extractFileNameFromRequest();
-        $version = $this->fileManager->createVersion($fileName, $tmpFilePath);
+        $version = $this->fileManager->storeFile($fileName, $tmpFilePath);
 
 		// check quota
 		if( $this->config['quota']>0 ){
