@@ -895,7 +895,6 @@ class Ric_Server_Server {
 		}
 	}
 
-
 	/**
 	 * help
 	 */
