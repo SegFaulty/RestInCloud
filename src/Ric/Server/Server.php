@@ -9,7 +9,6 @@ class Ric_Server_Server {
      * @var Ric_Server_Auth_Service
      */
     protected $authService;
-	static $markDeletedTimestamp = 1422222222; // 2015-01-25 22:43:42
 
 	protected $defaultConfig = [
 		'hostPort' => '', // if empty use autoDetectSource host with default port
