@@ -1,6 +1,6 @@
 <?php
 
-class Ric_Server_RegexValidation_Validator{
+class Ric_Server_Helper_RegexValidator{
 
     /**
      * validates regex, returns true if valid and false if not
