@@ -50,8 +50,6 @@ if( php_sapi_name()=='cli' ){
 # $ricServer->handleRequest();
 
 
-
-
 /**
  * Class Ric_Server_Server
  */
