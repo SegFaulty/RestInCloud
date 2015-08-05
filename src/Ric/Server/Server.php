@@ -954,9 +954,8 @@ class Ric_Server_Server {
 	 * @throws RuntimeException
 	 */
 	static protected function validateRegex($regEx){
-        $validationHelper = new Ric_Server_RegexValidation_Validator();
-        if(!$validationHelper->validateRegex($regEx)){
-            throw new RuntimeException('not a valid regex: '.$validationHelper->getLastErrorMessage(), 400);
+        if(!Ric_Server_RegexValidation_Validator::validateRegex($regEx, $errorMessage)){
+            throw new RuntimeException('not a valid regex: '.$errorMessage, 400);
         }
         return $regEx;
 	}
