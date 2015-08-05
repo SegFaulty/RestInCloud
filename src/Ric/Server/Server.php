@@ -567,7 +567,10 @@ class Ric_Server_Server {
 	 * @throws RuntimeException
 	 */
 	protected function actionList($details=false){
-		$pattern = (isset($_REQUEST['pattern']) ? self::validateRegex($_REQUEST['pattern']) : '' );
+		$pattern = H::getRP('pattern', null);
+        if($pattern!==null AND !Ric_Server_RegexValidation_Validator::validateRegex($pattern, $errorMessage)){
+            throw new RuntimeException('not a valid regex: '.$errorMessage, 400);
+        }
 		$showDeleted = H::getRP('showDeleted');
 		$start = H::getRP('start', 0);
 		$limit = min(1000, H::getRP('limit', 100));
@@ -583,7 +586,7 @@ class Ric_Server_Server {
 			if( $splFileInfo->isFile() ){
 				/** @noinspection PhpUnusedLocalVariableInspection */
 				list($fileName, $version) = $this->extractVersionFromFullFileName($splFileInfo->getFilename());
-				if( $pattern!='' AND !preg_match($pattern, $fileName) ){
+				if( $pattern!=null AND !preg_match($pattern, $fileName) ){
 					continue;
 				}
 				if( $splFileInfo->getMTime()==Ric_Server_Definition::MAGIC_DELETION_TIMESTAMP AND !$showDeleted ){
@@ -665,7 +668,10 @@ class Ric_Server_Server {
 			throw new RuntimeException('open file failed');
 		}
 		// grep
-		$regex = self::validateRegex(H::getRP('grep'));
+        $regex = H::getRP('grep');
+        if(!Ric_Server_RegexValidation_Validator::validateRegex($regex, $errorMessage)){
+            throw new RuntimeException('not a valid regex: '.$errorMessage, 400);
+        }
 		while(($line = gzgets($fp,100000))){
 			if( preg_match($regex, $line) ){
 				echo $line;
@@ -944,20 +950,6 @@ class Ric_Server_Server {
 			throw new RuntimeException('wrong hostname: ['.$hostName.'] - hostPort in config is missing and "hostname"-command returns not an host name with ".",  can not perform remote operation, please set "hostPort" in config or hostname on host to a reachable value (FQH: ric.example.com:3333)');
 		}
 		return $hostName;
-	}
-
-	/**
-	 * return same regEx if valid
-	 * or throws Exception if not valid
-	 * @param string $regEx
-	 * @return string
-	 * @throws RuntimeException
-	 */
-	static protected function validateRegex($regEx){
-        if(!Ric_Server_RegexValidation_Validator::validateRegex($regEx, $errorMessage)){
-            throw new RuntimeException('not a valid regex: '.$errorMessage, 400);
-        }
-        return $regEx;
 	}
 
 
