@@ -500,7 +500,9 @@ class Ric_Server_Server {
 		$result = [];
 		$result['status'] = 'OK';
 		$result['msg'] = '';
-		$filePath = $this->getFilePath();
+        $fileName = $this->extractFileNameFromRequest();
+        $fileVersion = $this->extractVersionFromRequest();
+        $filePath = $this->fileManager->getFilePath($fileName, $fileVersion);
 
 		$sha1 = H::getRP('sha1', '');
 		$minSize = H::getRP('minSize', 1);
@@ -508,7 +510,7 @@ class Ric_Server_Server {
 		$minReplicasDefault = max(1, count($this->config['servers'])-1); // min 1, or 1 invalid of current servers
 		$minReplicas = H::getRP('minReplicas', $minReplicasDefault); // if parameter omitted, don't check replicas!!!! or deadlock
 
-		$fileInfo = $this->fileManager->getFileInfo($filePath);
+		$fileInfo = $this->fileManager->getFileInfo($fileName, $fileVersion);
 		$fileInfo['replicas'] = false;
 		if( $minReplicas>0 ){
 			$fileInfo['replicas'] = $this->getReplicaCount($filePath);
@@ -571,43 +573,28 @@ class Ric_Server_Server {
         if($pattern!==null AND !Ric_Server_Helper_RegexValidator::isValid($pattern, $errorMessage)){
             throw new RuntimeException('not a valid regex: '.$errorMessage, 400);
         }
-		$showDeleted = H::getRP('showDeleted');
+		$showDeleted = H::getRP('showDeleted', false);
+        if($showDeleted==='true' OR $showDeleted==='1'){
+            $showDeleted = true;
+        }else{
+            $showDeleted = false;
+        }
 		$start = H::getRP('start', 0);
 		$limit = min(1000, H::getRP('limit', 100));
 
+        $fileNames = $this->fileManager->getFileInfosForPattern($pattern, $showDeleted, $start, $limit);
 		$lines = [];
-		$dirIterator = new RecursiveDirectoryIterator($this->config['storeDir']);
-		$iterator = new RecursiveIteratorIterator($dirIterator, RecursiveIteratorIterator::SELF_FIRST);
-		$index = -1;
-		foreach( $iterator as $splFileInfo ){ /** @var SplFileInfo $splFileInfo */
-			if( $splFileInfo->getPath()==$this->config['storeDir'].'intern' ){
-				continue; // skip our internal files
-			}
-			if( $splFileInfo->isFile() ){
-				/** @noinspection PhpUnusedLocalVariableInspection */
-				list($fileName, $version) = $this->extractVersionFromFullFileName($splFileInfo->getFilename());
-				if( $pattern!=null AND !preg_match($pattern, $fileName) ){
-					continue;
-				}
-				if( $splFileInfo->getMTime()==Ric_Server_Definition::MAGIC_DELETION_TIMESTAMP AND !$showDeleted ){
-					continue;
-				}
-				$index++;
-				if( $index<$start ){
-					continue;
-				}
-				if( count($lines)>=$limit ){
-					break;
-				}
-				if( $details ){
-					$fileInfo = $this->fileManager->getFileInfo($splFileInfo->getRealPath());
-					$lines[] = ['index' => $index] + $fileInfo;
-				}else{
-					if( !in_array($fileName, $lines) ){
-						$lines[] = $fileName;
-					}
-				}
-			}
+        $index = $start;
+		foreach( $fileNames as $fileInfo ){ /** @var SplFileInfo $splFileInfo */
+            if( $details ){
+                $lines[] = ['index' => $index] + $fileInfo;
+                $index++;
+            }else{
+                $fileName = $fileInfo['name'];
+                if( !in_array($fileName, $lines) ){
+                    $lines[] = $fileName;
+                }
+            }
 		}
 
 		header('Content-Type: application/json');
@@ -627,12 +614,11 @@ class Ric_Server_Server {
 		$lines = [];
 		$index = -1;
 		foreach( $this->fileManager->getAllVersions($fileName, $showDeleted) as $version=>$timeStamp ){
-            $filePath = $this->fileManager->getFilePath($fileName, $version);
             $index++;
             if( $limit<=$index ){
                 break;
             }
-            $lines[] = ['index' => $index] + $this->fileManager->getFileInfo($filePath);
+            $lines[] = ['index' => $index] + $this->fileManager->getFileInfo($fileName, $version);
 		}
 		header('Content-Type: application/json');
 		echo H::json($lines);

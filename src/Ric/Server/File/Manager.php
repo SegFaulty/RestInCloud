@@ -89,10 +89,50 @@ class Ric_Server_File_Manager{
     }
 
     /**
-     * @param string $filePath
+     * @param string $pattern
+     * @param bool|false $showDeleted
+     * @param int $start
+     * @param int $limit
+     * @return array [[string => string]]
+     */
+    public function getFileInfosForPattern($pattern='', $showDeleted=false, $start=0, $limit=100){
+        $result = [];
+        $dirIterator = new RecursiveDirectoryIterator($this->storageDir);
+        $iterator = new RecursiveIteratorIterator($dirIterator, RecursiveIteratorIterator::SELF_FIRST);
+        $index = -1;
+        foreach( $iterator as $splFileInfo ){ /** @var SplFileInfo $splFileInfo */
+            if( $splFileInfo->getPath()==$this->storageDir.'intern' ){
+                continue; // skip our internal files
+            }
+            if( $splFileInfo->isFile() ){
+                /** @noinspection PhpUnusedLocalVariableInspection */
+                list($fileName, $version) = $this->extractVersionFromFullFileName($splFileInfo->getFilename());
+                if( $pattern!=null AND !preg_match($pattern, $fileName) ){
+                    continue;
+                }
+                if( $splFileInfo->getMTime()==Ric_Server_Definition::MAGIC_DELETION_TIMESTAMP AND !$showDeleted ){
+                    continue;
+                }
+                $index++;
+                if( $index<$start ){
+                    continue;
+                }
+                $result[] = $this->getFileInfo($fileName, $version);
+                if( count($result)>=$limit ){
+                    break;
+                }
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * @param string $fileName
+     * @param string $version
      * @return array
      */
-    public function getFileInfo($filePath){
+    public function getFileInfo($fileName, $version){
+        $filePath = $this->getFilePath($fileName, $version);
         list($fileName, $version) = $this->extractVersionFromFullFileName($filePath);
         $fileTimestamp = filemtime($filePath);
         $info = [
