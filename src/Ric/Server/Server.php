@@ -819,20 +819,26 @@ class Ric_Server_Server {
      * send an existing file
      */
     protected function actionSendFile(){
-        $filePath = $this->getFilePath();
-        /** @noinspection PhpUnusedLocalVariableInspection */
-        list($fileName, $version) = $this->extractVersionFromFullFileName($filePath);
-        $lastModified = gmdate('D, d M Y H:i:s \G\M\T', filemtime($filePath));
-        $eTag = sha1_file($filePath);
+        $fileName = $this->extractFileNameFromRequest();
+        $fileVersion = $this->extractVersionFromRequest();
+        $fileInfo = $this->fileManager->getFileInfo($fileName, $fileVersion);
+
+        $lastModified = gmdate('D, d M Y H:i:s \G\M\T', $fileInfo->getTimestamp());
+        $eTag = $fileInfo->getSha1();
+
         // 304er support
         $ifMod = isset($_SERVER['HTTP_IF_MODIFIED_SINCE']) ? $_SERVER['HTTP_IF_MODIFIED_SINCE'] == $lastModified : null;
         $ifTag = isset($_SERVER['HTTP_IF_NONE_MATCH']) ? $_SERVER['HTTP_IF_NONE_MATCH'] == $eTag : null;
         if (($ifMod || $ifTag) && ($ifMod !== false && $ifTag !== false)) {
             header('HTTP/1.0 304 Not Modified');
         } else {
+            $filePath = $this->fileManager->getFilePath($fileName, $fileVersion);
+            if(!file_exists($filePath)){
+                throw new RuntimeException('File not found! '.$filePath, 404);
+            }
             header('Content-Type: application/octet-stream');
             header('Content-Disposition: attachment; filename="'.$fileName.'"');
-            header('Content-Length: '.filesize($filePath));
+            header('Content-Length: '.$fileInfo->getSize());
             header('Last-Modified:'.$lastModified);
             header('ETag: '.$eTag);
             readfile($filePath);
