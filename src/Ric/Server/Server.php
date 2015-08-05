@@ -568,7 +568,7 @@ class Ric_Server_Server {
 	 */
 	protected function actionList($details=false){
 		$pattern = H::getRP('pattern', null);
-        if($pattern!==null AND !Ric_Server_RegexValidation_Validator::validateRegex($pattern, $errorMessage)){
+        if($pattern!==null AND !Ric_Server_RegexValidation_Validator::isValid($pattern, $errorMessage)){
             throw new RuntimeException('not a valid regex: '.$errorMessage, 400);
         }
 		$showDeleted = H::getRP('showDeleted');
@@ -669,7 +669,7 @@ class Ric_Server_Server {
 		}
 		// grep
         $regex = H::getRP('grep');
-        if(!Ric_Server_RegexValidation_Validator::validateRegex($regex, $errorMessage)){
+        if(!Ric_Server_RegexValidation_Validator::isValid($regex, $errorMessage)){
             throw new RuntimeException('not a valid regex: '.$errorMessage, 400);
         }
 		while(($line = gzgets($fp,100000))){

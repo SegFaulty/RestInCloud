@@ -9,7 +9,7 @@ class Ric_Server_RegexValidation_Validator{
      * @param string $errorMessage get error message (reference)
      * @return bool
      */
-    static public function validateRegex($regEx, &$errorMessage=''){
+    static public function isValid($regEx, &$errorMessage=''){
         $isValid = true;
         // check is valid regex
         set_error_handler(function($errno, $errstr, $errfile, $errline, $errcontext) use(&$errorMessage){
