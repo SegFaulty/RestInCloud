@@ -148,7 +148,9 @@ echo $msg.PHP_EOL; //todo logger
 			$timestamp = time();
 		}
 		$rawFilePath = $this->getFilePathForResource($resource);
-		$filePath = $this->getEncryptedFilePath($rawFilePath, $password);
+
+		// we have to provide the same salt for the same filename to get a file with the same sha1, but it should be not the same for all files, so we take the $targetFileName itself ;-)
+		$filePath = $this->getEncryptedFilePath($rawFilePath, $password, $targetFileName);
 		if( filesize($filePath)<$minSize ){
 			throw new RuntimeException('required min file size('.$minSize.') not reached (was '.filesize($filePath).')');
 		}
@@ -300,24 +302,21 @@ echo $msg.PHP_EOL; //todo logger
 	 * if the passowrd is empty, the result file is still encoded with a salt !!!
 	 * @param string $filePath
 	 * @param string $password
-	 * @return string
+	 * @param string $salt
 	 * @throws RuntimeException
+	 * @return string
 	 */
-	protected function getEncryptedFilePath($filePath, $password){
+	protected function getEncryptedFilePath($filePath, $password, $salt='_sdffHGetdsga'){
 		if( !is_file($filePath) ){
 			throw new RuntimeException('file not found or not a regular file: '.$filePath);
 		}
 
 		$encryptedFilePath = $this->getTmpFilePath('.ricenc');
 
-		$command = 'openssl enc -aes-256-cbc -salt -in '.$filePath.' -out '.$encryptedFilePath.' -k '.escapeshellarg((string) $password);
+		$command = 'openssl enc -aes-256-cbc -S '.bin2hex(substr($salt,0,8)).' -in '.$filePath.' -out '.$encryptedFilePath.' -k '.escapeshellarg((string) $password);
 		exec($command, $output, $status);
 		if( $status!=0 ){
-echo '$command: '.$command.PHP_EOL;
-echo 'status: '.$status.PHP_EOL;
-echo '$output: '.$output;
-print_r($output);
-			throw new RuntimeException('encryption failed', 500);
+			throw new RuntimeException('encryption failed: '.$command.' with: '.print_r($output, true), 500);
 		}
 
 		return $encryptedFilePath;
@@ -339,11 +338,7 @@ print_r($output);
 		$command = 'openssl enc -aes-256-cbc -d -in '.$encryptedFilePath.' -out '.$decryptedFilePath.' -k '.escapeshellarg((string) $password);
 		exec($command, $output, $status);
 		if( $status!=0 ){
-echo '$command: '.$command.PHP_EOL;
-echo 'status: '.$status.PHP_EOL;
-echo '$output: ';
-print_r($output);
-			throw new RuntimeException('decryption failed', 500);
+			throw new RuntimeException('decryption failed '.$command.' with '.print_r($output, true), 500);
 		}
 
 		return $decryptedFilePath;
