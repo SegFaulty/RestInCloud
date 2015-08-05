@@ -3,24 +3,23 @@
 checkout and copy configs
 
     git clone https://github.com/SegFaulty/RestInCloud.git
-    cd RestInCloud/apache
-	chown www-data.www-data -R html
-	chown www-data.www-data ../var/data/ -R
-    cp config__dist__.json config.json
-    cp ric-apache-host__dist__.conf ric-apache-host.conf
+    cd RestInCloud
+	chown www-data.www-data var/ -R
+    cp config/example-config.json config/config.json
+    cp deployment/apache/example-apache-ric-vhost.conf config/apache-ric-vhost.conf
 
 change: tokens, path, quota
 
-    vi config.json
+    vi config/config.json
 
-change: host, paths
+change: host, log-location
 
-	vi ric-apache-host.conf
+	vi config/apache-ric-vhost.conf
 
 activate and restart apache, maybe it is /etc/apache2/sites-enabled (ubuntu)
 
     cd /etc/apache/sites-enabled
-    ln -s /home/www/RestInCloud/apache/ric-apache-host.conf
+    ln -s /home/www/RestInCloud/config/apache-ric-vhost.conf
     apachectl restart
 
 
