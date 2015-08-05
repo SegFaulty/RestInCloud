@@ -93,7 +93,7 @@ class Ric_Server_File_Manager{
      * @param bool|false $showDeleted
      * @param int $start
      * @param int $limit
-     * @return array [[string => string]]
+     * @return Ric_Server_File_FileInfo[]
      */
     public function getFileInfosForPattern($pattern='', $showDeleted=false, $start=0, $limit=100){
         $result = [];
@@ -129,20 +129,13 @@ class Ric_Server_File_Manager{
     /**
      * @param string $fileName
      * @param string $version
-     * @return array
+     * @return Ric_Server_File_FileInfo
      */
     public function getFileInfo($fileName, $version){
         $filePath = $this->getFilePath($fileName, $version);
         list($fileName, $version) = $this->extractVersionFromFullFileName($filePath);
         $fileTimestamp = filemtime($filePath);
-        $info = [
-            'name' => $fileName,
-            'version' => $version,
-            'sha1' => sha1_file($filePath), // ja sollte das selbe wie version sein, das bestätigt aber, das das file noch physisch korrekt ist
-            'size' => filesize($filePath),
-            'timestamp' => $fileTimestamp,
-            'dateTime' => date('Y-m-d H:i:s', $fileTimestamp),
-        ];
+        $info = new Ric_Server_File_FileInfo($fileName, $version, sha1_file($filePath), filesize($filePath), $fileTimestamp);
         return $info;
     }
 

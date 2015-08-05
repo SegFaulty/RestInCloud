@@ -493,6 +493,7 @@ class Ric_Server_Server {
     }
 
     /**
+     * todo check if $fileInfo->getVersion()==$fileInfo->getSha1()
      * list files or version of file
      * @throws RuntimeException
      */
@@ -511,31 +512,39 @@ class Ric_Server_Server {
         $minReplicas = H::getRP('minReplicas', $minReplicasDefault); // if parameter omitted, don't check replicas!!!! or deadlock
 
         $fileInfo = $this->fileManager->getFileInfo($fileName, $fileVersion);
-        $fileInfo['replicas'] = false;
+        $infos = [
+            'name' => $fileInfo->getName(),
+            'version' => $fileInfo->getVersion(),
+            'sha1' => $fileInfo->getSha1(),
+            'dateTime' => $fileInfo->getDateTime(),
+            'timestamp' => $fileInfo->getTimestamp(),
+            'size' => $fileInfo->getSize(),
+        ];
+        $infos['replicas'] = false;
         if( $minReplicas>0 ){
-            $fileInfo['replicas'] = $this->getReplicaCount($filePath);
+            $infos['replicas'] = $this->getReplicaCount($filePath);
         }
-        if( $sha1!='' AND $fileInfo['sha1']!=$sha1 ){
+        if( $sha1!='' AND $infos['sha1']!=$sha1 ){
             $result['status'] = 'CRITICAL';
             $result['msg'] = trim($result['msg'].PHP_EOL.'unmatched sha1');
         }
-        if( $fileInfo['size']<$minSize ){
+        if( $infos['size']<$minSize ){
             $result['status'] = 'CRITICAL';
-            $result['msg'] = trim($result['msg'].PHP_EOL.'size less then expected ('.$fileInfo['size'].'/'.$minSize.')');
+            $result['msg'] = trim($result['msg'].PHP_EOL.'size less then expected ('.$infos['size'].'/'.$minSize.')');
         }
-        if( $minTimestamp>0 AND $fileInfo['timestamp']<$minTimestamp ){
+        if( $minTimestamp>0 AND $infos['timestamp']<$minTimestamp ){
             $result['status'] = 'CRITICAL';
-            $result['msg'] = trim($result['msg'].PHP_EOL.'file is outdated ('.$fileInfo['timestamp'].'/'.$minTimestamp.')');
+            $result['msg'] = trim($result['msg'].PHP_EOL.'file is outdated ('.$infos['timestamp'].'/'.$minTimestamp.')');
         }
-        if( $minReplicas>0 AND $fileInfo['replicas']<$minReplicas ){
+        if( $minReplicas>0 AND $infos['replicas']<$minReplicas ){
             $result['status'] = 'CRITICAL';
             // wenn wir mindestens replikat haben und nur eins fehlt, dann warning (das wird mutmasslich gerade gelöst)
-            if( $fileInfo['replicas']>0 AND $fileInfo['replicas']>=$minReplicas-1 ){
+            if( $infos['replicas']>0 AND $infos['replicas']>=$minReplicas-1 ){
                 $result['status'] = 'WARNING';
             }
-            $result['msg'] = trim($result['msg'].PHP_EOL.'not enough replicas ('.$fileInfo['replicas'].'/'.$minReplicas.')');
+            $result['msg'] = trim($result['msg'].PHP_EOL.'not enough replicas ('.$infos['replicas'].'/'.$minReplicas.')');
         }
-        $result['fileInfo'] = $fileInfo;
+        $result['fileInfo'] = $infos;
         header('Content-Type: application/json');
         echo H::json($result);
     }
@@ -582,12 +591,20 @@ class Ric_Server_Server {
         $start = H::getRP('start', 0);
         $limit = min(1000, H::getRP('limit', 100));
 
-        $fileNames = $this->fileManager->getFileInfosForPattern($pattern, $showDeleted, $start, $limit);
+        $fileInfos = $this->fileManager->getFileInfosForPattern($pattern, $showDeleted, $start, $limit);
         $lines = [];
         $index = $start;
-        foreach( $fileNames as $fileInfo ){ /** @var SplFileInfo $splFileInfo */
+        foreach( $fileInfos as $fileInfo ){/** @var Ric_Server_File_FileInfo $fileInfo */
             if( $details ){
-                $lines[] = ['index' => $index] + $fileInfo;
+                $lines[] = [
+                    'index' => $index,
+                    'name' => $fileInfo->getName(),
+                    'version' => $fileInfo->getVersion(),
+                    'sha1' => $fileInfo->getSha1(),
+                    'dateTime' => $fileInfo->getDateTime(),
+                    'timestamp' => $fileInfo->getTimestamp(),
+                    'size' => $fileInfo->getSize(),
+                ];
                 $index++;
             }else{
                 $fileName = $fileInfo['name'];
@@ -618,7 +635,17 @@ class Ric_Server_Server {
             if( $limit<=$index ){
                 break;
             }
-            $lines[] = ['index' => $index] + $this->fileManager->getFileInfo($fileName, $version);
+            $fileInfo = $this->fileManager->getFileInfo($fileName, $version);
+            $lines[] = [
+                'index' => $index,
+                'name' => $fileInfo->getName(),
+                'version' => $fileInfo->getVersion(),
+                'sha1' => $fileInfo->getSha1(),
+                'dateTime' => $fileInfo->getDateTime(),
+                'timestamp' => $fileInfo->getTimestamp(),
+                'size' => $fileInfo->getSize(),
+            ];
+
         }
         header('Content-Type: application/json');
         echo H::json($lines);
