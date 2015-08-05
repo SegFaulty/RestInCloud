@@ -503,7 +503,6 @@ class Ric_Server_Server {
         $result['msg'] = '';
         $fileName = $this->extractFileNameFromRequest();
         $fileVersion = $this->extractVersionFromRequest();
-        $filePath = $this->fileManager->getFilePath($fileName, $fileVersion);
 
         $sha1 = H::getRP('sha1', '');
         $minSize = H::getRP('minSize', 1);
@@ -522,7 +521,7 @@ class Ric_Server_Server {
         ];
         $infos['replicas'] = false;
         if( $minReplicas>0 ){
-            $infos['replicas'] = $this->getReplicaCount($filePath);
+            $infos['replicas'] = $this->getReplicaCount($fileInfo->getName(), $fileInfo->getVersion(), $fileInfo->getSha1());
         }
         if( $sha1!='' AND $infos['sha1']!=$sha1 ){
             $result['status'] = 'CRITICAL';
@@ -550,13 +549,13 @@ class Ric_Server_Server {
     }
 
     /**
-     * @param string $filePath
+     * @param string $fileName
+     * @param string $version
+     * @param string $sha1
      * @return int
      */
-    protected function getReplicaCount($filePath){
+    protected function getReplicaCount($fileName, $version, $sha1){
         $replicas = 0;
-        list($fileName, $version) = $this->extractVersionFromFullFileName($filePath);
-        $sha1 = sha1_file($filePath);
         foreach( $this->config['servers'] as $server ){
             try{
                 $serverUrl = 'http://'.$server.'/';
