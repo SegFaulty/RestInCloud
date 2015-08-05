@@ -12,7 +12,7 @@ class Ric_Server_Server {
 
     protected $defaultConfig = [
         'hostPort' => '', // if empty use autoDetectSource host with default port
-        'storeDir' => '/tmp/ric/',
+        'storeDir' => '/nonExestingDir/ric/',
         'quota' => 0,
         'servers' => [],
         'adminToken' => 'admin',

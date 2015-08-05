@@ -18,9 +18,9 @@ change: host, log-location
 
 activate and restart apache, maybe it is /etc/apache2/sites-enabled (ubuntu)
 
-    cd /etc/apache/sites-enabled
+    cd /etc/apache2/sites-enabled
     ln -s /home/www/RestInCloud/config/apache-ric-vhost.conf
-    apachectl restart
+    apache2ctl restart
 
 
 
