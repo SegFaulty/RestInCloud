@@ -187,6 +187,7 @@ class Ric_Server_Server {
 
 		$this->executeRetention($fileName, $retention);
 
+        // TODO kein 201 liefern wenn $syncResult!='' , da dann mindestens ein server nicht erreicht wurde, muss das hier komplett failen
 		header('HTTP/1.1 201 Created', true, 201);
 		echo $result.PHP_EOL;
 	}
