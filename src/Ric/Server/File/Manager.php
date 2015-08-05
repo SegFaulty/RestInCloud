@@ -1,15 +1,15 @@
 <?php
 
 class Ric_Server_File_Manager{
-    protected $storeDir;
+    protected $storageDir;
 
     /**
      * Ric_Server_File_Manager constructor.
-     * @param $storeDir
+     * @param $storageDir
      */
-    public function __construct($storeDir)
+    public function __construct($storageDir)
     {
-        $this->storeDir = $storeDir;
+        $this->storageDir = $storageDir;
     }
 
 
@@ -21,7 +21,7 @@ class Ric_Server_File_Manager{
     public function getFilePath($fileName, $version=''){
         $filePath = '';
         if( $fileName!='' ){
-            $fileDir = $this->storeDir.$this->getSplitDirectoryFilePath($fileName);
+            $fileDir = $this->storageDir.$this->getSplitDirectoryFilePath($fileName);
 
             if( !$version ){ // get the newest version
                 $version = reset(array_keys($this->getAllVersions($fileName)));
@@ -75,7 +75,7 @@ class Ric_Server_File_Manager{
      */
     public function getAllVersions($fileName, $includeDeleted=false){
         $versions = [];
-        $fileDir = $this->storeDir.$this->getSplitDirectoryFilePath($fileName);
+        $fileDir = $this->storageDir.$this->getSplitDirectoryFilePath($fileName);
         foreach(glob($fileDir.$fileName.'___*') as $entryFileName) {
             /** @noinspection PhpUnusedLocalVariableInspection */
             list($fileName, $version) = $this->extractVersionFromFullFileName($entryFileName);
@@ -107,13 +107,13 @@ class Ric_Server_File_Manager{
     }
 
     /**
-     * returns the result of "du storeDir" in bytes
+     * returns the result of "du storageDir" in bytes
      * this is linux dependent, if want it more flexible, make it ;-)
      * @throws RuntimeException
      * @return int
      */
     public function getDirectorySize(){
-        $command = '/usr/bin/du -bs '.escapeshellarg($this->storeDir);
+        $command = '/usr/bin/du -bs '.escapeshellarg($this->storageDir);
         exec($command, $output, $status);
         if( $status!==0 OR count($output)!=1 ){
             throw new RuntimeException('du failed with status: '.$status);
