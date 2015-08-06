@@ -291,12 +291,12 @@ echo $msg.PHP_EOL; //todo logger
 		}elseif( is_dir($resource) ){
 			$this->logDebug('dir resource detected');
 			$tmpTarFile = $this->getTmpFilePath('.tar.bz2');
-			$command = 'tar -cjf '.$tmpTarFile.' '.$resource;
+			$command = 'tar -cjf '.$tmpTarFile.' -C '.realpath($resource).' .'; // change to dir and backup content of dir not the upper path     backup /etc/apache/ -> will back conf,sites-enabled ... not /etc/apache/conf
+			$this->logDebug('dir as tar with bzip: '.$command);
 			exec($command, $output, $status);
 			if( $status!=0 ){
 				throw new RuntimeException('tar dir failed: '.$command.' with: '.print_r($output, true), 500);
 			}
-			$this->logDebug('dir as tar with bzip '.$tmpTarFile);
 			touch($tmpTarFile, filemtime(rtrim($resource,'/').'/.')); // get the dir mod-date and set it to created tar
 			$this->logDebug('set modification time of tar to '.date('Y-m-d H:i:s', filemtime($tmpTarFile)));
 			$filePath = $tmpTarFile;
