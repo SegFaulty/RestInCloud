@@ -33,6 +33,7 @@ use ric help {command} for command details
 you can define every option as environment variable with prefix "ric" (server -> ricServer)
 
 * --verbose show debug details default: false
+* --quite don't print anything except failures default: false
 * --auth {token}  default: ENV ricAuth -> ''
 * --authFile {tokenFilePath} read auth from file default: ENV ricAuthFile -> ''
 * --server RicServer default: ENV ricServer -> ''

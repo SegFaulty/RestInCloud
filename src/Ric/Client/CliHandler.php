@@ -13,6 +13,7 @@ class Ric_Client_CliHandler{
 	 */
 	static public function handleExecute($argv, $env){
 		$status = true;
+		$msg = '';
 		$cli = new Ric_Client_Cli($argv, $env);
 		$command = array_shift($cli->arguments);
 		if( $cli->getOption('verbose') ){
@@ -54,10 +55,12 @@ class Ric_Client_CliHandler{
 			}
 		}catch(Exception $e){
 			$status = 1;
-			$msg = $e->getMessage();
+			file_put_contents("php://stderr", rtrim($e->getMessage()).PHP_EOL);
 		}
 
-		echo rtrim($msg).PHP_EOL; // add trailing newline
+		if( !$cli->getOption('quite') ){
+			echo rtrim($msg).PHP_EOL; // add trailing newline
+		}
 		if( is_bool($status) ){
 			$status = (int) !$status;
 		}
