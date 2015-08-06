@@ -20,7 +20,7 @@ aus einer resource wird immer eine datei generiert, diese wird gzipped und encry
 
 * ric help - show help
 * ric backup - store a a resource (file/dir/dump) in RestInCloud Backup Server
-* ric verify - verify if a resource is valid backuped
+* ric check - check if a resource is valid backuped
 * ric list - all versions of a resource
 * ric restore - restore a backuped resource
 * ric delete - delete a resource
@@ -32,10 +32,10 @@ use ric help {command} for command details
 
 you can define every option as environment variable with prefix "ric" (server -> ricServer)
 
-* --verbose show debug details
-* --auth {token}  default: ENV ricAuth
-* --server RicServer default: ENV ricServer
-* --prefix prefix all target names default: ENV ricPrefix
+* --verbose show debug details default: false
+* --auth {token}  default: ENV ricAuth -> ''
+* --server RicServer default: ENV ricServer -> ''
+* --prefix prefix all target names default: ENV ricPrefix -> ''
 
 ## Help backup
     ric backup {resource} [{targetFileName}] [options]
@@ -50,27 +50,29 @@ ablauf:
 * (optionaly check minSize)
 * refresh this file with post request
 * if failed store file with put request
-* verify the file (sha1, minSize, minReplicas)
+* check the file (sha1, minSize, minReplicas)
 
 ### backup options
 
 * --pass Password
 * --retention default: last3
-* --timestamp default: call time
+* --timestamp as int or 'now' or 'file' default: now
 * --minReplicas default: max(1, count(servers)-1)
 * --minSize default: 1
+* --prefix
 
-## Help verify
+## Help check
 
-    ric verify testService_host1_config.tar.gz --minSize=100000
+    ric check testService_host1_config.tar.gz --minSize=100000
 
 
-### verify options
+### check options
 
 * --minTimestamp 123131231
 * --minSize 23423
 * --sha1
 * --minReplicas 3
+* --prefix
 
 * --sic aktivere sic (nur nötig wenn keine andere sic option)
 * --sicChannel default --target
@@ -84,20 +86,29 @@ ablauf:
 
     ric restore hostname%??%??homewww/ric/config.tar.gz /tmp/restore/
 
-## restore options
+### restore options
 
 * --pass Password
 * --overwrite   overwrite existing resource
+* --prefix
+
+ if --prefix is set, the restored file will not contains the prefix!
 
 ## Help list
 
-    ric verify /home/www/ric/config/
+    ric check /home/www/ric/config/
 
 ## Help delete
 
-    ric delete {fileName} [{version}]
+    ric delete {fileName} {version}
 
-    ric delete error.config
+    use version: "all" to delete all versions of {fileName}
+
+    ric delete error.config all
+    ric delete error.config 8aaa6c7bd96811293a2879ed45879b3cf5e4165b
+### delete options
+
+* --prefix
 
 ## Help admin
 

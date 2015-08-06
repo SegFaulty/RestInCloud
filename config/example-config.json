@@ -1,0 +1,8 @@
+{
+  "hostPort": "ric01.example.com:1347",
+  "storeDir": "/usr/share/RestInCloud/var/data/",
+  "quota": 10000,
+  "adminToken": "yourAdminToken",
+  "writerToken": "yourWriterToken",
+  "readerToken": "yourReaderToken"
+}

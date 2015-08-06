@@ -41,8 +41,8 @@ class Ric_Client_CliHandler{
 				case 'backup':
 					$msg = self::commandBackup($client, $cli);
 					break;
-				case 'verify':
-					$msg = self::commandVerify($client, $cli);
+				case 'check':
+					$msg = self::commandCheck($client, $cli);
 					break;
 				case 'list':
 					$msg = self::commandList($client, $cli);
@@ -85,18 +85,21 @@ class Ric_Client_CliHandler{
 	 * @throws RuntimeException
 	 */
 	static protected function commandBackup($client, $cli){
-		$resource = $cli->arguments[0];
+		$resource = $cli->getArgument(1);
 		if( count($cli->arguments)==1 ){
 			if( is_file($resource) ){
 				$targetFileName = basename($resource);
+			}elseif( is_dir($resource) ){
+				$targetFileName = basename($resource).'.tar.bz2';
 			}else{
-				throw new RuntimeException('no targetFileName given, but resource is not a regular file!');
+				throw new RuntimeException('no targetFileName given, but resource is not a regular file or dir!');
 			}
 		}else{
-			$targetFileName = $cli->arguments[1];
+			$targetFileName = $cli->getArgument(2);
 		}
+		$targetFileName = $cli->getOption('prefix','').$targetFileName;
 		$client->backup($resource, $targetFileName, $cli->getOption('pass'), $cli->getOption('retention'), $cli->getOption('timestamp'), $cli->getOption('minReplicas'), $cli->getOption('minSize'));
-		return 'OK';
+		return 'OK'.PHP_EOL.$targetFileName;
 	}
 
 	/**
@@ -105,9 +108,10 @@ class Ric_Client_CliHandler{
 	 * @return string
 	 * @throws RuntimeException
 	 */
-	static protected function commandVerify($client, $cli){
+	static protected function commandCheck($client, $cli){
 		$targetFileName = $cli->arguments[0];
-		$client->verify($targetFileName, $cli->getOption('minReplicas'), $cli->getOption('sha1'), $cli->getOption('minSize'), $cli->getOption('minTimestamp'));
+		$targetFileName = $cli->getOption('prefix','').$targetFileName;
+		$client->check($targetFileName, $cli->getOption('minReplicas'), $cli->getOption('sha1'), $cli->getOption('minSize'), $cli->getOption('minTimestamp'));
 		return 'OK';
 	}
 
@@ -120,6 +124,7 @@ class Ric_Client_CliHandler{
 	static protected function commandList($client, $cli){
 		$msg = '';
 		$targetFileName = $cli->arguments[0];
+		$targetFileName = $cli->getOption('prefix','').$targetFileName;
 		$versions = $client->versions($targetFileName);
 		$msg.= $targetFileName.PHP_EOL;
 		$msg.= 'Date       Time     Version (sha1)                           Size'.PHP_EOL;
@@ -147,6 +152,7 @@ class Ric_Client_CliHandler{
 		}else{
 			$resource = $cli->arguments[1];
 		}
+		$targetFileName = $cli->getOption('prefix','').$targetFileName;
 		$client->restore($targetFileName, $resource, $cli->getOption('pass'), $cli->getOption('version'), (true AND $cli->getOption('overwrite')));
 		return 'OK';
 	}
@@ -158,15 +164,12 @@ class Ric_Client_CliHandler{
 	 * @throws RuntimeException
 	 */
 	static protected function commandDelete($client, $cli){
-		$targetFileName = $cli->arguments[0];
-		$version = null;
-		if( count($cli->arguments)==1 ){
-			$version = null;
-		}elseif(count($cli->arguments)==2){
-			$version = $cli->arguments[1];
-		}else{
-			throw new RuntimeException('to many arguments');
+		$targetFileName = $cli->getArgument(1);
+		$version = $cli->getArgument(2);
+		if( $targetFileName===null OR $version===null ){
+			throw new RuntimeException('name and version needed, use "all" for all version');
 		}
+		$targetFileName = $cli->getOption('prefix','').$targetFileName;
 		return $client->delete($targetFileName, $version);
 	}
 

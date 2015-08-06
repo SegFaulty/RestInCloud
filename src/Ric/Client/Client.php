@@ -144,14 +144,21 @@ echo $msg.PHP_EOL; //todo logger
 	 * @return bool
 	 */
 	public function backup($resource, $targetFileName, $password=null, $retention=null, $timestamp=null, $minReplicas=null, $minSize=1){
-		if( $timestamp<=0 ){
+		$rawFilePath = $this->getFilePathForResource($resource);
+
+		if( $timestamp=='file' ){
+			$timestamp = filemtime($rawFilePath);
+		}
+		if( $timestamp=='now' OR $timestamp<=0 ){
 			$timestamp = time();
 		}
-		$rawFilePath = $this->getFilePathForResource($resource);
-		$filePath = $this->getEncryptedFilePath($rawFilePath, $password);
-		if( filesize($filePath)<$minSize ){
-			throw new RuntimeException('required min file size('.$minSize.') not reached (was '.filesize($filePath).')');
+
+		if( filesize($rawFilePath)<$minSize ){
+			throw new RuntimeException('required min file size('.$minSize.') not reached (was '.filesize($rawFilePath).')');
 		}
+
+		$filePath = $this->getEncryptedFilePath($rawFilePath, $password, substr(md5($targetFileName),0,8)); // we have to provide the same salt for the same filename to get a file with the same sha1, but it should be not the same for all files, so we take the $targetFileName itself ;-)
+
 		$sha1 = sha1_file($filePath);
 		$params = [];
 		$params['sha1'] = $sha1;
@@ -176,7 +183,7 @@ echo $msg.PHP_EOL; //todo logger
 			$this->logDebug('POST refresh succeeded, no file transfer necessary');
 		}
 		// Verify
-		$this->verify($targetFileName, $minReplicas, $sha1);
+		$this->check($targetFileName, $minReplicas, $sha1);
 		return true;
 	}
 
@@ -189,8 +196,7 @@ echo $msg.PHP_EOL; //todo logger
 	 * @throws RuntimeException
 	 * @return bool
 	 */
-	public function verify($targetFileName, $minReplicas=null, $sha1=null, $minSize=null, $minTimestamp=null){
-		// Verify
+	public function check($targetFileName, $minReplicas=null, $sha1=null, $minSize=null, $minTimestamp=null){
 		$params = [];
 		if( $minReplicas!==null ){
 			$params['minReplicas'] = $minReplicas;
@@ -204,13 +210,13 @@ echo $msg.PHP_EOL; //todo logger
 		if( $minTimestamp!==null ){
 			$params['minTimestamp'] = $minTimestamp;
 		}
-		$fileUrl = $this->buildUrl($targetFileName, 'verify', $params);
+		$fileUrl = $this->buildUrl($targetFileName, 'check', $params);
 		$response = trim(Ric_Rest_Client::get($fileUrl, [], $headers));
 		$this->checkServerResponse($response, $headers);
-		$this->logDebug('Verify ('.$fileUrl.') result: '.$response);
+		$this->logDebug('Check ('.$fileUrl.') result: '.$response);
 		$result = json_decode($response, true);
 		if( !isset($result['status']) OR $result['status']!='OK' ){
-			throw new RuntimeException('verify failed: '.$response);
+			throw new RuntimeException('check failed: '.$response);
 		}
 		return true;
 	}
@@ -284,7 +290,16 @@ echo $msg.PHP_EOL; //todo logger
 			$filePath = $resource;
 		}elseif( is_dir($resource) ){
 			$this->logDebug('dir resource detected');
-			throw new RuntimeException('resource type dir not implemented');
+			$tmpTarFile = $this->getTmpFilePath('.tar.bz2');
+			$command = 'tar -cjf '.$tmpTarFile.' '.$resource;
+			exec($command, $output, $status);
+			if( $status!=0 ){
+				throw new RuntimeException('tar dir failed: '.$command.' with: '.print_r($output, true), 500);
+			}
+			$this->logDebug('dir as tar with bzip '.$tmpTarFile);
+			touch($tmpTarFile, filemtime(rtrim($resource,'/').'/.')); // get the dir mod-date and set it to created tar
+			$this->logDebug('set modification time of tar to '.date('Y-m-d H:i:s', filemtime($tmpTarFile)));
+			$filePath = $tmpTarFile;
 		}elseif( preg_match('~^mysql://~', $resource) ){
 			throw new RuntimeException('resource type mysql not implemented');
 		}elseif( preg_match('~^redis://~', $resource) ){ // redis://pass@123.234.23.23:3343/mykeys_* <- dump as msgpack (ttls?)
@@ -300,24 +315,21 @@ echo $msg.PHP_EOL; //todo logger
 	 * if the passowrd is empty, the result file is still encoded with a salt !!!
 	 * @param string $filePath
 	 * @param string $password
-	 * @return string
+	 * @param string $salt
 	 * @throws RuntimeException
+	 * @return string
 	 */
-	protected function getEncryptedFilePath($filePath, $password){
+	protected function getEncryptedFilePath($filePath, $password, $salt='_sdffHGetdsga'){
 		if( !is_file($filePath) ){
 			throw new RuntimeException('file not found or not a regular file: '.$filePath);
 		}
 
 		$encryptedFilePath = $this->getTmpFilePath('.ricenc');
 
-		$command = 'openssl enc -aes-256-cbc -salt -in '.$filePath.' -out '.$encryptedFilePath.' -k '.escapeshellarg((string) $password);
+		$command = 'openssl enc -aes-256-cbc -S '.bin2hex(substr($salt,0,8)).' -in '.$filePath.' -out '.$encryptedFilePath.' -k '.escapeshellarg((string) $password);
 		exec($command, $output, $status);
 		if( $status!=0 ){
-echo '$command: '.$command.PHP_EOL;
-echo 'status: '.$status.PHP_EOL;
-echo '$output: '.$output;
-print_r($output);
-			throw new RuntimeException('encryption failed', 500);
+			throw new RuntimeException('encryption failed: '.$command.' with: '.print_r($output, true), 500);
 		}
 
 		return $encryptedFilePath;
@@ -339,11 +351,7 @@ print_r($output);
 		$command = 'openssl enc -aes-256-cbc -d -in '.$encryptedFilePath.' -out '.$decryptedFilePath.' -k '.escapeshellarg((string) $password);
 		exec($command, $output, $status);
 		if( $status!=0 ){
-echo '$command: '.$command.PHP_EOL;
-echo 'status: '.$status.PHP_EOL;
-echo '$output: ';
-print_r($output);
-			throw new RuntimeException('decryption failed', 500);
+			throw new RuntimeException('decryption failed '.$command.' with '.print_r($output, true), 500);
 		}
 
 		return $decryptedFilePath;
@@ -357,10 +365,10 @@ print_r($output);
 	 */
 	public function delete($targetFileName, $version=null){
 		$params = [];
-		if( $version!==null ){
+		if( $version!==null AND $version!='all' ){
 			$params['version'] = $version;
 		}
-		$response = Ric_Rest_Client::delete($this->buildUrl($targetFileName, 'delete'), [], $headers);
+		$response = Ric_Rest_Client::delete($this->buildUrl($targetFileName, 'delete', $params), [], $headers);
 		$this->checkServerResponse($response, $headers);
 		return $response;
 	}
