@@ -40,6 +40,16 @@ class Ric_Client_Cli {
 	}
 
 	/**
+	 * @param int $argumentPosition // starts with 1 !!!
+	 * @param string|null $default
+	 * @return null
+	 */
+	public function getArgument($argumentPosition=1, $default=null){
+		$argsIndex = $argumentPosition-1;
+		return isset($this->arguments[$argsIndex]) ? $this->arguments[$argsIndex] : $default;
+	}
+
+	/**
 	 * return option > env > default
 	 * @param string $name
 	 * @param string $default
