@@ -556,8 +556,6 @@ class Ric_Server_Server {
      */
     protected function getReplicaCount($fileName, $version, $sha1){
         $replicas = 0;
-        list($fileName, $version) = $this->extractVersionFromFullFileName($filePath);
-        $sha1 = sha1_file($filePath);
         foreach( $this->config['servers'] as $server ){
             try{
                 $serverUrl = 'http://'.$server.'/';
