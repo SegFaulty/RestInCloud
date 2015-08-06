@@ -56,7 +56,7 @@ ablauf:
 
 * --pass Password
 * --retention default: last3
-* --timestamp default: call time
+* --timestamp as int or 'now' or 'file' default: now
 * --minReplicas default: max(1, count(servers)-1)
 * --minSize default: 1
 

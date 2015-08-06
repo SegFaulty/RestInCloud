@@ -144,16 +144,21 @@ echo $msg.PHP_EOL; //todo logger
 	 * @return bool
 	 */
 	public function backup($resource, $targetFileName, $password=null, $retention=null, $timestamp=null, $minReplicas=null, $minSize=1){
-		if( $timestamp<=0 ){
-			$timestamp = time();
-		}
 		$rawFilePath = $this->getFilePathForResource($resource);
 
-		// we have to provide the same salt for the same filename to get a file with the same sha1, but it should be not the same for all files, so we take the $targetFileName itself ;-)
-		$filePath = $this->getEncryptedFilePath($rawFilePath, $password, $targetFileName);
-		if( filesize($filePath)<$minSize ){
-			throw new RuntimeException('required min file size('.$minSize.') not reached (was '.filesize($filePath).')');
+		if( $timestamp=='file' ){
+			$timestamp = filemtime($rawFilePath);
 		}
+		if( $timestamp=='now' OR $timestamp<=0 ){
+			$timestamp = time();
+		}
+
+		if( filesize($rawFilePath)<$minSize ){
+			throw new RuntimeException('required min file size('.$minSize.') not reached (was '.filesize($rawFilePath).')');
+		}
+
+		$filePath = $this->getEncryptedFilePath($rawFilePath, $password, substr(md5($targetFileName),0,8)); // we have to provide the same salt for the same filename to get a file with the same sha1, but it should be not the same for all files, so we take the $targetFileName itself ;-)
+
 		$sha1 = sha1_file($filePath);
 		$params = [];
 		$params['sha1'] = $sha1;
