@@ -357,10 +357,10 @@ echo $msg.PHP_EOL; //todo logger
 	 */
 	public function delete($targetFileName, $version=null){
 		$params = [];
-		if( $version!==null ){
+		if( $version!==null AND $version!='all' ){
 			$params['version'] = $version;
 		}
-		$response = Ric_Rest_Client::delete($this->buildUrl($targetFileName, 'delete'), [], $headers);
+		$response = Ric_Rest_Client::delete($this->buildUrl($targetFileName, 'delete', $params), [], $headers);
 		$this->checkServerResponse($response, $headers);
 		return $response;
 	}

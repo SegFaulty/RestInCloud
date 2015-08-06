@@ -95,9 +95,12 @@ ablauf:
 
 ## Help delete
 
-    ric delete {fileName} [{version}]
+    ric delete {fileName} {version}
 
-    ric delete error.config
+    use version: "all" to delete all versions of {fileName}
+
+    ric delete error.config all
+    ric delete error.config 8aaa6c7bd96811293a2879ed45879b3cf5e4165b
 
 ## Help admin
 

@@ -158,14 +158,10 @@ class Ric_Client_CliHandler{
 	 * @throws RuntimeException
 	 */
 	static protected function commandDelete($client, $cli){
-		$targetFileName = $cli->arguments[0];
-		$version = null;
-		if( count($cli->arguments)==1 ){
-			$version = null;
-		}elseif(count($cli->arguments)==2){
-			$version = $cli->arguments[1];
-		}else{
-			throw new RuntimeException('to many arguments');
+		$targetFileName = $cli->getArgument(1);
+		$version = $cli->getArgument(2);
+		if( $targetFileName===null OR $version===null ){
+			throw new RuntimeException('name and version needed, use "all" for all version');
 		}
 		return $client->delete($targetFileName, $version);
 	}
