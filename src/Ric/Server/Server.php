@@ -219,8 +219,8 @@ class Ric_Server_Server {
             }
         }elseif( $action=='size' ){
             echo filesize($this->getFilePath());
-        }elseif( $action=='verify' ){
-            $this->actionVerify();
+        }elseif( $action=='check' ){
+            $this->actionCheck();
         }elseif( $action=='list' ){
             $this->actionListVersions();
         }elseif( $action=='head' ){
@@ -493,10 +493,9 @@ class Ric_Server_Server {
     }
 
     /**
-     * list files or version of file
      * @throws RuntimeException
      */
-    protected function actionVerify(){
+    protected function actionCheck(){
         $result = [];
         $result['status'] = 'OK';
         $result['msg'] = '';
@@ -551,8 +550,8 @@ class Ric_Server_Server {
         foreach( $this->config['servers'] as $server ){
             try{
                 $serverUrl = 'http://'.$server.'/';
-                // verify file
-                $url = $serverUrl.$fileName.'?verify&version='.$version.'&sha1='.$sha1.'&minReplicas=0&token='.$this->config['readerToken']; // &minReplicas=0  otherwise loopOfDeath
+                // check file
+                $url = $serverUrl.$fileName.'?check&version='.$version.'&sha1='.$sha1.'&minReplicas=0&token='.$this->config['readerToken']; // &minReplicas=0  otherwise loopOfDeath
                 $response = json_decode(Ric_Rest_Client::get($url), true);
                 if( H::getIKS($response, 'status')=='OK' ){
                     $replicas++;

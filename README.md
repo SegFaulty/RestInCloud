@@ -35,8 +35,8 @@ simple restfully dockerized distributed open source cloud backup server ;-)
  * GET http://ric1.server/error.log?head=20 - show first n lines of the file
  * GET http://ric1.server/error.log?size - return the filesize
  * GET http://ric1.server/error.log?grep=EAN:.*\d+501 - scan the file for this (regex) pattern
- * GET http://ric1.server/error.log?verify&minSize=40000&minReplicas=2&minTimestamp=14234234&sha=1234ef23
-    - verify that the file
+ * GET http://ric1.server/error.log?check&minSize=40000&minReplicas=2&minTimestamp=14234234&sha=1234ef23
+    - check that the file
     - (1) exists,
     - (2) size >40k [default:1],
     - (3) fileTime>=minTimestamp [default:8d],
