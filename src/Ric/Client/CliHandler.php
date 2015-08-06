@@ -97,6 +97,7 @@ class Ric_Client_CliHandler{
 		}else{
 			$targetFileName = $cli->getArgument(2);
 		}
+		$targetFileName = $cli->getOption('prefix','').$targetFileName;
 		$client->backup($resource, $targetFileName, $cli->getOption('pass'), $cli->getOption('retention'), $cli->getOption('timestamp'), $cli->getOption('minReplicas'), $cli->getOption('minSize'));
 		return 'OK'.PHP_EOL.$targetFileName;
 	}
@@ -109,6 +110,7 @@ class Ric_Client_CliHandler{
 	 */
 	static protected function commandVerify($client, $cli){
 		$targetFileName = $cli->arguments[0];
+		$targetFileName = $cli->getOption('prefix','').$targetFileName;
 		$client->verify($targetFileName, $cli->getOption('minReplicas'), $cli->getOption('sha1'), $cli->getOption('minSize'), $cli->getOption('minTimestamp'));
 		return 'OK';
 	}
@@ -122,6 +124,7 @@ class Ric_Client_CliHandler{
 	static protected function commandList($client, $cli){
 		$msg = '';
 		$targetFileName = $cli->arguments[0];
+		$targetFileName = $cli->getOption('prefix','').$targetFileName;
 		$versions = $client->versions($targetFileName);
 		$msg.= $targetFileName.PHP_EOL;
 		$msg.= 'Date       Time     Version (sha1)                           Size'.PHP_EOL;
@@ -149,6 +152,7 @@ class Ric_Client_CliHandler{
 		}else{
 			$resource = $cli->arguments[1];
 		}
+		$targetFileName = $cli->getOption('prefix','').$targetFileName;
 		$client->restore($targetFileName, $resource, $cli->getOption('pass'), $cli->getOption('version'), (true AND $cli->getOption('overwrite')));
 		return 'OK';
 	}
@@ -165,6 +169,7 @@ class Ric_Client_CliHandler{
 		if( $targetFileName===null OR $version===null ){
 			throw new RuntimeException('name and version needed, use "all" for all version');
 		}
+		$targetFileName = $cli->getOption('prefix','').$targetFileName;
 		return $client->delete($targetFileName, $version);
 	}
 

@@ -32,10 +32,10 @@ use ric help {command} for command details
 
 you can define every option as environment variable with prefix "ric" (server -> ricServer)
 
-* --verbose show debug details
-* --auth {token}  default: ENV ricAuth
-* --server RicServer default: ENV ricServer
-* --prefix prefix all target names default: ENV ricPrefix
+* --verbose show debug details default: false
+* --auth {token}  default: ENV ricAuth -> ''
+* --server RicServer default: ENV ricServer -> ''
+* --prefix prefix all target names default: ENV ricPrefix -> ''
 
 ## Help backup
     ric backup {resource} [{targetFileName}] [options]
@@ -59,6 +59,7 @@ ablauf:
 * --timestamp as int or 'now' or 'file' default: now
 * --minReplicas default: max(1, count(servers)-1)
 * --minSize default: 1
+* --prefix
 
 ## Help verify
 
@@ -71,6 +72,7 @@ ablauf:
 * --minSize 23423
 * --sha1
 * --minReplicas 3
+* --prefix
 
 * --sic aktivere sic (nur nötig wenn keine andere sic option)
 * --sicChannel default --target
@@ -84,10 +86,13 @@ ablauf:
 
     ric restore hostname%??%??homewww/ric/config.tar.gz /tmp/restore/
 
-## restore options
+### restore options
 
 * --pass Password
 * --overwrite   overwrite existing resource
+* --prefix
+
+ if --prefix is set, the restored file will not contains the prefix!
 
 ## Help list
 
@@ -101,6 +106,9 @@ ablauf:
 
     ric delete error.config all
     ric delete error.config 8aaa6c7bd96811293a2879ed45879b3cf5e4165b
+### delete options
+
+* --prefix
 
 ## Help admin
 
