@@ -85,18 +85,20 @@ class Ric_Client_CliHandler{
 	 * @throws RuntimeException
 	 */
 	static protected function commandBackup($client, $cli){
-		$resource = $cli->arguments[0];
+		$resource = $cli->getArgument(1);
 		if( count($cli->arguments)==1 ){
 			if( is_file($resource) ){
 				$targetFileName = basename($resource);
+			}elseif( is_dir($resource) ){
+				$targetFileName = basename($resource).'.tar.gz';
 			}else{
-				throw new RuntimeException('no targetFileName given, but resource is not a regular file!');
+				throw new RuntimeException('no targetFileName given, but resource is not a regular file or dir!');
 			}
 		}else{
-			$targetFileName = $cli->arguments[1];
+			$targetFileName = $cli->getArgument(2);
 		}
 		$client->backup($resource, $targetFileName, $cli->getOption('pass'), $cli->getOption('retention'), $cli->getOption('timestamp'), $cli->getOption('minReplicas'), $cli->getOption('minSize'));
-		return 'OK';
+		return 'OK'.PHP_EOL.$targetFileName;
 	}
 
 	/**
