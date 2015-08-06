@@ -291,13 +291,15 @@ echo $msg.PHP_EOL; //todo logger
 			$filePath = $resource;
 		}elseif( is_dir($resource) ){
 			$this->logDebug('dir resource detected');
-			$tmpTarFile = $this->getTmpFilePath('.tar.gz');
-			$command = 'tar -czf '.$tmpTarFile.' '.$resource;
+			$tmpTarFile = $this->getTmpFilePath('.tar.bz2');
+			$command = 'tar -cjf '.$tmpTarFile.' '.$resource;
 			exec($command, $output, $status);
 			if( $status!=0 ){
 				throw new RuntimeException('tar dir failed: '.$command.' with: '.print_r($output, true), 500);
 			}
-			$this->logDebug('dir as tar'.$tmpTarFile);
+			$this->logDebug('dir as tar with bzip '.$tmpTarFile);
+			touch($tmpTarFile, filemtime(rtrim($resource,'/').'/.')); // get the dir mod-date and set it to created tar
+			$this->logDebug('set modification time of tar to '.date('Y-m-d H:i:s', filemtime($tmpTarFile)));
 			$filePath = $tmpTarFile;
 		}elseif( preg_match('~^mysql://~', $resource) ){
 			throw new RuntimeException('resource type mysql not implemented');

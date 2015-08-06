@@ -90,7 +90,7 @@ class Ric_Client_CliHandler{
 			if( is_file($resource) ){
 				$targetFileName = basename($resource);
 			}elseif( is_dir($resource) ){
-				$targetFileName = basename($resource).'.tar.gz';
+				$targetFileName = basename($resource).'.tar.bz2';
 			}else{
 				throw new RuntimeException('no targetFileName given, but resource is not a regular file or dir!');
 			}
