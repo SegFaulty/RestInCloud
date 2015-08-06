@@ -183,7 +183,7 @@ echo $msg.PHP_EOL; //todo logger
 			$this->logDebug('POST refresh succeeded, no file transfer necessary');
 		}
 		// Verify
-		$this->verify($targetFileName, $minReplicas, $sha1);
+		$this->check($targetFileName, $minReplicas, $sha1);
 		return true;
 	}
 
@@ -196,8 +196,7 @@ echo $msg.PHP_EOL; //todo logger
 	 * @throws RuntimeException
 	 * @return bool
 	 */
-	public function verify($targetFileName, $minReplicas=null, $sha1=null, $minSize=null, $minTimestamp=null){
-		// Verify
+	public function check($targetFileName, $minReplicas=null, $sha1=null, $minSize=null, $minTimestamp=null){
 		$params = [];
 		if( $minReplicas!==null ){
 			$params['minReplicas'] = $minReplicas;
@@ -211,13 +210,13 @@ echo $msg.PHP_EOL; //todo logger
 		if( $minTimestamp!==null ){
 			$params['minTimestamp'] = $minTimestamp;
 		}
-		$fileUrl = $this->buildUrl($targetFileName, 'verify', $params);
+		$fileUrl = $this->buildUrl($targetFileName, 'check', $params);
 		$response = trim(Ric_Rest_Client::get($fileUrl, [], $headers));
 		$this->checkServerResponse($response, $headers);
-		$this->logDebug('Verify ('.$fileUrl.') result: '.$response);
+		$this->logDebug('Check ('.$fileUrl.') result: '.$response);
 		$result = json_decode($response, true);
 		if( !isset($result['status']) OR $result['status']!='OK' ){
-			throw new RuntimeException('verify failed: '.$response);
+			throw new RuntimeException('check failed: '.$response);
 		}
 		return true;
 	}

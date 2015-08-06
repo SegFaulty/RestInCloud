@@ -20,7 +20,7 @@ aus einer resource wird immer eine datei generiert, diese wird gzipped und encry
 
 * ric help - show help
 * ric backup - store a a resource (file/dir/dump) in RestInCloud Backup Server
-* ric verify - verify if a resource is valid backuped
+* ric check - check if a resource is valid backuped
 * ric list - all versions of a resource
 * ric restore - restore a backuped resource
 * ric delete - delete a resource
@@ -50,7 +50,7 @@ ablauf:
 * (optionaly check minSize)
 * refresh this file with post request
 * if failed store file with put request
-* verify the file (sha1, minSize, minReplicas)
+* check the file (sha1, minSize, minReplicas)
 
 ### backup options
 
@@ -61,12 +61,12 @@ ablauf:
 * --minSize default: 1
 * --prefix
 
-## Help verify
+## Help check
 
-    ric verify testService_host1_config.tar.gz --minSize=100000
+    ric check testService_host1_config.tar.gz --minSize=100000
 
 
-### verify options
+### check options
 
 * --minTimestamp 123131231
 * --minSize 23423
@@ -96,7 +96,7 @@ ablauf:
 
 ## Help list
 
-    ric verify /home/www/ric/config/
+    ric check /home/www/ric/config/
 
 ## Help delete
 

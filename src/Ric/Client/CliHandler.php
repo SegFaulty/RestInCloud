@@ -41,8 +41,8 @@ class Ric_Client_CliHandler{
 				case 'backup':
 					$msg = self::commandBackup($client, $cli);
 					break;
-				case 'verify':
-					$msg = self::commandVerify($client, $cli);
+				case 'check':
+					$msg = self::commandCheck($client, $cli);
 					break;
 				case 'list':
 					$msg = self::commandList($client, $cli);
@@ -108,10 +108,10 @@ class Ric_Client_CliHandler{
 	 * @return string
 	 * @throws RuntimeException
 	 */
-	static protected function commandVerify($client, $cli){
+	static protected function commandCheck($client, $cli){
 		$targetFileName = $cli->arguments[0];
 		$targetFileName = $cli->getOption('prefix','').$targetFileName;
-		$client->verify($targetFileName, $cli->getOption('minReplicas'), $cli->getOption('sha1'), $cli->getOption('minSize'), $cli->getOption('minTimestamp'));
+		$client->check($targetFileName, $cli->getOption('minReplicas'), $cli->getOption('sha1'), $cli->getOption('minSize'), $cli->getOption('minTimestamp'));
 		return 'OK';
 	}
 
