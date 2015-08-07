@@ -121,7 +121,7 @@ class Ric_Client_CliHandler{
 		$targetFileName = $cli->getOption('prefix','').$targetFileName;
 		$minTimestamp = $cli->getOption('minTimestamp');
 		if( $minTimestamp<0 ){
-			$minTimestamp=time()-$minTimestamp;
+			$minTimestamp = time()+intval($minTimestamp); // add because $minTimestamp is negative
 		}
 		$client->check($targetFileName, $cli->getOption('minReplicas'), $cli->getOption('sha1'), $cli->getOption('minSize'), $minTimestamp);
 		return 'OK';
