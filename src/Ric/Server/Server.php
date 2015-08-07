@@ -18,9 +18,11 @@ class Ric_Server_Server {
     /**
      * construct
      */
-    public function __construct($configFilePath=''){
-        $this->configLoader = new Ric_Server_Config();
-        $this->config = $this->configLoader->loadConfig($configFilePath);
+    public function __construct($config=[]){
+        if(empty($config)){
+            throw new RuntimeException('No config found');
+        }
+        $this->config = $config;
         if( !is_dir($this->config['storeDir']) OR !is_writable($this->config['storeDir']) ){
             throw new RuntimeException('document root ['.$this->config['storeDir'].'] is not a writable dir!');
         }
@@ -65,20 +67,20 @@ class Ric_Server_Server {
         }
     }
 
-    /**
-     * execute cli command
-     * @param array $argv
-     * @throws RuntimeException
-     */
-    static public function cliPurge($argv){
-        $storeDir = $argv[2];
-        $maxTimestamp = $argv[3];
-        if( $maxTimestamp<=1 OR $maxTimestamp>time()+86400 ){
-            throw new RuntimeException('invalid timestamp (now:'.time().')');
-        }
-        $ricServer = new Ric_Server_Server($storeDir);
-        echo H::json($ricServer->purge($maxTimestamp));
-    }
+//    /**
+//     * execute cli command
+//     * @param array $argv
+//     * @throws RuntimeException
+//     */
+//    static public function cliPurge($argv){
+//        $storeDir = $argv[2];
+//        $maxTimestamp = $argv[3];
+//        if( $maxTimestamp<=1 OR $maxTimestamp>time()+86400 ){
+//            throw new RuntimeException('invalid timestamp (now:'.time().')');
+//        }
+//        $ricServer = new Ric_Server_Server($storeDir);
+//        echo H::json($ricServer->purge($maxTimestamp));
+//    }
 
     /**
      * physically delete files marked for deletion
