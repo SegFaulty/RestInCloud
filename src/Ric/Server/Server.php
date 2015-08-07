@@ -369,20 +369,21 @@ class Ric_Server_Server {
     /**
      * todo check if $fileInfo->getVersion()==$fileInfo->getSha1()
      * list files or version of file
-     * @throws RuntimeException
+     * @param string $fileName
+     * @param string $fileVersion
+     * @param string $sha1
+     * @param int $minSize
+     * @param int $minTimestamp
+     * @param int $minReplicas
      */
-    public function actionCheck(){
+    public function checkFile($fileName, $fileVersion, $sha1, $minSize, $minTimestamp, $minReplicas=null){
         $result = [];
         $result['status'] = 'OK';
         $result['msg'] = '';
-        $fileName = $this->extractFileNameFromRequest();
-        $fileVersion = $this->extractVersionFromRequest();
 
-        $sha1 = H::getRP('sha1', '');
-        $minSize = H::getRP('minSize', 1);
-        $minTimestamp = H::getRP('minTimestamp', 0); // default no check
-        $minReplicasDefault = max(1, count($this->config['servers'])-1); // min 1, or 1 invalid of current servers
-        $minReplicas = H::getRP('minReplicas', $minReplicasDefault); // if parameter omitted, don't check replicas!!!! or deadlock
+        if($minReplicas==null){
+            $minReplicas = max(1, count($this->config['servers'])-1); // min 1, or 1 invalid of current servers
+        }
 
         $fileInfo = $this->fileManager->getFileInfo($fileName, $fileVersion);
         $infos = [

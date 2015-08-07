@@ -88,7 +88,7 @@ class Ric_Server_Api{
         }elseif( $action=='size' ){
             $this->server->actionGetFileSize();
         }elseif( $action=='check' ){
-            $this->server->actionCheck();
+            $this->actionCheck();
         }elseif( $action=='list' ){
             $this->server->actionListVersions();
         }elseif( $action=='head' ){
@@ -232,6 +232,23 @@ class Ric_Server_Api{
         $version = $this->extractVersionFromRequest();
 
         $this->server->deleteFile($fileName, $version);
+    }
+
+    /**
+     * todo check if $fileInfo->getVersion()==$fileInfo->getSha1()
+     * list files or version of file
+     * @throws RuntimeException
+     */
+    protected function actionCheck(){
+        $fileName = $this->extractFileNameFromRequest();
+        $fileVersion = $this->extractVersionFromRequest();
+
+        $sha1 = H::getRP('sha1', '');
+        $minSize = H::getRP('minSize', 1);
+        $minTimestamp = H::getRP('minTimestamp', 0); // default no check
+        $minReplicas = H::getRP('minReplicas', null); // if parameter omitted, don't check replicas!!!! or deadlock
+
+        $this->server->checkFile($fileName, $fileVersion, $sha1, $minSize, $minTimestamp, $minReplicas);
     }
 
     protected function extractFileNameFromRequest(){
