@@ -199,24 +199,6 @@ class Ric_Server_Server {
     }
 
     /**
-     * @param string $server
-     * @throws RuntimeException
-     */
-    public function addServer($server){
-        $response = Ric_Rest_Client::get('http://' . $server . '/', ['info' => 1, 'token' => $this->configService->get('readerToken')]);
-        $info = json_decode($response, true);
-        if( $info AND H::getIKS($info, 'serverTimestamp') ){
-            $servers = $this->configService->get('servers');
-            $servers[] = $server;
-            $this->configService->setRuntimeConfig('servers', $this->configService->get('servers'));
-        }else{
-            throw new RuntimeException('server is not responding properly', 400);
-        }
-        header('Content-Type: application/json');
-        echo H::json(['Status' => 'OK']);
-    }
-
-    /**
      * remove selected or "all" servers
      * @param $server
      */

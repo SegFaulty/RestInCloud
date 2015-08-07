@@ -198,7 +198,7 @@ class Ric_Server_Api{
      */
     protected function actionAddServer(){
         $server = H::getRP('addServer');
-        $this->server->addServer($server);
+        $this->clusterManager->addServer($server);
     }
 
     /**
