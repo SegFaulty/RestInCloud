@@ -199,19 +199,6 @@ class Ric_Server_Server {
     }
 
     /**
-     * todo check if parameter value all is wanted
-     * @param $server
-     */
-    protected function removeServerFromConfig($server){
-        if( $server=='all' ){
-            $servers = [];
-        } else {
-            $servers = array_diff($this->configService->get('servers'), [$server]);
-        }
-        $this->configService->setRuntimeConfig('servers', $servers);
-    }
-
-    /**
      * join a existing cluster
      * get all servers of the given clusterMember an send an addServer to all
      * if it fails, the cluster is in inconsistent state, send leaveCluster command
@@ -244,45 +231,6 @@ class Ric_Server_Server {
         header('Content-Type: application/json');
         echo H::json(['Status' => 'OK']);
     }
-
-    /**
-     * remove a server from the cluster
-     * send removeServer to all servers
-     * @param string $server
-     * @throws RuntimeException
-     */
-    public function removeFromCluster($server){
-        list($leavedServers, $errorMsg) = $this->removeServerFromCluster($server);
-        if( $errorMsg!='' ){
-            throw new RuntimeException('removeFromCluster failed! '.$errorMsg.' Inconsitent cluster state! (please remove me manually) succesfully removed from: '.join('; ', $leavedServers), 400);
-        }
-        header('Content-Type: application/json');
-        echo H::json(['Status' => 'OK']);
-    }
-
-    /**
-     * leaving a cluster
-     * send removeServer to all servers
-     * if it fails, the cluster is in inconsistent state, send leaveCluster command
-     * @param $server
-     * @return array
-     */
-    protected function removeServerFromCluster($server){
-        $leftServers = [];
-        $errorMsg = '';
-        foreach( $this->configService->get('servers') as $clusterServer ){
-            $response = Ric_Rest_Client::post('http://' . $clusterServer . '/', ['action' => 'removeServer', 'removeServer' => $server, 'token' => $this->configService->get('adminToken')]);
-            $result = json_decode($response, true);
-            if( H::getIKS($result, 'Status')!='OK' ){
-                $errorMsg.= 'removeServer failed from '.$clusterServer.' failed! ['.$response.']';
-            }else{
-                $leftServers[] = $clusterServer;
-            }
-        }
-        $this->removeServerFromConfig($server);
-        return [$leftServers, $errorMsg];
-    }
-
 
     /**
      * mark one or all versions of the File as deleted

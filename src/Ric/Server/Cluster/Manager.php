@@ -70,6 +70,21 @@ class Ric_Server_Cluster_Manager{
     }
 
     /**
+     * remove a server from the cluster
+     * send removeServer to all servers
+     * @param string $server
+     * @throws RuntimeException
+     */
+    public function removeFromCluster($server){
+        list($leavedServers, $errorMsg) = $this->removeServerFromCluster($server);
+        if( $errorMsg!='' ){
+            throw new RuntimeException('removeFromCluster failed! '.$errorMsg.' Inconsitent cluster state! (please remove me manually) succesfully removed from: '.join('; ', $leavedServers), 400);
+        }
+        header('Content-Type: application/json');
+        echo H::json(['Status' => 'OK']);
+    }
+
+    /**
      * leaving a cluster
      * send removeServer to all servers
      * if it fails, the cluster is in inconsistent state, send leaveCluster command

@@ -238,7 +238,7 @@ class Ric_Server_Api{
      */
     protected function actionRemoveFromCluster(){
         $server = H::getRP('removeFromCluster');
-        $this->server->removeFromCluster($server);
+        $this->clusterManager->removeFromCluster($server);
     }
 
     /**
