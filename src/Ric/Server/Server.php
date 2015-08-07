@@ -509,6 +509,20 @@ class Ric_Server_Server {
         }
     }
 
+    /***************/
+    /*** CLUSTER ***/
+    /**
+     * @param string $server
+     * @throws RuntimeException
+     */
+    public function addServer($server){
+        $this->clusterManager->addServer($server);
+        header('Content-Type: application/json');
+        echo H::json(['Status' => 'OK']);
+    }
+    /*** CLUSTER ***/
+    /***************/
+
     /**
      * @param string $fileName
      * @param string $retention
