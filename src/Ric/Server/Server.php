@@ -199,40 +199,6 @@ class Ric_Server_Server {
     }
 
     /**
-     * join a existing cluster
-     * get all servers of the given clusterMember an send an addServer to all
-     * if it fails, the cluster is in inconsistent state, send leaveCluster command
-     * @param string $server
-     * @throws RuntimeException
-     */
-    public function joinCluster($server){
-        $ownServer = $this->getOwnHostPort();
-        $response = Ric_Rest_Client::get('http://' . $server . '/', ['info' => 1, 'token' => $this->configService->get('adminToken')]);
-        $info = json_decode($response, true);
-        if( isset($info['config']['servers']) ){
-            $servers = $info['config']['servers'];
-            $joinedServers = [];
-            $servers[] = $server;
-            foreach( $servers as $clusterServer ){
-                $response = Ric_Rest_Client::post('http://' . $clusterServer . '/', ['action' => 'addServer', 'addServer' => $ownServer, 'token' => $this->configService->get('adminToken')]);
-                $result = json_decode($response, true);
-                if( H::getIKS($result, 'Status')!='OK' ){
-                    throw new RuntimeException('join cluster failed! addServer to '.$clusterServer.' failed! ['.$response.'] Inconsitent cluster state! I\'m added to this servers (please remove me): '.join('; ', $joinedServers), 400);
-                }
-                $joinedServers[] = $clusterServer;
-            }
-            $this->configService->setRuntimeConfig('servers', $servers);
-
-            // todo  pull a dump and restore
-
-        }else{
-            throw new RuntimeException('cluster node is not responding properly', 400);
-        }
-        header('Content-Type: application/json');
-        echo H::json(['Status' => 'OK']);
-    }
-
-    /**
      * mark one or all versions of the File as deleted
      * @param string $fileName
      * @param string $version
