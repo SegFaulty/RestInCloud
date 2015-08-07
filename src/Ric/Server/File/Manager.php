@@ -63,6 +63,16 @@ class Ric_Server_File_Manager{
 
     /**
      * @param string $fileName
+     * @param string $version
+     * @param int $timestamp
+     */
+    public function updateTimestamp($fileName, $version, $timestamp){
+        $filePath = $this->getFilePath($fileName, $version);
+        touch($filePath, $timestamp);
+    }
+
+    /**
+     * @param string $fileName
      * @return string
      */
     protected function getSplitDirectoryFilePath($fileName){

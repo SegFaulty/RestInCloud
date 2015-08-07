@@ -116,7 +116,7 @@ class Ric_Server_Server {
 
         // replicate
         $filePath = $this->fileManager->getFilePath($fileName, $version);
-        touch($filePath, $timestamp);
+        $this->fileManager->updateTimestamp($fileName, $version, $timestamp);
         $syncResult = $this->clusterManager->syncFile($fileName, $version, $filePath, $timestamp, $retention, $noSync);
         if( $syncResult!='' ){
             $result = 'WARNING'.' :'.$syncResult;
@@ -143,7 +143,7 @@ class Ric_Server_Server {
 
         $filePath = $this->fileManager->getFilePath($fileName, $version);
         if( file_exists($filePath) ){
-            touch($filePath, $timestamp);
+            $this->fileManager->updateTimestamp($fileName, $version, $timestamp);
             $syncResult = $this->clusterManager->syncFile($fileName, $version, $filePath, $timestamp, $retention, $noSync);
             $this->executeRetention($fileName, $retention);
             if( $syncResult=='' ){
