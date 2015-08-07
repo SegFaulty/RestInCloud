@@ -533,6 +533,20 @@ class Ric_Server_Server {
         echo H::json(['Status' => 'OK']);
     }
 
+    /**
+     * join a existing cluster
+     * get all servers of the given clusterMember an send an addServer to all
+     * if it fails, the cluster is in inconsistent state, send leaveCluster command
+     * @param string $server
+     * @throws RuntimeException
+     */
+    public function joinCluster($server){
+        $this->clusterManager->joinCluster($server);
+
+        header('Content-Type: application/json');
+        echo H::json(['Status' => 'OK']);
+    }
+
     /*** CLUSTER ***/
     /***************/
 

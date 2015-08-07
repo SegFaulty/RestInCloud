@@ -218,7 +218,7 @@ class Ric_Server_Api{
      */
     protected function actionJoinCluster(){
         $server = H::getRP('joinCluster');
-        $this->clusterManager->joinCluster($server);
+        $this->server->joinCluster($server);
     }
 
     /**

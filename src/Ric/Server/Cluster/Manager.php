@@ -68,8 +68,6 @@ class Ric_Server_Cluster_Manager{
         }else{
             throw new RuntimeException('cluster node is not responding properly', 400);
         }
-        header('Content-Type: application/json');
-        echo H::json(['Status' => 'OK']);
     }
 
     /**
