@@ -21,8 +21,8 @@ class Ric_Server_Server {
      */
     public function __construct($configService){
         $this->configService = $configService;
-        $this->config = $configService->getConfig();
-        if(empty($this->config)){
+        $config = $configService->getConfig();
+        if(empty($config)){
             throw new RuntimeException('No config found');
         }
         $storageDir = $this->configService->get('storeDir');
@@ -90,18 +90,6 @@ class Ric_Server_Server {
         }
         $result['runTime'] = round(microtime(true)-$result['runTime'],3);
         return $result;
-    }
-
-    /**
-     * set, update, remove (null) a value in runtimeConfig (and config)
-     * @param string $key
-     * @param string $value
-     */
-    protected function setRuntimeConfig($key, $value){
-        $this->configService->setRuntimeConfig($key, $value);
-        if($value!==null){
-            $this->config[$key] = $value;
-        }
     }
 
     /**
@@ -213,7 +201,7 @@ class Ric_Server_Server {
         $info = json_decode($response, true);
         if( $info AND H::getIKS($info, 'serverTimestamp') ){
             $this->configService->get('servers')[] = $server;
-            $this->setRuntimeConfig('servers', $this->configService->get('servers'));
+            $this->configService->setRuntimeConfig('servers', $this->configService->get('servers'));
         }else{
             throw new RuntimeException('server is not responding properly', 400);
         }
@@ -242,7 +230,7 @@ class Ric_Server_Server {
         } else {
             $servers = array_diff($this->configService->get('servers'), [$server]);
         }
-        $this->setRuntimeConfig('servers', $servers);
+        $this->configService->setRuntimeConfig('servers', $servers);
     }
 
     /**
@@ -268,7 +256,7 @@ class Ric_Server_Server {
                 }
                 $joinedServers[] = $clusterServer;
             }
-            $this->setRuntimeConfig('servers', $servers);
+            $this->configService->setRuntimeConfig('servers', $servers);
 
             // todo  pull a dump and restore
 
@@ -288,7 +276,7 @@ class Ric_Server_Server {
     public function leaveCluster(){
         $ownServer = $this->getOwnHostPort();
         list($leavedServers, $errorMsg) = $this->removeServerFromCluster($ownServer);
-        $this->setRuntimeConfig('servers', []);
+        $this->configService->setRuntimeConfig('servers', []);
 
         if( $errorMsg!='' ){
             throw new RuntimeException('leaveCluster failed! '.$errorMsg.' Inconsitent cluster state! (please remove me manually) succesfully removed from: '.join('; ', $leavedServers), 400);
