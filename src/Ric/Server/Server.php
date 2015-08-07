@@ -610,7 +610,7 @@ class Ric_Server_Server {
      *
      * get server info
      */
-    public function actionHealth(){
+    public function getHealthInfo(){
         $criticalQuotaFreeLevel = 15;
         $status = 'OK';
         $msg = '';

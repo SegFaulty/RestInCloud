@@ -79,7 +79,7 @@ class Ric_Server_Api{
             }elseif( $action=='info' ){
                 $this->server->actionInfo();
             }elseif( $action=='health' ){
-                $this->server->actionHealth();
+                $this->actionHealth();
             }elseif( $action=='phpInfo' ){
                 phpinfo();
             }else{
@@ -232,6 +232,16 @@ class Ric_Server_Api{
     protected function actionRemoveFromCluster(){
         $server = H::getRP('removeFromCluster');
         $this->server->removeFromCluster($server);
+    }
+
+    /**
+     * check for all servers
+     * quota <85%; every server knowns every server
+     *
+     * get server info
+     */
+    protected function actionHealth(){
+        $this->server->getHealthInfo();
     }
 
     /**
