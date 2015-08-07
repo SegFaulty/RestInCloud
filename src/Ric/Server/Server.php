@@ -10,19 +10,24 @@ class Ric_Server_Server {
      */
     protected $authService;
 
-    protected $configLoader;
+    /**
+     * @var Ric_Server_Config
+     */
+    protected $configService;
     protected $config = [];
 
     protected $fileManager;
 
     /**
      * construct
+     * @param Ric_Server_Config $configService
      */
-    public function __construct($config=[]){
-        if(empty($config)){
+    public function __construct($configService){
+        $this->configService = $configService;
+        $this->config = $configService->getConfig();
+        if(empty($this->config)){
             throw new RuntimeException('No config found');
         }
-        $this->config = $config;
         if( !is_dir($this->config['storeDir']) OR !is_writable($this->config['storeDir']) ){
             throw new RuntimeException('document root ['.$this->config['storeDir'].'] is not a writable dir!');
         }
@@ -128,7 +133,7 @@ class Ric_Server_Server {
      * @param string $value
      */
     protected function setRuntimeConfig($key, $value){
-        $this->configLoader->setRuntimeConfig($key, $value);
+        $this->configService->setRuntimeConfig($key, $value);
         if($value!==null){
             $this->config[$key] = $value;
         }
@@ -712,7 +717,7 @@ class Ric_Server_Server {
             if( file_exists($this->config['storeDir'].'intern/config.json') ){
                 $info['runtimeConfig'] = json_decode(file_get_contents($this->config['storeDir'].'intern/config.json'), true);
             }
-            $info['defaultConfig'] = $this->defaultConfig;
+            $info['defaultConfig'] = $this->configService->getDefaultConfig();
         }
         return $info;
     }

@@ -14,7 +14,30 @@ class Ric_Server_Config {
     ];
 	protected $config = [];
 
-	/**
+    /**
+     * Ric_Server_Config constructor.
+     */
+    public function __construct($configFilePath) {
+        $this->loadConfig($configFilePath);
+    }
+
+    /**
+     * @return array
+     */
+    public function getConfig()
+    {
+        return $this->config;
+    }
+
+    /**
+     * @return array
+     */
+    public function getDefaultConfig()
+    {
+        return $this->defaultConfig;
+    }
+
+    /**
 	 * load config default -> given config -> docRoot/intern/config.json
 	 * @param string $configFilePath
 	 * @return array
