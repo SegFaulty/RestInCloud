@@ -77,7 +77,7 @@ class Ric_Server_Api{
             }elseif( $action=='help' ){
                 $this->actionHelp();
             }elseif( $action=='info' ){
-                $this->server->actionInfo();
+                $this->actionInfo();
             }elseif( $action=='health' ){
                 $this->actionHealth();
             }elseif( $action=='phpInfo' ){
@@ -242,6 +242,13 @@ class Ric_Server_Api{
      */
     protected function actionHealth(){
         $this->server->getHealthInfo();
+    }
+
+    /**
+     * get server info
+     */
+    public function actionInfo(){
+        $this->server->showServerInfo();
     }
 
     /**

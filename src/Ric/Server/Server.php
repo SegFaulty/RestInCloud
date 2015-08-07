@@ -573,7 +573,7 @@ class Ric_Server_Server {
     /**
      * get server info
      */
-    public function actionInfo(){
+    public function showServerInfo(){
         header('Content-Type: application/json');
         echo H::json($this->buildInfo($this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN, false)));
     }
