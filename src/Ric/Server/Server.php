@@ -310,10 +310,10 @@ class Ric_Server_Server {
     /**
      * remove a server from the cluster
      * send removeServer to all servers
+     * @param string $server
      * @throws RuntimeException
      */
-    public function actionRemoveFromCluster(){
-        $server = H::getRP('removeFromCluster');
+    public function removeFromCluster($server){
         list($leavedServers, $errorMsg) = $this->removeServerFromCluster($server);
         if( $errorMsg!='' ){
             throw new RuntimeException('removeFromCluster failed! '.$errorMsg.' Inconsitent cluster state! (please remove me manually) succesfully removed from: '.join('; ', $leavedServers), 400);
@@ -330,7 +330,7 @@ class Ric_Server_Server {
      * @return array
      */
     protected function removeServerFromCluster($server){
-        $leavedServers = [];
+        $leftServers = [];
         $errorMsg = '';
         foreach( $this->config['servers'] as $clusterServer ){
             $response = Ric_Rest_Client::post('http://' . $clusterServer . '/', ['action' => 'removeServer', 'removeServer' => $server, 'token' => $this->config['adminToken']]);
@@ -338,11 +338,11 @@ class Ric_Server_Server {
             if( H::getIKS($result, 'Status')!='OK' ){
                 $errorMsg.= 'removeServer failed from '.$clusterServer.' failed! ['.$response.']';
             }else{
-                $leavedServers[] = $clusterServer;
+                $leftServers[] = $clusterServer;
             }
         }
         $this->removeServerFromConfig($server);
-        return [$leavedServers, $errorMsg];
+        return [$leftServers, $errorMsg];
     }
 
 

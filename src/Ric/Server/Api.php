@@ -121,7 +121,7 @@ class Ric_Server_Api{
             }elseif( $action=='leaveCluster' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
                 $this->actionLeaveCluster();
             }elseif( $action=='removeFromCluster' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
-                $this->server->actionRemoveFromCluster();
+                $this->actionRemoveFromCluster();
             }else{
                 throw new RuntimeException('unknown action or no file given [Post]', 400);
             }
@@ -212,6 +212,16 @@ class Ric_Server_Api{
      */
     protected function actionLeaveCluster(){
         $this->server->leaveCluster();
+    }
+
+    /**
+     * remove a server from the cluster
+     * send removeServer to all servers
+     * @throws RuntimeException
+     */
+    protected function actionRemoveFromCluster(){
+        $server = H::getRP('removeFromCluster');
+        $this->server->removeFromCluster($server);
     }
 
     protected function extractFileNameFromRequest(){
