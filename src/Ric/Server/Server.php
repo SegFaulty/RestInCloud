@@ -164,12 +164,10 @@ class Ric_Server_Server {
     public function deleteFile($fileName, $version){
         $filesDeleted = 0;
         if( $version ){
-            $filePath = $this->fileManager->getFilePath($fileName, $version);
-            $filesDeleted+= $this->markFileDeleted($filePath);
+            $filesDeleted+= $this->fileManager->markFileAsDeleted($fileName, $version);
         }else{
             foreach( $this->fileManager->getAllVersions($fileName) as $version=>$timestamp){
-                $filePath = $this->fileManager->getFilePath($fileName, $version);
-                $filesDeleted+= $this->markFileDeleted($filePath);
+                $filesDeleted+= $this->fileManager->markFileAsDeleted($fileName, $version);
             }
         }
         header('Content-Type: application/json');
@@ -543,8 +541,7 @@ class Ric_Server_Server {
                 throw new RuntimeException('unknown retention strategy', 400);
         }
         foreach( $deleteFilePaths as $version ){
-            $filePath = $this->fileManager->getFilePath($fileName, $version);
-            $this->markFileDeleted($filePath);
+            $this->fileManager->markFileAsDeleted($fileName, $version);
         }
     }
 

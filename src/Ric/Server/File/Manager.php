@@ -73,6 +73,20 @@ class Ric_Server_File_Manager{
 
     /**
      * @param string $fileName
+     * @param string $version
+     * @return bool
+     */
+    public function markFileAsDeleted($fileName, $version){
+        $result = false;
+        $filePath = $this->getFilePath($fileName, $version);
+        if( file_exists($filePath) AND filemtime($filePath)!=Ric_Server_Definition::MAGIC_DELETION_TIMESTAMP ){
+            $result = touch($filePath, Ric_Server_Definition::MAGIC_DELETION_TIMESTAMP) ;
+        }
+        return $result;
+    }
+
+    /**
+     * @param string $fileName
      * @return string
      */
     protected function getSplitDirectoryFilePath($fileName){
