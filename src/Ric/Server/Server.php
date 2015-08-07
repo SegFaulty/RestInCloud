@@ -529,17 +529,16 @@ class Ric_Server_Server {
     /**
      * todo necessary?
      * todo merge with grep
+     * @param string $fileName
+     * @param string $fileVersion
+     * @param int $lines
      * @throws RuntimeException
      */
-    public function actionHead(){
-        $filePath = $this->getFilePath();
+    public function getLinesFromFile($fileName, $fileVersion, $lines){
+        $filePath = $this->fileManager->getFileInfosForPattern($fileName, $fileVersion);
         $fp = gzopen($filePath, 'r');
         if( !$fp ){
             throw new RuntimeException('open file failed');
-        }
-        $lines = H::getRP('head', 10);
-        if( $lines==0 ){
-            $lines = 10;
         }
         while($lines-- AND ($line = gzgets($fp, 100000))!==false){
             echo $line;
@@ -552,6 +551,7 @@ class Ric_Server_Server {
      * @param string $fileName
      * @param string $fileVersion
      * @param string $regex
+     * @throws RuntimeException
      */
     public function grepFromFile($fileName, $fileVersion, $regex){
         $filePath = $this->fileManager->getFileInfosForPattern($fileName, $fileVersion);
