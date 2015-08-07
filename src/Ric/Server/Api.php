@@ -29,7 +29,7 @@ class Ric_Server_Api{
         try{
             $this->auth(Ric_Server_Auth_Definition::ROLE__READER, true);
             if( $_SERVER['REQUEST_METHOD']=='PUT' ){
-                $this->server->handlePutRequest();
+                $this->handlePutRequest();
             }elseif( $_SERVER['REQUEST_METHOD']=='POST' OR H::getRP('method')=='post' ){
                 $this->handlePostRequest();
             }elseif( $_SERVER['REQUEST_METHOD']=='GET' ){
@@ -107,7 +107,7 @@ class Ric_Server_Api{
     /**
      * handle POST, file refresh
      */
-    public function handlePostRequest(){
+    protected function handlePostRequest(){
         $this->auth(Ric_Server_Auth_Definition::ROLE__WRITER);
         $action = H::getRP('action');
         if( parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)=='/' ){ // homepage
@@ -129,6 +129,48 @@ class Ric_Server_Api{
             // not "/" .. this is a file, refresh action
             $this->server->actionPostRefresh();
         }
+    }
+
+    /**
+     * handle PUT
+     */
+    protected function handlePutRequest(){
+        $this->auth(Ric_Server_Auth_Definition::ROLE__WRITER);
+        $retention = H::getRP('retention', Ric_Server_Definition::RETENTION__LAST3);
+        $timestamp = (int) H::getRP('timestamp', time());
+        $noSync = (bool) H::getRP('noSync', false);
+
+        $tmpFilePath = $this->readInputStreamToTempFile();
+
+        $fileName = $this->extractFileNameFromRequest();
+        $this->server->saveFileInCloud($tmpFilePath, $fileName, $retention, $timestamp, $noSync);
+    }
+
+    /**
+     * @return string filepath
+     */
+    protected function readInputStreamToTempFile(){
+        $tmpFilePath = sys_get_temp_dir().'/_'.__CLASS__.'_'.uniqid('', true);
+        $putData = fopen("php://input", "r");
+        $fp = fopen($tmpFilePath, "w");
+        stream_copy_to_stream($putData, $fp);
+        fclose($fp);
+        fclose($putData);
+        return $tmpFilePath;
+    }
+
+    protected function extractFileNameFromRequest(){
+        $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+        $fileName = basename($path);
+        if( ltrim($path,DIRECTORY_SEPARATOR)!=$fileName ){
+            throw new RuntimeException('a path is not allowed! use server.com/file.name', 400);
+        }
+        $allowedChars = '1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        $allowedChars.= '-_.';
+        if( preg_match('~[^'.preg_quote($allowedChars, '~').']~', $fileName) ){
+            throw new RuntimeException('filename must only use these chars: '.$allowedChars, 400);
+        }
+        return $fileName;
     }
 
     /**

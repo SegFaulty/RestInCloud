@@ -105,27 +105,15 @@ class Ric_Server_Server {
 
     /**
      * handle PUT
+     * @param string $tmpFilePath
+     * @param string $fileName
+     * @param string $retention @see Ric_Server_Definition::RETENTION__*
+     * @param int $timestamp
+     * @param boolean $noSync
      */
-    public function handlePutRequest(){
-        $this->auth(Ric_Server_Auth_Definition::ROLE__WRITER);
+    public function saveFileInCloud($tmpFilePath, $fileName, $retention, $timestamp, $noSync){
         $result = 'OK';
-        $retention = H::getRP('retention', Ric_Server_Definition::RETENTION__LAST3);
-        $timestamp = H::getRP('timestamp', time());
-        $noSync = (bool) H::getRP('noSync');
 
-        // read stream to tmpFile
-        $tmpFilePath = sys_get_temp_dir().'/_'.__CLASS__.'_'.uniqid('', true);
-        $putData = fopen("php://input", "r");
-        $fp = fopen($tmpFilePath, "w");
-        stream_copy_to_stream($putData, $fp);
-#$bytesCopied = stream_copy_to_stream($putData, $fp);
-#echo $bytesCopied.' bytes'.PHP_EOL;
-#echo filesize($tmpFilePath).' tmp bytes'.PHP_EOL;
-        fclose($fp);
-        fclose($putData);
-
-
-        $fileName = $this->extractFileNameFromRequest();
         $version = $this->fileManager->storeFile($fileName, $tmpFilePath);
 
         // check quota
@@ -146,6 +134,7 @@ class Ric_Server_Server {
 
         $this->executeRetention($fileName, $retention);
 
+        // todo differentiate between error and stdout
         // TODO kein 201 liefern wenn $syncResult!='' , da dann mindestens ein server nicht erreicht wurde, muss das hier komplett failen
         header('HTTP/1.1 201 Created', true, 201);
         echo $result.PHP_EOL;
