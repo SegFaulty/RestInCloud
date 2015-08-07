@@ -295,7 +295,7 @@ class Ric_Server_Server {
      * if it fails, the cluster is in inconsistent state, send leaveCluster command
      * @throws RuntimeException
      */
-    public function actionLeaveCluster(){
+    public function leaveCluster(){
         $ownServer = $this->getOwnHostPort();
         list($leavedServers, $errorMsg) = $this->removeServerFromCluster($ownServer);
         $this->setRuntimeConfig('servers', []);
