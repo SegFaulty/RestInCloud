@@ -55,7 +55,9 @@ class Ric_Client_CliHandler{
 			}
 		}catch(Exception $e){
 			$status = 1;
-			file_put_contents("php://stderr", rtrim($e->getMessage()).PHP_EOL);
+			ini_set('display_errors', 'stderr'); // ensure we write to STDERR
+			fwrite(STDERR, trim('ERROR: '.$e->getMessage()).PHP_EOL);
+#			file_put_contents("php://stderr", rtrim($e->getMessage()).PHP_EOL);
 		}
 
 		if( !$cli->getOption('quite') ){
