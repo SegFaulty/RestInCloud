@@ -328,9 +328,9 @@ class Ric_Server_Api{
         $limit = min(1000, H::getRP('limit', 100));
 
         if($details){
-            $this->server->listFileNames($pattern, $start, $limit, $showDeleted);
-        }else{
             $this->server->listFileInfos($pattern, $start, $limit, $showDeleted);
+        }else{
+            $this->server->listFileNames($pattern, $start, $limit, $showDeleted);
         }
     }
 
