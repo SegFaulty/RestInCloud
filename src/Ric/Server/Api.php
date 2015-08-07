@@ -98,7 +98,7 @@ class Ric_Server_Api{
         }elseif( $action=='help' ){
             $this->server->actionHelp();
         }elseif( $action=='' ){
-            $this->server->actionSendFile();
+            $this->actionSendFile();
         }else{
             throw new RuntimeException('unknown action', 400);
         }
@@ -157,6 +157,16 @@ class Ric_Server_Api{
         fclose($fp);
         fclose($putData);
         return $tmpFilePath;
+    }
+
+    /**
+     * send an existing file
+     */
+    public function actionSendFile(){
+        $fileName = $this->extractFileNameFromRequest();
+        $fileVersion = $this->extractVersionFromRequest();
+
+        $this->server->sendFile($fileName, $fileVersion);
     }
 
     /**

@@ -705,10 +705,10 @@ class Ric_Server_Server {
 
     /**
      * send an existing file
+     * @param string $fileName
+     * @param string $fileVersion
      */
-    public function actionSendFile(){
-        $fileName = $this->extractFileNameFromRequest();
-        $fileVersion = $this->extractVersionFromRequest();
+    public function sendFile($fileName, $fileVersion){
         $fileInfo = $this->fileManager->getFileInfo($fileName, $fileVersion);
 
         $lastModified = gmdate('D, d M Y H:i:s \G\M\T', $fileInfo->getTimestamp());
