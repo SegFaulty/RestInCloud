@@ -90,7 +90,7 @@ class Ric_Server_Api{
         }elseif( $action=='check' ){
             $this->actionCheck();
         }elseif( $action=='list' ){
-            $this->server->actionListVersions();
+            $this->actionListVersions();
         }elseif( $action=='head' ){
             $this->server->actionHead();
         }elseif( $action=='grep' ){
@@ -274,6 +274,18 @@ class Ric_Server_Api{
         }else{
             $this->server->listFileInfos($pattern, $start, $limit, $showDeleted);
         }
+    }
+
+    /**
+     * list versions of file
+     * @throws RuntimeException
+     */
+    protected function actionListVersions(){
+        $showDeleted = H::getRP('showDeleted');
+        $limit = min(1000, H::getRP('limit', 100));
+        $fileName = $this->extractFileNameFromRequest();
+
+        $this->server->listVersions($fileName, $limit, $showDeleted);
     }
 
     protected function extractFileNameFromRequest(){

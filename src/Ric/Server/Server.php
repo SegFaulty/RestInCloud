@@ -454,7 +454,7 @@ class Ric_Server_Server {
  * @param int $limit
  * @param boolean $showDeleted
  */
-    public function listFileNames($pattern, $start, $limit, $showDeleted){
+    public function listFileNames($pattern, $start, $limit, $showDeleted=false){
         $fileInfos = $this->fileManager->getFileInfosForPattern($pattern, $showDeleted, $start, $limit);
         $lines = [];
         foreach( $fileInfos as $fileInfo ){/** @var Ric_Server_File_FileInfo $fileInfo */
@@ -475,7 +475,7 @@ class Ric_Server_Server {
      * @param int $limit
      * @param boolean $showDeleted
      */
-    public function listFileInfos($pattern, $start, $limit, $showDeleted){
+    public function listFileInfos($pattern, $start, $limit, $showDeleted=false){
         $fileInfos = $this->fileManager->getFileInfosForPattern($pattern, $showDeleted, $start, $limit);
         $lines = [];
         $index = $start;
@@ -498,14 +498,11 @@ class Ric_Server_Server {
 
     /**
      * list versions of file
-     * @throws RuntimeException
+     * @param string $fileName
+     * @param int $limit
+     * @param bool $showDeleted
      */
-    public function actionListVersions(){
-        $showDeleted = H::getRP('showDeleted');
-        $limit = min(1000, H::getRP('limit', 100));
-
-        $fileName = $this->extractFileNameFromRequest();
-
+    public function listVersions($fileName, $limit, $showDeleted=false){
         $lines = [];
         $index = -1;
         foreach( $this->fileManager->getAllVersions($fileName, $showDeleted) as $version=>$timeStamp ){
