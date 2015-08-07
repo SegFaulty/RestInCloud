@@ -86,6 +86,24 @@ class Ric_Server_File_Manager{
     }
 
     /**
+     * mark one or all versions of the File as deleted
+     * @param string $fileName
+     * @param string $version
+     * @return int
+     */
+    public function deleteFile($fileName, $version){
+        $filesDeleted = 0;
+        if( $version ){
+            $filesDeleted+= $this->markFileAsDeleted($fileName, $version);
+        }else{
+            foreach( $this->getAllVersions($fileName) as $version=>$timestamp){
+                $filesDeleted+= $this->markFileAsDeleted($fileName, $version);
+            }
+        }
+        return $filesDeleted;
+    }
+
+    /**
      * @param string $fileName
      * @return string
      */

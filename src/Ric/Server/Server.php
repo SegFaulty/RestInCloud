@@ -162,14 +162,7 @@ class Ric_Server_Server {
      * @param string $version
      */
     public function deleteFile($fileName, $version){
-        $filesDeleted = 0;
-        if( $version ){
-            $filesDeleted+= $this->fileManager->markFileAsDeleted($fileName, $version);
-        }else{
-            foreach( $this->fileManager->getAllVersions($fileName) as $version=>$timestamp){
-                $filesDeleted+= $this->fileManager->markFileAsDeleted($fileName, $version);
-            }
-        }
+        $filesDeleted = $this->fileManager->deleteFile($fileName, $version);
         header('Content-Type: application/json');
         echo H::json(['filesDeleted' => $filesDeleted]);
     }
