@@ -9,8 +9,10 @@ class Ric_Server_Server {
      * @var Ric_Server_Config
      */
     protected $configService;
-    protected $config = [];
 
+    /**
+     * @var Ric_Server_File_Manager
+     */
     protected $fileManager;
 
     /**
@@ -23,10 +25,14 @@ class Ric_Server_Server {
         if(empty($this->config)){
             throw new RuntimeException('No config found');
         }
-        if( !is_dir($this->config['storeDir']) OR !is_writable($this->config['storeDir']) ){
-            throw new RuntimeException('document root ['.$this->config['storeDir'].'] is not a writable dir!');
+        $storageDir = $this->configService->get('storeDir');
+        if( !is_dir($storageDir) OR !is_writable($storageDir) ){
+            throw new RuntimeException('document root ['.$storageDir.'] is not a writable dir!');
         }
-        $this->fileManager = new Ric_Server_File_Manager($this->config['storeDir']);
+        if( !is_dir($storageDir) OR !is_writable($storageDir) ){
+            throw new RuntimeException('document root ['.$storageDir.'] is not a writable dir!');
+        }
+        $this->fileManager = new Ric_Server_File_Manager($storageDir);
     }
 
 
@@ -61,7 +67,7 @@ class Ric_Server_Server {
         $result['deletedFiles'] = 0;
         $result['deletedBytes'] = 0;
         $result['runTime'] = microtime(true);
-        $dirIterator = new RecursiveDirectoryIterator($this->config['storeDir']);
+        $dirIterator = new RecursiveDirectoryIterator($this->configService->get('storeDir'));
         $iterator = new RecursiveIteratorIterator($dirIterator, RecursiveIteratorIterator::SELF_FIRST);
         foreach( $iterator as $splFileInfo ){ /** @var SplFileInfo $splFileInfo */
             if( $splFileInfo->isFile() ){
@@ -113,8 +119,8 @@ class Ric_Server_Server {
         $version = $this->fileManager->storeFile($fileName, $tmpFilePath);
 
         // check quota
-        if( $this->config['quota']>0 ){
-            if( $this->fileManager->getDirectorySize()>$this->config['quota']*1024*1024 ){
+        if( $this->configService->get('quota')>0 ){
+            if( $this->fileManager->getDirectorySize()>$this->configService->get('quota')*1024*1024 ){
                 $filePath = $this->fileManager->getFilePath($fileName, $version);
                 unlink($filePath);
                 throw new RuntimeException('Quota exceeded!', 507);
@@ -176,15 +182,15 @@ class Ric_Server_Server {
             // SYNC
             /** @noinspection PhpUnusedLocalVariableInspection */
             list($fileName, $version) = $this->extractVersionFromFullFileName($filePath);
-            foreach( $this->config['servers'] as $server ){
+            foreach( $this->configService->get('servers') as $server ){
                 try{
                     $serverUrl = 'http://'.$server.'/';
                     // try to refresh file
-                    $url = $serverUrl.$fileName.'?sha1='.sha1_file($filePath).'&timestamp='.$timestamp.'&retention='.$retention.'&noSync=1&token='.$this->config['writerToken'];
+                    $url = $serverUrl.$fileName.'?sha1='.sha1_file($filePath).'&timestamp='.$timestamp.'&retention='.$retention.'&noSync=1&token='.$this->configService->get('writerToken');
                     $response = Ric_Rest_Client::post($url);
                     if( trim($response)!='1' ){
                         // refresh failed, upload
-                        $url = $serverUrl.$fileName.'?timestamp='.$timestamp.'&retention='.$retention.'&noSync=1&token='.$this->config['writerToken'];
+                        $url = $serverUrl.$fileName.'?timestamp='.$timestamp.'&retention='.$retention.'&noSync=1&token='.$this->configService->get('writerToken');
                         $response = Ric_Rest_Client::putFile($url, $filePath);
                         if( trim($response)!='OK' ){
                             $result = trim($result."\n".'failed to upload to '.$server.' :'.$response);
@@ -203,11 +209,11 @@ class Ric_Server_Server {
      * @throws RuntimeException
      */
     public function addServer($server){
-        $response = Ric_Rest_Client::get('http://' . $server . '/', ['info' => 1, 'token' => $this->config['readerToken']]);
+        $response = Ric_Rest_Client::get('http://' . $server . '/', ['info' => 1, 'token' => $this->configService->get('readerToken')]);
         $info = json_decode($response, true);
         if( $info AND H::getIKS($info, 'serverTimestamp') ){
-            $this->config['servers'][] = $server;
-            $this->setRuntimeConfig('servers', $this->config['servers']);
+            $this->configService->get('servers')[] = $server;
+            $this->setRuntimeConfig('servers', $this->configService->get('servers'));
         }else{
             throw new RuntimeException('server is not responding properly', 400);
         }
@@ -234,7 +240,7 @@ class Ric_Server_Server {
         if( $server=='all' ){
             $servers = [];
         } else {
-            $servers = array_diff($this->config['servers'], [$server]);
+            $servers = array_diff($this->configService->get('servers'), [$server]);
         }
         $this->setRuntimeConfig('servers', $servers);
     }
@@ -248,14 +254,14 @@ class Ric_Server_Server {
      */
     public function joinCluster($server){
         $ownServer = $this->getOwnHostPort();
-        $response = Ric_Rest_Client::get('http://' . $server . '/', ['info' => 1, 'token' => $this->config['adminToken']]);
+        $response = Ric_Rest_Client::get('http://' . $server . '/', ['info' => 1, 'token' => $this->configService->get('adminToken')]);
         $info = json_decode($response, true);
         if( isset($info['config']['servers']) ){
             $servers = $info['config']['servers'];
             $joinedServers = [];
             $servers[] = $server;
             foreach( $servers as $clusterServer ){
-                $response = Ric_Rest_Client::post('http://' . $clusterServer . '/', ['action' => 'addServer', 'addServer' => $ownServer, 'token' => $this->config['adminToken']]);
+                $response = Ric_Rest_Client::post('http://' . $clusterServer . '/', ['action' => 'addServer', 'addServer' => $ownServer, 'token' => $this->configService->get('adminToken')]);
                 $result = json_decode($response, true);
                 if( H::getIKS($result, 'Status')!='OK' ){
                     throw new RuntimeException('join cluster failed! addServer to '.$clusterServer.' failed! ['.$response.'] Inconsitent cluster state! I\'m added to this servers (please remove me): '.join('; ', $joinedServers), 400);
@@ -316,8 +322,8 @@ class Ric_Server_Server {
     protected function removeServerFromCluster($server){
         $leftServers = [];
         $errorMsg = '';
-        foreach( $this->config['servers'] as $clusterServer ){
-            $response = Ric_Rest_Client::post('http://' . $clusterServer . '/', ['action' => 'removeServer', 'removeServer' => $server, 'token' => $this->config['adminToken']]);
+        foreach( $this->configService->get('servers') as $clusterServer ){
+            $response = Ric_Rest_Client::post('http://' . $clusterServer . '/', ['action' => 'removeServer', 'removeServer' => $server, 'token' => $this->configService->get('adminToken')]);
             $result = json_decode($response, true);
             if( H::getIKS($result, 'Status')!='OK' ){
                 $errorMsg.= 'removeServer failed from '.$clusterServer.' failed! ['.$response.']';
@@ -366,7 +372,7 @@ class Ric_Server_Server {
         $result['msg'] = '';
 
         if($minReplicas==null){
-            $minReplicas = max(1, count($this->config['servers'])-1); // min 1, or 1 invalid of current servers
+            $minReplicas = max(1, count($this->configService->get('servers'))-1); // min 1, or 1 invalid of current servers
         }
 
         $fileInfo = $this->fileManager->getFileInfo($fileName, $fileVersion);
@@ -415,11 +421,11 @@ class Ric_Server_Server {
      */
     protected function getReplicaCount($fileName, $version, $sha1){
         $replicas = 0;
-        foreach( $this->config['servers'] as $server ){
+        foreach( $this->configService->get('servers') as $server ){
             try{
                 $serverUrl = 'http://'.$server.'/';
                 // check file
-                $url = $serverUrl.$fileName.'?check&version='.$version.'&sha1='.$sha1.'&minReplicas=0&token='.$this->config['readerToken']; // &minReplicas=0  otherwise loopOfDeath
+                $url = $serverUrl.$fileName.'?check&version='.$version.'&sha1='.$sha1.'&minReplicas=0&token='.$this->configService->get('readerToken'); // &minReplicas=0  otherwise loopOfDeath
                 $response = json_decode(Ric_Rest_Client::get($url), true);
                 if( H::getIKS($response, 'status')=='OK' ){
                     $replicas++;
@@ -568,17 +574,17 @@ class Ric_Server_Server {
         $directorySizeMb = ceil($directorySize /1024/1024); // IN MB
         $info['usageByte'] = $directorySize;
         $info['usage'] = $directorySizeMb;
-        $info['quota'] = $this->config['quota'];
-        if( $this->config['quota']>0 ){
-            $info['quotaLevel'] = ceil($directorySizeMb/$this->config['quota']*100);
-            $info['quotaFreeLevel'] = max(0,min(100,100-ceil($directorySizeMb/$this->config['quota']*100)));
-            $info['quotaFree'] = max(0, intval($this->config['quota']-$directorySizeMb));
+        $info['quota'] = $this->configService->get('quota');
+        if( $this->configService->get('quota')>0 ){
+            $info['quotaLevel'] = ceil($directorySizeMb/$this->configService->get('quota')*100);
+            $info['quotaFreeLevel'] = max(0,min(100,100-ceil($directorySizeMb/$this->configService->get('quota')*100)));
+            $info['quotaFree'] = max(0, intval($this->configService->get('quota')-$directorySizeMb));
         }
         if( $isAdmin ){ // only for admins
             $info['config'] = $this->config;
             $info['runtimeConfig'] = false;
-            if( file_exists($this->config['storeDir'].'intern/config.json') ){
-                $info['runtimeConfig'] = json_decode(file_get_contents($this->config['storeDir'].'intern/config.json'), true);
+            if( file_exists($this->configService->get('storeDir').'intern/config.json') ){
+                $info['runtimeConfig'] = json_decode(file_get_contents($this->configService->get('storeDir').'intern/config.json'), true);
             }
             $info['defaultConfig'] = $this->configService->getDefaultConfig();
         }
@@ -598,14 +604,14 @@ class Ric_Server_Server {
         $msg = '';
 
         $serversFailures = [];
-        $clusterServers = array_merge([$this->getOwnHostPort()], $this->config['servers']);
+        $clusterServers = array_merge([$this->getOwnHostPort()], $this->configService->get('servers'));
         sort($clusterServers);
         // get serverInfos
         $serverInfos = [];
         $serverInfos[$this->getOwnHostPort()] = $this->buildInfo(true);
-        foreach( $this->config['servers'] as $server ){
+        foreach( $this->configService->get('servers') as $server ){
             try{
-                $url = 'http://'.$server.'/?info&token='.$this->config['adminToken'];
+                $url = 'http://'.$server.'/?info&token='.$this->configService->get('adminToken');
                 $result = json_decode(Ric_Rest_Client::get($url), true);
                 if( !array_key_exists('usageByte', $result) ){
                     throw new RuntimeException('info failed');
@@ -643,10 +649,10 @@ class Ric_Server_Server {
         // check if cluster in critical state
         if( count($serverInfos)<2 OR count($serversFailures)>1 ){
             $status = 'CRITICAL';
-            $msg.= 'replication critical! servers running: '.count($serverInfos).' remoteServer configured: '.count($this->config['servers']).PHP_EOL;
+            $msg.= 'replication critical! servers running: '.count($serverInfos).' remoteServer configured: '.count($this->configService->get('servers')).PHP_EOL;
         }
         // ok servers:
-        $msg.= 'servers ok: '.(count($this->config['servers'])+1-count($serversFailures)).PHP_EOL;
+        $msg.= 'servers ok: '.(count($this->configService->get('servers'))+1-count($serversFailures)).PHP_EOL;
 
         echo $status.PHP_EOL;
         if( $isAdmin ){
@@ -837,8 +843,9 @@ class Ric_Server_Server {
     public function getOwnHostPort(){
         static $hostName = '';
         if( empty($hostName) ){
-            if( !empty($this->config['hostPort']) ){
-                $hostName = $this->config['hostPort'];
+            $hostAndPort = $this->configService->get('hostPort');
+            if( !empty($hostAndPort) ){
+                $hostName = $this->configService->get('hostPort');
             }else{
                 $hostName = gethostname(); // servers host name
             }
