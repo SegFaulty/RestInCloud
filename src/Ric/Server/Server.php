@@ -16,6 +16,11 @@ class Ric_Server_Server {
     protected $fileManager;
 
     /**
+     * @var Ric_Server_Cluster_Manager
+     */
+    protected $clusterManager;
+
+    /**
      * construct
      * @param Ric_Server_Config $configService
      */
@@ -33,6 +38,7 @@ class Ric_Server_Server {
             throw new RuntimeException('document root ['.$storageDir.'] is not a writable dir!');
         }
         $this->fileManager = new Ric_Server_File_Manager($storageDir);
+        $this->clusterManager = new Ric_Server_Cluster_Manager($configService);
     }
 
 
@@ -374,7 +380,7 @@ class Ric_Server_Server {
         ];
         $infos['replicas'] = false;
         if( $minReplicas>0 ){
-            $infos['replicas'] = $this->getReplicaCount($fileInfo->getName(), $fileInfo->getVersion(), $fileInfo->getSha1());
+            $infos['replicas'] = $this->clusterManager->getReplicaCount($fileInfo->getName(), $fileInfo->getVersion(), $fileInfo->getSha1());
         }
         if( $sha1!='' AND $infos['sha1']!=$sha1 ){
             $result['status'] = 'CRITICAL';
@@ -399,30 +405,6 @@ class Ric_Server_Server {
         $result['fileInfo'] = $infos;
         header('Content-Type: application/json');
         echo H::json($result);
-    }
-
-    /**
-     * @param string $fileName
-     * @param string $version
-     * @param string $sha1
-     * @return int
-     */
-    protected function getReplicaCount($fileName, $version, $sha1){
-        $replicas = 0;
-        foreach( $this->configService->get('servers') as $server ){
-            try{
-                $serverUrl = 'http://'.$server.'/';
-                // check file
-                $url = $serverUrl.$fileName.'?check&version='.$version.'&sha1='.$sha1.'&minReplicas=0&token='.$this->configService->get('readerToken'); // &minReplicas=0  otherwise loopOfDeath
-                $response = json_decode(Ric_Rest_Client::get($url), true);
-                if( H::getIKS($response, 'status')=='OK' ){
-                    $replicas++;
-                }
-            }catch(Exception $e){
-                // unwichtig
-            }
-        }
-        return $replicas;
     }
 
     /**
@@ -569,7 +551,7 @@ class Ric_Server_Server {
             $info['quotaFree'] = max(0, intval($this->configService->get('quota')-$directorySizeMb));
         }
         if( $isAdmin ){ // only for admins
-            $info['config'] = $this->config;
+            $info['config'] = $this->configService->getConfig();
             $info['runtimeConfig'] = false;
             if( file_exists($this->configService->get('storeDir').'intern/config.json') ){
                 $info['runtimeConfig'] = json_decode(file_get_contents($this->configService->get('storeDir').'intern/config.json'), true);
