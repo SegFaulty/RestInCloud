@@ -115,7 +115,7 @@ class Ric_Server_Api{
             if( $action=='addServer' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
                 $this->actionAddServer();
             }elseif( $action=='removeServer' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
-                $this->server->actionRemoveServer();
+                $this->actionRemoveServer();
             }elseif( $action=='joinCluster' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
                 $this->server->actionJoinCluster();
             }elseif( $action=='leaveCluster' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
@@ -182,6 +182,15 @@ class Ric_Server_Api{
     protected function actionAddServer(){
         $server = H::getRP('addServer');
         $this->server->addServer($server);
+    }
+
+    /**
+     * remove selected or "all" servers
+     * @throws RuntimeException
+     */
+    public function actionRemoveServer(){
+        $server = H::getRP('removeServer');
+        $this->server->removeServer($server);
     }
 
     protected function extractFileNameFromRequest(){
