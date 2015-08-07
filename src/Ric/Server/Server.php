@@ -143,21 +143,15 @@ class Ric_Server_Server {
 
     /**
      * check and refresh a with a post request
-     * @throws RuntimeException
+     * @param string $fileName
+     * @param string $version
+     * @param string $retention
+     * @param int $timestamp
+     * @param boolean $noSync
      */
-    public function actionPostRefresh(){
+    public function refreshFile($fileName, $version, $retention, $timestamp, $noSync){
         $result = '0';
 
-        $version = H::getRP('sha1');
-        $retention = H::getRP('retention', '');
-        $timestamp = H::getRP('timestamp', time());
-        $noSync = (bool) H::getRP('noSync');
-
-        if( $version=='' ){
-            throw new RuntimeException('?sha1=1342.. is required', 400);
-        }
-
-        $fileName = $this->extractFileNameFromRequest();
         $filePath = $this->fileManager->getFilePath($fileName, $version);
         if( file_exists($filePath) ){
             $syncResult = $this->syncFile($filePath, $timestamp, $retention, $noSync);

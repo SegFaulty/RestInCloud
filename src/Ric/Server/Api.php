@@ -127,7 +127,7 @@ class Ric_Server_Api{
             }
         }else{
             // not "/" .. this is a file, refresh action
-            $this->server->actionPostRefresh();
+            $this->actionPostRefresh();
         }
     }
 
@@ -138,7 +138,7 @@ class Ric_Server_Api{
         $this->auth(Ric_Server_Auth_Definition::ROLE__WRITER);
         $retention = H::getRP('retention', Ric_Server_Definition::RETENTION__LAST3);
         $timestamp = (int) H::getRP('timestamp', time());
-        $noSync = (bool) H::getRP('noSync', false);
+        $noSync = (bool) H::getRP('noSync');
 
         $tmpFilePath = $this->readInputStreamToTempFile();
 
@@ -157,6 +157,23 @@ class Ric_Server_Api{
         fclose($fp);
         fclose($putData);
         return $tmpFilePath;
+    }
+
+    /**
+     * check and refresh a with a post request
+     * @throws RuntimeException
+     */
+    protected function actionPostRefresh(){
+        $version = H::getRP('sha1');
+        $retention = H::getRP('retention', '');
+        $timestamp = H::getRP('timestamp', time());
+        $noSync = (bool) H::getRP('noSync');
+
+        if( $version=='' ){
+            throw new RuntimeException('?sha1=1342.. is required', 400);
+        }
+        $fileName = $this->extractFileNameFromRequest();
+        $this->server->refreshFile($fileName, $version, $retention, $timestamp, $noSync);
     }
 
     protected function extractFileNameFromRequest(){
