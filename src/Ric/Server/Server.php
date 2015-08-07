@@ -111,6 +111,7 @@ class Ric_Server_Server {
      * @param string $retention @see Ric_Server_Definition::RETENTION__*
      * @param int $timestamp
      * @param boolean $noSync
+     * @throws RuntimeException
      */
     public function saveFileInCloud($tmpFilePath, $fileName, $retention, $timestamp, $noSync){
         $result = 'OK';
@@ -208,7 +209,6 @@ class Ric_Server_Server {
      * @param string $user
      * @param bool $isRequired
      * @return bool
-     * @throws RuntimeException
      */
     protected function auth($user=Ric_Server_Auth_Definition::ROLE__READER, $isRequired=true){
         return $this->authService->auth($user, $isRequired);
@@ -606,6 +606,7 @@ class Ric_Server_Server {
      * quota <85%; every server knowns every server
      *
      * get server info
+     * @throws RuntimeException
      */
     public function getHealthInfo(){
         $criticalQuotaFreeLevel = 15;
@@ -704,6 +705,7 @@ class Ric_Server_Server {
      * send an existing file
      * @param string $fileName
      * @param string $fileVersion
+     * @throws RuntimeException
      */
     public function sendFile($fileName, $fileVersion){
         $fileInfo = $this->fileManager->getFileInfo($fileName, $fileVersion);
@@ -772,6 +774,10 @@ class Ric_Server_Server {
         return $result;
     }
 
+    /**
+     * @return string
+     * @throws RuntimeException
+     */
     protected function extractFileNameFromRequest(){
         $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
         $fileName = basename($path);
@@ -786,6 +792,10 @@ class Ric_Server_Server {
         return $fileName;
     }
 
+    /**
+     * @return string
+     * @throws RuntimeException
+     */
     protected function extractVersionFromRequest(){
         $version = '';
         if( !empty($_REQUEST['version']) ){
