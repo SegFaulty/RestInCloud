@@ -35,42 +35,6 @@ class Ric_Server_Server {
         $this->fileManager = new Ric_Server_File_Manager($this->config['storeDir']);
     }
 
-    /**
-     * handle GETs
-     */
-    public function handleRequest(){
-        try{
-            $this->auth(Ric_Server_Auth_Definition::ROLE__READER, true);
-            if( $_SERVER['REQUEST_METHOD']=='PUT' ){
-                $this->handlePutRequest();
-            }elseif( $_SERVER['REQUEST_METHOD']=='POST' OR H::getRP('method')=='post' ){
-                $this->handlePostRequest();
-            }elseif( $_SERVER['REQUEST_METHOD']=='GET' ){
-                $this->handleGetRequest();
-            }elseif( $_SERVER['REQUEST_METHOD']=='DELETE' OR H::getRP('method')=='delete' ){
-                if( $this->auth(Ric_Server_Auth_Definition::ROLE__WRITER) ){
-                    $this->actionDelete();
-                }
-            }else{
-                throw new RuntimeException('unsupported http-method', 400);
-            }
-        }catch(Exception $e){
-            if( $e->getCode()===400 ){
-                header('HTTP/1.1 400 Bad Request', true, 400);
-            }elseif( $e->getCode()===403 ){
-                header('HTTP/1.1 403 Forbidden', true, 403);
-            }elseif( $e->getCode()===404 ){
-                header('HTTP/1.1 404 Not found', true, 404);
-            }elseif( $e->getCode()===507 ){
-                header('HTTP/1.1 507 Insufficient Storage', true, 507);
-            }else{
-                header('HTTP/1.1 500 Internal Server Error', true, 500);
-            }
-            header('Content-Type: application/json');
-            echo H::json(['error'=>$e->getMessage()]);
-
-        }
-    }
 
 //    /**
 //     * execute cli command
@@ -142,7 +106,7 @@ class Ric_Server_Server {
     /**
      * handle PUT
      */
-    protected function handlePutRequest(){
+    public function handlePutRequest(){
         $this->auth(Ric_Server_Auth_Definition::ROLE__WRITER);
         $result = 'OK';
         $retention = H::getRP('retention', Ric_Server_Definition::RETENTION__LAST3);
@@ -190,7 +154,7 @@ class Ric_Server_Server {
     /**
      * handle get
      */
-    protected function handleGetRequest(){
+    public function handleGetRequest(){
         $action = '';
         if( preg_match('~^(\w+).*~', H::getIKS($_SERVER, 'QUERY_STRING'), $matches) ){
             $action = $matches[1];
@@ -235,7 +199,7 @@ class Ric_Server_Server {
     /**
      * handle POST, file refresh
      */
-    protected function handlePostRequest(){
+    public function handlePostRequest(){
         $this->auth(Ric_Server_Auth_Definition::ROLE__WRITER);
         $action = H::getRP('action');
         if( parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)=='/' ){ // homepage
@@ -471,7 +435,7 @@ class Ric_Server_Server {
     /**
      * mark one or all versions of the File as deleted
      */
-    protected function actionDelete(){
+    public function actionDelete(){
         $fileName = $this->extractFileNameFromRequest();
         $version = $this->extractVersionFromRequest();
         $filesDeleted = 0;
