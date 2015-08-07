@@ -36,7 +36,7 @@ class Ric_Server_Api{
                 $this->handleGetRequest();
             }elseif( $_SERVER['REQUEST_METHOD']=='DELETE' OR H::getRP('method')=='delete' ){
                 if( $this->auth(Ric_Server_Auth_Definition::ROLE__WRITER) ){
-                    $this->server->actionDelete();
+                    $this->actionDelete();
                 }
             }else{
                 throw new RuntimeException('unsupported http-method', 400);
@@ -224,6 +224,16 @@ class Ric_Server_Api{
         $this->server->removeFromCluster($server);
     }
 
+    /**
+     * mark one or all versions of the File as deleted
+     */
+    protected function actionDelete(){
+        $fileName = $this->extractFileNameFromRequest();
+        $version = $this->extractVersionFromRequest();
+
+        $this->server->deleteFile($fileName, $version);
+    }
+
     protected function extractFileNameFromRequest(){
         $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
         $fileName = basename($path);
@@ -236,6 +246,17 @@ class Ric_Server_Api{
             throw new RuntimeException('filename must only use these chars: '.$allowedChars, 400);
         }
         return $fileName;
+    }
+
+    protected function extractVersionFromRequest(){
+        $version = '';
+        if( !empty($_REQUEST['version']) ){
+            if( !ctype_alnum($_REQUEST['version']) ){
+                throw new RuntimeException('invalid version', 400);
+            }
+            $version = $_REQUEST['version'];
+        }
+        return $version;
     }
 
     /**

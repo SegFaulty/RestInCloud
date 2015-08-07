@@ -348,10 +348,10 @@ class Ric_Server_Server {
 
     /**
      * mark one or all versions of the File as deleted
+     * @param string $fileName
+     * @param string $version
      */
-    public function actionDelete(){
-        $fileName = $this->extractFileNameFromRequest();
-        $version = $this->extractVersionFromRequest();
+    public function deleteFile($fileName, $version){
         $filesDeleted = 0;
         if( $version ){
             $filePath = $this->fileManager->getFilePath($fileName, $version);
