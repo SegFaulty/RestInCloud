@@ -12,14 +12,21 @@ class Ric_Server_Api{
     protected $authService;
 
     /**
+     * @var Ric_Server_Cluster_Manager
+     */
+    private $clusterManager;
+
+    /**
      * Ric_Server_Api constructor.
      * @param Ric_Server_Server $server
      * @param Ric_Server_Auth_Service $authService
+     * @param Ric_Server_Cluster_Manager $clusterManager
      */
-    public function __construct(Ric_Server_Server $server, Ric_Server_Auth_Service $authService)
+    public function __construct(Ric_Server_Server $server, Ric_Server_Auth_Service $authService, Ric_Server_Cluster_Manager $clusterManager)
     {
         $this->server = $server;
         $this->authService = $authService;
+        $this->clusterManager = $clusterManager;
     }
 
     /**
