@@ -312,15 +312,10 @@ class Ric_Server_Server {
      * @throws RuntimeException
      */
     public function getLinesFromFile($fileName, $fileVersion, $lines){
-        $filePath = $this->fileManager->getFileInfosForPattern($fileName, $fileVersion);
-        $fp = gzopen($filePath, 'r');
-        if( !$fp ){
-            throw new RuntimeException('open file failed');
-        }
-        while($lines-- AND ($line = gzgets($fp, 100000))!==false){
+        $dataLines = $this->fileManager->getLinesFromFile($fileName, $fileVersion, $lines);
+        foreach($dataLines as $line) {
             echo $line;
         }
-        gzclose($fp);
     }
 
     /**
