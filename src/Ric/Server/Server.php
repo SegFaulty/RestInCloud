@@ -546,18 +546,6 @@ class Ric_Server_Server {
     }
 
     /**
-     * @param string $filePath
-     * @return bool
-     */
-    protected function markFileDeleted($filePath){
-        $result = false;
-        if( file_exists($filePath) AND filemtime($filePath)!=Ric_Server_Definition::MAGIC_DELETION_TIMESTAMP ){
-            $result = touch($filePath, Ric_Server_Definition::MAGIC_DELETION_TIMESTAMP) ;
-        }
-        return $result;
-    }
-
-    /**
      * get the own address
      * @throws RuntimeException
      */
