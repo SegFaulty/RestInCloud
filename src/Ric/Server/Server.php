@@ -30,14 +30,7 @@ class Ric_Server_Server {
         if(empty($config)){
             throw new RuntimeException('No config found');
         }
-        $storageDir = $this->configService->get('storeDir');
-        if( !is_dir($storageDir) OR !is_writable($storageDir) ){
-            throw new RuntimeException('document root ['.$storageDir.'] is not a writable dir!');
-        }
-        if( !is_dir($storageDir) OR !is_writable($storageDir) ){
-            throw new RuntimeException('document root ['.$storageDir.'] is not a writable dir!');
-        }
-        $this->fileManager = new Ric_Server_File_Manager($storageDir);
+        $this->fileManager = new Ric_Server_File_Manager($this->configService->get('storeDir'));
         $this->clusterManager = new Ric_Server_Cluster_Manager($configService);
     }
 

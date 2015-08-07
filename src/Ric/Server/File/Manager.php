@@ -7,8 +7,10 @@ class Ric_Server_File_Manager{
      * Ric_Server_File_Manager constructor.
      * @param $storageDir
      */
-    public function __construct($storageDir)
-    {
+    public function __construct($storageDir) {
+        if( !is_dir($storageDir) OR !is_writable($storageDir) ){
+            throw new RuntimeException('document root ['.$storageDir.'] is not a writable dir!');
+        }
         $this->storageDir = $storageDir;
     }
 
