@@ -547,6 +547,18 @@ class Ric_Server_Server {
         echo H::json(['Status' => 'OK']);
     }
 
+    /**
+     * leaving a cluster
+     * send removeServer to all servers
+     * if it fails, the cluster is in inconsistent state, send leaveCluster command
+     * @throws RuntimeException
+     */
+    public function leaveCluster(){
+        $this->clusterManager->leaveCluster();
+        header('Content-Type: application/json');
+        echo H::json(['Status' => 'OK']);
+    }
+
     /*** CLUSTER ***/
     /***************/
 
