@@ -63,6 +63,13 @@ class Ric_Server_Config {
 		return $this->config;
 	}
 
+    public function get($key){
+        if(!isset($this->config[$key])){
+            throw new RuntimeException('Config not found: '.$key);
+        }
+        return $this->config[$key];
+    }
+
 	/**
 	 * set, update, remove (null) a value in runtimeConfig (and config)
 	 * @param string $key
