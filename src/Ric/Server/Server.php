@@ -559,6 +559,18 @@ class Ric_Server_Server {
         echo H::json(['Status' => 'OK']);
     }
 
+    /**
+     * remove a server from the cluster
+     * send removeServer to all servers
+     * @param string $server
+     * @throws RuntimeException
+     */
+    public function removeFromCluster($server){
+        $this->clusterManager->removeFromCluster($server);
+        header('Content-Type: application/json');
+        echo H::json(['Status' => 'OK']);
+    }
+
     /*** CLUSTER ***/
     /***************/
 

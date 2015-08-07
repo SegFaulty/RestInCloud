@@ -105,8 +105,6 @@ class Ric_Server_Cluster_Manager{
         if( $errorMsg!='' ){
             throw new RuntimeException('removeFromCluster failed! '.$errorMsg.' Inconsitent cluster state! (please remove me manually) succesfully removed from: '.join('; ', $leavedServers), 400);
         }
-        header('Content-Type: application/json');
-        echo H::json(['Status' => 'OK']);
     }
 
     /**
