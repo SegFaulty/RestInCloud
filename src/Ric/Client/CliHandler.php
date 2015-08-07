@@ -117,9 +117,13 @@ class Ric_Client_CliHandler{
 	 * @throws RuntimeException
 	 */
 	static protected function commandCheck($client, $cli){
-		$targetFileName = $cli->arguments[0];
+		$targetFileName = $cli->getArgument(1);
 		$targetFileName = $cli->getOption('prefix','').$targetFileName;
-		$client->check($targetFileName, $cli->getOption('minReplicas'), $cli->getOption('sha1'), $cli->getOption('minSize'), $cli->getOption('minTimestamp'));
+		$minTimestamp = $cli->getOption('minTimestamp');
+		if( $minTimestamp<0 ){
+			$minTimestamp=time()-$minTimestamp;
+		}
+		$client->check($targetFileName, $cli->getOption('minReplicas'), $cli->getOption('sha1'), $cli->getOption('minSize'), $minTimestamp);
 		return 'OK';
 	}
 

@@ -66,11 +66,11 @@ procedure:
 
 ## Help check
 
-    ric check testService_host1_config.tar.gz --minSize=100000
+    ric check testService_host1_config.tar.gz --minSize=100000 --minTimestamp=-3600
 
 ### check options
 
-* --minTimestamp 123131231
+* --minTimestamp 123131231  or -86400 (see it as maxAge)
 * --minSize 23423
 * --sha1
 * --minReplicas 3
