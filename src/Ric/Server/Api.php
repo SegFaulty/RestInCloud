@@ -113,7 +113,7 @@ class Ric_Server_Api{
         if( parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)=='/' ){ // homepage
             // post actions
             if( $action=='addServer' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
-                $this->server->actionAddServer();
+                $this->actionAddServer();
             }elseif( $action=='removeServer' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
                 $this->server->actionRemoveServer();
             }elseif( $action=='joinCluster' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
@@ -174,6 +174,14 @@ class Ric_Server_Api{
         }
         $fileName = $this->extractFileNameFromRequest();
         $this->server->refreshFile($fileName, $version, $retention, $timestamp, $noSync);
+    }
+
+    /**
+     * @throws RuntimeException
+     */
+    protected function actionAddServer(){
+        $server = H::getRP('addServer');
+        $this->server->addServer($server);
     }
 
     protected function extractFileNameFromRequest(){

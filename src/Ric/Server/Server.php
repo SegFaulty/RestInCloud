@@ -215,11 +215,12 @@ class Ric_Server_Server {
     }
 
     /**
+     * @param string $server
      * @throws RuntimeException
      */
-    public function actionAddServer(){
-        $server = H::getRP('addServer');
-        $info = json_decode(Ric_Rest_Client::get('http://'.$server.'/', ['info'=>1,'token'=>$this->config['readerToken']]), true);
+    public function addServer($server){
+        $response = Ric_Rest_Client::get('http://' . $server . '/', ['info' => 1, 'token' => $this->config['readerToken']]);
+        $info = json_decode($response, true);
         if( $info AND H::getIKS($info, 'serverTimestamp') ){
             $this->config['servers'][] = $server;
             $this->setRuntimeConfig('servers', $this->config['servers']);
