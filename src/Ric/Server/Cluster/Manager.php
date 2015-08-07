@@ -78,9 +78,6 @@ class Ric_Server_Cluster_Manager{
      */
     public function removeServer($server){
         $this->removeServerFromConfig($server);
-
-        header('Content-Type: application/json');
-        echo H::json(['Status' => 'OK']);
     }
 
     /**

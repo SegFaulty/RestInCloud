@@ -511,6 +511,7 @@ class Ric_Server_Server {
 
     /***************/
     /*** CLUSTER ***/
+
     /**
      * @param string $server
      * @throws RuntimeException
@@ -520,6 +521,18 @@ class Ric_Server_Server {
         header('Content-Type: application/json');
         echo H::json(['Status' => 'OK']);
     }
+
+    /**
+     * remove selected or "all" servers
+     * @param $server
+     */
+    public function removeServer($server){
+        $this->clusterManager->removeServer($server);
+
+        header('Content-Type: application/json');
+        echo H::json(['Status' => 'OK']);
+    }
+
     /*** CLUSTER ***/
     /***************/
 

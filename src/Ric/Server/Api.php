@@ -207,7 +207,7 @@ class Ric_Server_Api{
      */
     public function actionRemoveServer(){
         $server = H::getRP('removeServer');
-        $this->clusterManager->removeServer($server);
+        $this->server->removeServer($server);
     }
 
     /**
