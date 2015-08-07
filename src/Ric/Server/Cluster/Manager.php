@@ -179,6 +179,44 @@ class Ric_Server_Cluster_Manager{
     }
 
     /**
+     * sync file to other servers
+     * upload (put) if necessary
+     * @param $fileName
+     * @param $version
+     * @param string $filePath
+     * @param int $timestamp
+     * @param string $retention
+     * @param bool $noSync
+     * @return array|string
+     */
+    public function syncFile($fileName, $version, $filePath, $timestamp, $retention, $noSync=false){
+        $result = '';
+        if( !$noSync ){
+            // SYNC
+            $sha1 = sha1_file($filePath);
+            foreach( $this->configService->get('servers') as $server ){
+                try{
+                    $serverUrl = 'http://'.$server.'/';
+                    // try to refresh file
+                    $url = $serverUrl.$fileName.'?sha1='.$sha1.'&timestamp='.$timestamp.'&retention='.$retention.'&noSync=1&token='.$this->configService->get('writerToken');
+                    $response = Ric_Rest_Client::post($url);
+                    if( trim($response)!='1' ){
+                        // refresh failed, upload
+                        $url = $serverUrl.$fileName.'?timestamp='.$timestamp.'&retention='.$retention.'&noSync=1&token='.$this->configService->get('writerToken');
+                        $response = Ric_Rest_Client::putFile($url, $filePath);
+                        if( trim($response)!='OK' ){
+                            $result = trim($result."\n".'failed to upload to '.$server.' :'.$response);
+                        }
+                    }
+                }catch(Exception $e){
+                    $result = trim($result."\n".'failed to upload to '.$server);
+                }
+            }
+        }
+        return $result;
+    }
+
+    /**
      * get the own address
      * @throws RuntimeException
      */

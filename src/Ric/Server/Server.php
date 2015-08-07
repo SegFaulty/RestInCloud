@@ -123,7 +123,8 @@ class Ric_Server_Server {
 
         // replicate
         $filePath = $this->fileManager->getFilePath($fileName, $version);
-        $syncResult = $this->syncFile($filePath, $timestamp, $retention, $noSync);
+        touch($filePath, $timestamp);
+        $syncResult = $this->clusterManager->syncFile($fileName, $version, $filePath, $timestamp, $retention, $noSync);
         if( $syncResult!='' ){
             $result = 'WARNING'.' :'.$syncResult;
         }
@@ -149,7 +150,8 @@ class Ric_Server_Server {
 
         $filePath = $this->fileManager->getFilePath($fileName, $version);
         if( file_exists($filePath) ){
-            $syncResult = $this->syncFile($filePath, $timestamp, $retention, $noSync);
+            touch($filePath, $timestamp);
+            $syncResult = $this->clusterManager->syncFile($fileName, $version, $filePath, $timestamp, $retention, $noSync);
             $this->executeRetention($fileName, $retention);
             if( $syncResult=='' ){
                 $result = '1';
@@ -159,43 +161,6 @@ class Ric_Server_Server {
             $result = '0';
         }
         echo $result.PHP_EOL;
-    }
-
-    /**
-     * register a new file in store and set timestamp, sync other server
-     * @param string $filePath
-     * @param int $timestamp
-     * @param string $retention
-     * @param bool $noSync
-     * @return array|string
-     */
-    protected function syncFile($filePath, $timestamp, $retention, $noSync=false){
-        $result = '';
-        touch($filePath, $timestamp);
-        if( !$noSync ){
-            // SYNC
-            /** @noinspection PhpUnusedLocalVariableInspection */
-            list($fileName, $version) = $this->extractVersionFromFullFileName($filePath);
-            foreach( $this->configService->get('servers') as $server ){
-                try{
-                    $serverUrl = 'http://'.$server.'/';
-                    // try to refresh file
-                    $url = $serverUrl.$fileName.'?sha1='.sha1_file($filePath).'&timestamp='.$timestamp.'&retention='.$retention.'&noSync=1&token='.$this->configService->get('writerToken');
-                    $response = Ric_Rest_Client::post($url);
-                    if( trim($response)!='1' ){
-                        // refresh failed, upload
-                        $url = $serverUrl.$fileName.'?timestamp='.$timestamp.'&retention='.$retention.'&noSync=1&token='.$this->configService->get('writerToken');
-                        $response = Ric_Rest_Client::putFile($url, $filePath);
-                        if( trim($response)!='OK' ){
-                            $result = trim($result."\n".'failed to upload to '.$server.' :'.$response);
-                        }
-                    }
-                }catch(Exception $e){
-                    $result = trim($result."\n".'failed to upload to '.$server);
-                }
-            }
-        }
-        return $result;
     }
 
     /**
