@@ -33,7 +33,9 @@ use ric help {command} for command details
 you can define every option as environment variable with prefix "ric" (server -> ricServer)
 
 * --verbose show debug details default: false
+* --quite don't print anything except failures default: false
 * --auth {token}  default: ENV ricAuth -> ''
+* --authFile {tokenFilePath} read auth from file default: ENV ricAuthFile -> ''
 * --server RicServer default: ENV ricServer -> ''
 * --prefix prefix all target names default: ENV ricPrefix -> ''
 
@@ -44,9 +46,9 @@ you can define every option as environment variable with prefix "ric" (server ->
     ric backup /home/www/ric/config/ testService_host1_config.tar.gz --retention=last7
 
 backups the config dir (as tar.gz) with last7 versions
-ablauf:
+procedure:
 * detect resource type (file, dir, mysql, redis ..) and make a file of it
-* encrypt the file with salt and (optionally) password
+* encrypt the file with salt(based on targetFileName) and (optionally) password
 * (optionaly check minSize)
 * refresh this file with post request
 * if failed store file with put request
@@ -55,6 +57,7 @@ ablauf:
 ### backup options
 
 * --pass Password
+* --passFile {passFilePath} read pass from file default: ENV ricPassFile -> ''
 * --retention default: last3
 * --timestamp as int or 'now' or 'file' default: now
 * --minReplicas default: max(1, count(servers)-1)
@@ -64,7 +67,6 @@ ablauf:
 ## Help check
 
     ric check testService_host1_config.tar.gz --minSize=100000
-
 
 ### check options
 

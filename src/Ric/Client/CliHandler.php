@@ -13,29 +13,16 @@ class Ric_Client_CliHandler{
 	 */
 	static public function handleExecute($argv, $env){
 		$status = true;
+		$msg = '';
 		$cli = new Ric_Client_Cli($argv, $env);
 		$command = array_shift($cli->arguments);
 		if( $cli->getOption('verbose') ){
-			echo 'command: '.$command.PHP_EOL;
-			echo 'arguments: ';
-			foreach( $cli->arguments as $value ){
-				echo '"'.$value.'", ';
-			}
-			echo PHP_EOL;
-			echo 'options: ';
-			foreach( $cli->options as $key=>$value ){
-				echo $key.': "'.$value.'", ';
-			}
-			echo PHP_EOL;
-			echo 'environment: ';
-			foreach( $cli->env as $key=>$value ){
-				echo $key.': "'.$value.'", ';
-			}
-			echo PHP_EOL;
+			self::dumpParameters($command, $cli);
 		}
 
 		try{
-			$client = new Ric_Client_Client($cli->getOption('server'), $cli->getOption('auth'));
+			$auth = $cli->getOption('auth', self::resolveSecretFile($cli->getOption('authFile')));
+			$client = new Ric_Client_Client($cli->getOption('server'), $auth);
 			$client->setDebug($cli->getOption('verbose'));
 			switch($command){
 				case 'backup':
@@ -68,14 +55,32 @@ class Ric_Client_CliHandler{
 			}
 		}catch(Exception $e){
 			$status = 1;
-			$msg = $e->getMessage();
+			file_put_contents("php://stderr", rtrim($e->getMessage()).PHP_EOL);
 		}
 
-		echo rtrim($msg).PHP_EOL; // add trailing newline
+		if( !$cli->getOption('quite') ){
+			echo rtrim($msg).PHP_EOL; // add trailing newline
+		}
 		if( is_bool($status) ){
 			$status = (int) !$status;
 		}
 		return $status; // success -> 0 , failed >= 1
+	}
+
+	/**
+	 * @param string $filePath
+	 * @throws RuntimeException
+	 * @return string
+	 */
+	static protected function resolveSecretFile($filePath){
+		$secret = '';
+		if( $filePath!='' ){
+			if( !file_exists($filePath) OR !is_readable($filePath) ){
+				throw new RuntimeException('authFile not found or not readable: '.$filePath);
+			}
+			$secret = trim(file_get_contents($filePath));
+		}
+		return $secret;
 	}
 
 	/**
@@ -98,7 +103,8 @@ class Ric_Client_CliHandler{
 			$targetFileName = $cli->getArgument(2);
 		}
 		$targetFileName = $cli->getOption('prefix','').$targetFileName;
-		$client->backup($resource, $targetFileName, $cli->getOption('pass'), $cli->getOption('retention'), $cli->getOption('timestamp'), $cli->getOption('minReplicas'), $cli->getOption('minSize'));
+		$password = $cli->getOption('pass', self::resolveSecretFile($cli->getOption('passFile')));
+		$client->backup($resource, $targetFileName, $password, $cli->getOption('retention'), $cli->getOption('timestamp'), $cli->getOption('minReplicas'), $cli->getOption('minSize'));
 		return 'OK'.PHP_EOL.$targetFileName;
 	}
 
@@ -206,6 +212,29 @@ class Ric_Client_CliHandler{
 			throw new RuntimeException('unknown admin command');
 		}
 		return $msg;
+	}
+
+	/**
+	 * @param $command
+	 * @param $cli
+	 */
+	protected static function dumpParameters($command, $cli){
+		echo 'command: ' . $command . PHP_EOL;
+		echo 'arguments: ';
+		foreach( $cli->arguments as $value ){
+			echo '"' . $value . '", ';
+		}
+		echo PHP_EOL;
+		echo 'options: ';
+		foreach( $cli->options as $key => $value ){
+			echo $key . ': "' . $value . '", ';
+		}
+		echo PHP_EOL;
+		echo 'environment: ';
+		foreach( $cli->env as $key => $value ){
+			echo $key . ': "' . $value . '", ';
+		}
+		echo PHP_EOL;
 	}
 
 }
