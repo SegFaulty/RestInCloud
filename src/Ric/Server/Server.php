@@ -549,18 +549,15 @@ class Ric_Server_Server {
 
     /**
      * todo necessary?
-     * @throws RuntimeException
+     * @param string $fileName
+     * @param string $fileVersion
+     * @param string $regex
      */
-    public function actionGrep(){
-        $filePath = $this->getFilePath();
+    public function grepFromFile($fileName, $fileVersion, $regex){
+        $filePath = $this->fileManager->getFileInfosForPattern($fileName, $fileVersion);
         $fp = gzopen($filePath, 'r');
         if( !$fp ){
             throw new RuntimeException('open file failed');
-        }
-        // grep
-        $regex = H::getRP('grep');
-        if(!Ric_Server_Helper_RegexValidator::isValid($regex, $errorMessage)){
-            throw new RuntimeException('not a valid regex: '.$errorMessage, 400);
         }
         while(($line = gzgets($fp,100000))){
             if( preg_match($regex, $line) ){

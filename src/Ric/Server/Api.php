@@ -94,7 +94,7 @@ class Ric_Server_Api{
         }elseif( $action=='head' ){
             $this->server->actionHead();
         }elseif( $action=='grep' ){
-            $this->server->actionGrep();
+            $this->actionGrep();
         }elseif( $action=='help' ){
             $this->actionHelp();
         }elseif( $action=='' ){
@@ -276,6 +276,20 @@ class Ric_Server_Api{
         $minReplicas = H::getRP('minReplicas', null); // if parameter omitted, don't check replicas!!!! or deadlock
 
         $this->server->checkFile($fileName, $fileVersion, $sha1, $minSize, $minTimestamp, $minReplicas);
+    }
+
+    /**
+     * todo necessary?
+     * @throws RuntimeException
+     */
+    protected function actionGrep(){
+        $fileName = $this->extractFileNameFromRequest();
+        $fileVersion = $this->extractVersionFromRequest();
+        $regex = H::getRP('grep');
+        if(!Ric_Server_Helper_RegexValidator::isValid($regex, $errorMessage)){
+            throw new RuntimeException('not a valid regex: '.$errorMessage, 400);
+        }
+        $this->server->grepFromFile($fileName, $fileVersion, $regex);
     }
 
     /**
