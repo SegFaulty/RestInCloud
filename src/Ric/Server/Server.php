@@ -597,7 +597,7 @@ class Ric_Server_Server {
                 ];
                 $index++;
             }else{
-                $fileName = $fileInfo['name'];
+                $fileName = $fileInfo->getName();
                 if( !in_array($fileName, $lines) ){
                     $lines[] = $fileName;
                 }
