@@ -241,14 +241,16 @@ class Ric_Server_Api{
      * get server info
      */
     protected function actionHealth(){
-        $this->server->getHealthInfo();
+        $isAdmin = $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN, false);
+        $this->server->getHealthInfo($isAdmin);
     }
 
     /**
      * get server info
      */
     public function actionInfo(){
-        $this->server->showServerInfo();
+        $isAdmin = $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN, false);
+        $this->server->showServerInfo($isAdmin);
     }
 
     /**

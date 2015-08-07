@@ -6,11 +6,6 @@
 class Ric_Server_Server {
 
     /**
-     * @var Ric_Server_Auth_Service
-     */
-    protected $authService;
-
-    /**
      * @var Ric_Server_Config
      */
     protected $configService;
@@ -31,7 +26,6 @@ class Ric_Server_Server {
         if( !is_dir($this->config['storeDir']) OR !is_writable($this->config['storeDir']) ){
             throw new RuntimeException('document root ['.$this->config['storeDir'].'] is not a writable dir!');
         }
-        $this->authService = new Ric_Server_Auth_Service($this->config);
         $this->fileManager = new Ric_Server_File_Manager($this->config['storeDir']);
     }
 
@@ -202,16 +196,6 @@ class Ric_Server_Server {
             }
         }
         return $result;
-    }
-
-    /**
-     * user admin>writer>reader
-     * @param string $user
-     * @param bool $isRequired
-     * @return bool
-     */
-    protected function auth($user=Ric_Server_Auth_Definition::ROLE__READER, $isRequired=true){
-        return $this->authService->auth($user, $isRequired);
     }
 
     /**
@@ -570,9 +554,9 @@ class Ric_Server_Server {
     /**
      * get server info
      */
-    public function showServerInfo(){
+    public function showServerInfo($isAdmin=false){
         header('Content-Type: application/json');
-        echo H::json($this->buildInfo($this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN, false)));
+        echo H::json($this->buildInfo($isAdmin));
     }
 
     /**
@@ -608,7 +592,7 @@ class Ric_Server_Server {
      * get server info
      * @throws RuntimeException
      */
-    public function getHealthInfo(){
+    public function getHealthInfo($isAdmin=false){
         $criticalQuotaFreeLevel = 15;
         $status = 'OK';
         $msg = '';
@@ -665,7 +649,7 @@ class Ric_Server_Server {
         $msg.= 'servers ok: '.(count($this->config['servers'])+1-count($serversFailures)).PHP_EOL;
 
         echo $status.PHP_EOL;
-        if( $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN, false) ){
+        if( $isAdmin ){
             echo $msg.PHP_EOL;
         }
     }
