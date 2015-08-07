@@ -259,10 +259,10 @@ class Ric_Server_Server {
      * join a existing cluster
      * get all servers of the given clusterMember an send an addServer to all
      * if it fails, the cluster is in inconsistent state, send leaveCluster command
+     * @param string $server
      * @throws RuntimeException
      */
-    public function actionJoinCluster(){
-        $server = H::getRP('joinCluster');
+    public function joinCluster($server){
         $ownServer = $this->getOwnHostPort();
         $response = Ric_Rest_Client::get('http://' . $server . '/', ['info' => 1, 'token' => $this->config['adminToken']]);
         $info = json_decode($response, true);
@@ -836,7 +836,7 @@ class Ric_Server_Server {
      * get the own address
      * @throws RuntimeException
      */
-    protected function getOwnHostPort(){
+    public function getOwnHostPort(){
         static $hostName = '';
         if( empty($hostName) ){
             if( !empty($this->config['hostPort']) ){

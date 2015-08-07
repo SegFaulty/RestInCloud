@@ -117,7 +117,7 @@ class Ric_Server_Api{
             }elseif( $action=='removeServer' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
                 $this->actionRemoveServer();
             }elseif( $action=='joinCluster' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
-                $this->server->actionJoinCluster();
+                $this->actionJoinCluster();
             }elseif( $action=='leaveCluster' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
                 $this->server->actionLeaveCluster();
             }elseif( $action=='removeFromCluster' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
@@ -191,6 +191,17 @@ class Ric_Server_Api{
     public function actionRemoveServer(){
         $server = H::getRP('removeServer');
         $this->server->removeServer($server);
+    }
+
+    /**
+     * join a existing cluster
+     * get all servers of the given clusterMember an send an addServer to all
+     * if it fails, the cluster is in inconsistent state, send leaveCluster command
+     * @throws RuntimeException
+     */
+    protected function actionJoinCluster(){
+        $server = H::getRP('joinCluster');
+        $this->server->joinCluster($server);
     }
 
     protected function extractFileNameFromRequest(){
