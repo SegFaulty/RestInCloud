@@ -2,16 +2,17 @@
 
 class Ric_Server_Config {
 
-	protected $defaultConfig = [];
+    protected $defaultConfig = [
+        'hostPort' => '', // if empty use autoDetectSource host with default port
+        'storeDir' => '/nonExistingDir/ric/',
+        'quota' => 0,
+        'servers' => [],
+        'adminToken' => 'admin',
+        'writerToken' => 'writer',
+        'readerToken' => '',
+        'defaultRetention' => Ric_Server_Definition::RETENTION__LAST3,
+    ];
 	protected $config = [];
-
-	/**
-	 * Ric_Server_Config constructor.
-	 * @param array $defaultConfig
-	 */
-	public function __construct(array $defaultConfig){
-		$this->defaultConfig = $defaultConfig;
-	}
 
 	/**
 	 * load config default -> given config -> docRoot/intern/config.json

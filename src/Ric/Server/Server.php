@@ -10,17 +10,6 @@ class Ric_Server_Server {
      */
     protected $authService;
 
-    protected $defaultConfig = [
-        'hostPort' => '', // if empty use autoDetectSource host with default port
-        'storeDir' => '/nonExistingDir/ric/',
-        'quota' => 0,
-        'servers' => [],
-        'adminToken' => 'admin',
-        'writerToken' => 'writer',
-        'readerToken' => '',
-        'defaultRetention' => Ric_Server_Definition::RETENTION__LAST3,
-    ];
-
     protected $configLoader;
     protected $config = [];
 
@@ -30,7 +19,7 @@ class Ric_Server_Server {
      * construct
      */
     public function __construct($configFilePath=''){
-        $this->configLoader = new Ric_Server_Config($this->defaultConfig);
+        $this->configLoader = new Ric_Server_Config();
         $this->config = $this->configLoader->loadConfig($configFilePath);
         if( !is_dir($this->config['storeDir']) OR !is_writable($this->config['storeDir']) ){
             throw new RuntimeException('document root ['.$this->config['storeDir'].'] is not a writable dir!');
