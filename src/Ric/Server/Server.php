@@ -448,44 +448,48 @@ class Ric_Server_Server {
     }
 
     /**
-     * list files
-     * @throws RuntimeException
-     */
-    public function actionList($details=false){
-        $pattern = H::getRP('pattern', null);
-        if($pattern!==null AND !Ric_Server_Helper_RegexValidator::isValid($pattern, $errorMessage)){
-            throw new RuntimeException('not a valid regex: '.$errorMessage, 400);
+ * list files
+ * @param string $pattern
+ * @param int $start
+ * @param int $limit
+ * @param boolean $showDeleted
+ */
+    public function listFileNames($pattern, $start, $limit, $showDeleted){
+        $fileInfos = $this->fileManager->getFileInfosForPattern($pattern, $showDeleted, $start, $limit);
+        $lines = [];
+        foreach( $fileInfos as $fileInfo ){/** @var Ric_Server_File_FileInfo $fileInfo */
+            $fileName = $fileInfo->getName();
+            if( !in_array($fileName, $lines) ){
+                $lines[] = $fileName;
+            }
         }
-        $showDeleted = H::getRP('showDeleted', false);
-        if($showDeleted==='true' OR $showDeleted==='1'){
-            $showDeleted = true;
-        }else{
-            $showDeleted = false;
-        }
-        $start = H::getRP('start', 0);
-        $limit = min(1000, H::getRP('limit', 100));
 
+        header('Content-Type: application/json');
+        echo H::json($lines);
+    }
+
+    /**
+     * list files
+     * @param string $pattern
+     * @param int $start
+     * @param int $limit
+     * @param boolean $showDeleted
+     */
+    public function listFileInfos($pattern, $start, $limit, $showDeleted){
         $fileInfos = $this->fileManager->getFileInfosForPattern($pattern, $showDeleted, $start, $limit);
         $lines = [];
         $index = $start;
         foreach( $fileInfos as $fileInfo ){/** @var Ric_Server_File_FileInfo $fileInfo */
-            if( $details ){
-                $lines[] = [
-                    'index' => $index,
-                    'name' => $fileInfo->getName(),
-                    'version' => $fileInfo->getVersion(),
-                    'sha1' => $fileInfo->getSha1(),
-                    'dateTime' => $fileInfo->getDateTime(),
-                    'timestamp' => $fileInfo->getTimestamp(),
-                    'size' => $fileInfo->getSize(),
-                ];
-                $index++;
-            }else{
-                $fileName = $fileInfo->getName();
-                if( !in_array($fileName, $lines) ){
-                    $lines[] = $fileName;
-                }
-            }
+            $lines[] = [
+                'index' => $index,
+                'name' => $fileInfo->getName(),
+                'version' => $fileInfo->getVersion(),
+                'sha1' => $fileInfo->getSha1(),
+                'dateTime' => $fileInfo->getDateTime(),
+                'timestamp' => $fileInfo->getTimestamp(),
+                'size' => $fileInfo->getSize(),
+            ];
+            $index++;
         }
 
         header('Content-Type: application/json');

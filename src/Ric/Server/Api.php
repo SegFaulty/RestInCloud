@@ -71,9 +71,9 @@ class Ric_Server_Api{
             $this->server->actionHelp();
         }elseif( parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)=='/' ){ // no file
             if( $action=='list' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
-                $this->server->actionList();
+                $this->actionList();
             }elseif( $action=='listDetails' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
-                $this->server->actionList(true);
+                $this->actionList(true);
             }elseif( $action=='help' ){
                 $this->server->actionHelp();
             }elseif( $action=='info' ){
@@ -249,6 +249,31 @@ class Ric_Server_Api{
         $minReplicas = H::getRP('minReplicas', null); // if parameter omitted, don't check replicas!!!! or deadlock
 
         $this->server->checkFile($fileName, $fileVersion, $sha1, $minSize, $minTimestamp, $minReplicas);
+    }
+
+    /**
+     * list files
+     * @throws RuntimeException
+     */
+    protected function actionList($details=false){
+        $pattern = H::getRP('pattern', null);
+        if($pattern!==null AND !Ric_Server_Helper_RegexValidator::isValid($pattern, $errorMessage)){
+            throw new RuntimeException('not a valid regex: '.$errorMessage, 400);
+        }
+        $showDeleted = H::getRP('showDeleted', false);
+        if($showDeleted==='true' OR $showDeleted==='1'){
+            $showDeleted = true;
+        }else{
+            $showDeleted = false;
+        }
+        $start = H::getRP('start', 0);
+        $limit = min(1000, H::getRP('limit', 100));
+
+        if($details){
+            $this->server->listFileNames($pattern, $start, $limit, $showDeleted);
+        }else{
+            $this->server->listFileInfos($pattern, $start, $limit, $showDeleted);
+        }
     }
 
     protected function extractFileNameFromRequest(){
