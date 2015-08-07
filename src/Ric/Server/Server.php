@@ -152,51 +152,6 @@ class Ric_Server_Server {
     }
 
     /**
-     * handle get
-     */
-    public function handleGetRequest(){
-        $action = '';
-        if( preg_match('~^(\w+).*~', H::getIKS($_SERVER, 'QUERY_STRING'), $matches) ){
-            $action = $matches[1];
-        }
-        if( $_SERVER['REQUEST_URI']=='/' ){ // homepage
-            $this->actionHelp();
-        }elseif( parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)=='/' ){ // no file
-            if( $action=='list' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
-                $this->actionList();
-            }elseif( $action=='listDetails' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
-                $this->actionList(true);
-            }elseif( $action=='help' ){
-                $this->actionHelp();
-            }elseif( $action=='info' ){
-                $this->actionInfo();
-            }elseif( $action=='health' ){
-                $this->actionHealth();
-            }elseif( $action=='phpInfo' ){
-                phpinfo();
-            }else{
-                throw new RuntimeException('unknown action', 400);
-            }
-        }elseif( $action=='size' ){
-            echo filesize($this->getFilePath());
-        }elseif( $action=='check' ){
-            $this->actionCheck();
-        }elseif( $action=='list' ){
-            $this->actionListVersions();
-        }elseif( $action=='head' ){
-            $this->actionHead();
-        }elseif( $action=='grep' ){
-            $this->actionGrep();
-        }elseif( $action=='help' ){
-            $this->actionHelp();
-        }elseif( $action=='' AND ($filePath=$this->getFilePath()) ){
-            $this->actionSendFile();
-        }else{
-            throw new RuntimeException('unknown action or no file given', 400);
-        }
-    }
-
-    /**
      * handle POST, file refresh
      */
     public function handlePostRequest(){
@@ -457,7 +412,7 @@ class Ric_Server_Server {
      * list files or version of file
      * @throws RuntimeException
      */
-    protected function actionCheck(){
+    public function actionCheck(){
         $result = [];
         $result['status'] = 'OK';
         $result['msg'] = '';
@@ -536,7 +491,7 @@ class Ric_Server_Server {
      * list files
      * @throws RuntimeException
      */
-    protected function actionList($details=false){
+    public function actionList($details=false){
         $pattern = H::getRP('pattern', null);
         if($pattern!==null AND !Ric_Server_Helper_RegexValidator::isValid($pattern, $errorMessage)){
             throw new RuntimeException('not a valid regex: '.$errorMessage, 400);
@@ -581,7 +536,7 @@ class Ric_Server_Server {
      * list versions of file
      * @throws RuntimeException
      */
-    protected function actionListVersions(){
+    public function actionListVersions(){
         $showDeleted = H::getRP('showDeleted');
         $limit = min(1000, H::getRP('limit', 100));
 
@@ -614,7 +569,7 @@ class Ric_Server_Server {
      * todo merge with grep
      * @throws RuntimeException
      */
-    protected function actionHead(){
+    public function actionHead(){
         $filePath = $this->getFilePath();
         $fp = gzopen($filePath, 'r');
         if( !$fp ){
@@ -633,7 +588,7 @@ class Ric_Server_Server {
     /**
      * @throws RuntimeException
      */
-    protected function actionGrep(){
+    public function actionGrep(){
         $filePath = $this->getFilePath();
         $fp = gzopen($filePath, 'r');
         if( !$fp ){
@@ -655,7 +610,7 @@ class Ric_Server_Server {
     /**
      * get server info
      */
-    protected function actionInfo(){
+    public function actionInfo(){
         header('Content-Type: application/json');
         echo H::json($this->buildInfo($this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN, false)));
     }
@@ -692,7 +647,7 @@ class Ric_Server_Server {
      *
      * get server info
      */
-    protected function actionHealth(){
+    public function actionHealth(){
         $criticalQuotaFreeLevel = 15;
         $status = 'OK';
         $msg = '';
@@ -758,7 +713,7 @@ class Ric_Server_Server {
     /**
      * help
      */
-    protected function actionHelp(){
+    public function actionHelp(){
         $helpString = '';
         // extract from README-md
         $readMePath = __DIR__.'/../../../README.md';
@@ -776,9 +731,16 @@ class Ric_Server_Server {
     }
 
     /**
+     * outputs the file size
+     */
+    public function actionGetFileSize(){
+        echo filesize($this->getFilePath());
+    }
+
+    /**
      * send an existing file
      */
-    protected function actionSendFile(){
+    public function actionSendFile(){
         $fileName = $this->extractFileNameFromRequest();
         $fileVersion = $this->extractVersionFromRequest();
         $fileInfo = $this->fileManager->getFileInfo($fileName, $fileVersion);

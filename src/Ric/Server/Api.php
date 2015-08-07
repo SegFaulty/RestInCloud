@@ -33,7 +33,7 @@ class Ric_Server_Api{
             }elseif( $_SERVER['REQUEST_METHOD']=='POST' OR H::getRP('method')=='post' ){
                 $this->server->handlePostRequest();
             }elseif( $_SERVER['REQUEST_METHOD']=='GET' ){
-                $this->server->handleGetRequest();
+                $this->handleGetRequest();
             }elseif( $_SERVER['REQUEST_METHOD']=='DELETE' OR H::getRP('method')=='delete' ){
                 if( $this->auth(Ric_Server_Auth_Definition::ROLE__WRITER) ){
                     $this->server->actionDelete();
@@ -56,6 +56,51 @@ class Ric_Server_Api{
             header('Content-Type: application/json');
             echo H::json(['error'=>$e->getMessage()]);
 
+        }
+    }
+
+    /**
+     * handle get
+     */
+    protected function handleGetRequest(){
+        $action = '';
+        if( preg_match('~^(\w+).*~', H::getIKS($_SERVER, 'QUERY_STRING'), $matches) ){
+            $action = $matches[1];
+        }
+        if( $_SERVER['REQUEST_URI']=='/' ){ // homepage
+            $this->server->actionHelp();
+        }elseif( parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)=='/' ){ // no file
+            if( $action=='list' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
+                $this->server->actionList();
+            }elseif( $action=='listDetails' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
+                $this->server->actionList(true);
+            }elseif( $action=='help' ){
+                $this->server->actionHelp();
+            }elseif( $action=='info' ){
+                $this->server->actionInfo();
+            }elseif( $action=='health' ){
+                $this->server->actionHealth();
+            }elseif( $action=='phpInfo' ){
+                phpinfo();
+            }else{
+                throw new RuntimeException('unknown action', 400);
+            }
+        }elseif( $action=='size' ){
+            $this->server->actionGetFileSize();
+        }elseif( $action=='check' ){
+            $this->server->actionCheck();
+        }elseif( $action=='list' ){
+            $this->server->actionListVersions();
+        }elseif( $action=='head' ){
+            $this->server->actionHead();
+        }elseif( $action=='grep' ){
+            $this->server->actionGrep();
+        }elseif( $action=='help' ){
+            $this->server->actionHelp();
+        }elseif( $action=='' ){
+            $this->server->actionSendFile();
+        }else{
+            throw new RuntimeException('unknown action', 400);
         }
     }
 
