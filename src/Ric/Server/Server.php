@@ -52,6 +52,7 @@ class Ric_Server_Server {
 //    }
 
     /**
+     * todo move that thing
      * physically delete files marked for deletion
      *
      * @param $maxTimestamp
@@ -145,8 +146,8 @@ class Ric_Server_Server {
      * @throws RuntimeException
      */
     public function actionPostRefresh(){
-        // not / .. this is a file, refresh action
         $result = '0';
+
         $version = H::getRP('sha1');
         $retention = H::getRP('retention', '');
         $timestamp = H::getRP('timestamp', time());
@@ -165,7 +166,8 @@ class Ric_Server_Server {
                 $result = '1';
             }
         }else{
-            // file not found  > $result = '0';
+            // file not found
+            $result = '0';
         }
         echo $result.PHP_EOL;
     }
