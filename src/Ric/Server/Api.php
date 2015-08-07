@@ -31,7 +31,7 @@ class Ric_Server_Api{
             if( $_SERVER['REQUEST_METHOD']=='PUT' ){
                 $this->server->handlePutRequest();
             }elseif( $_SERVER['REQUEST_METHOD']=='POST' OR H::getRP('method')=='post' ){
-                $this->server->handlePostRequest();
+                $this->handlePostRequest();
             }elseif( $_SERVER['REQUEST_METHOD']=='GET' ){
                 $this->handleGetRequest();
             }elseif( $_SERVER['REQUEST_METHOD']=='DELETE' OR H::getRP('method')=='delete' ){
