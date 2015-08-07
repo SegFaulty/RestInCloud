@@ -68,14 +68,14 @@ class Ric_Server_Api{
             $action = $matches[1];
         }
         if( $_SERVER['REQUEST_URI']=='/' ){ // homepage
-            $this->server->actionHelp();
+            $this->actionHelp();
         }elseif( parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)=='/' ){ // no file
             if( $action=='list' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
                 $this->actionList();
             }elseif( $action=='listDetails' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
                 $this->actionList(true);
             }elseif( $action=='help' ){
-                $this->server->actionHelp();
+                $this->actionHelp();
             }elseif( $action=='info' ){
                 $this->server->actionInfo();
             }elseif( $action=='health' ){
@@ -96,7 +96,7 @@ class Ric_Server_Api{
         }elseif( $action=='grep' ){
             $this->server->actionGrep();
         }elseif( $action=='help' ){
-            $this->server->actionHelp();
+            $this->actionHelp();
         }elseif( $action=='' ){
             $this->actionSendFile();
         }else{
@@ -305,6 +305,13 @@ class Ric_Server_Api{
         $fileName = $this->extractFileNameFromRequest();
         $version = $this->extractVersionFromRequest();
         $this->server->showFileSize($fileName, $version);
+    }
+
+    /**
+     * help
+     */
+    protected function actionHelp(){
+        $this->server->getHelpInfo();
     }
 
     protected function extractFileNameFromRequest(){

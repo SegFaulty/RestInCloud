@@ -676,7 +676,7 @@ class Ric_Server_Server {
     /**
      * help
      */
-    public function actionHelp(){
+    public function getHelpInfo(){
         $helpString = '';
         // extract from README-md
         $readMePath = __DIR__.'/../../../README.md';
