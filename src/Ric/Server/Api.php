@@ -86,7 +86,7 @@ class Ric_Server_Api{
                 throw new RuntimeException('unknown action', 400);
             }
         }elseif( $action=='size' ){
-            $this->server->actionGetFileSize();
+            $this->actionGetFileSize();
         }elseif( $action=='check' ){
             $this->actionCheck();
         }elseif( $action=='list' ){
@@ -286,6 +286,15 @@ class Ric_Server_Api{
         $fileName = $this->extractFileNameFromRequest();
 
         $this->server->listVersions($fileName, $limit, $showDeleted);
+    }
+
+    /**
+     * outputs the file size
+     */
+    protected function actionGetFileSize(){
+        $fileName = $this->extractFileNameFromRequest();
+        $version = $this->extractVersionFromRequest();
+        $this->server->showFileSize($fileName, $version);
     }
 
     protected function extractFileNameFromRequest(){

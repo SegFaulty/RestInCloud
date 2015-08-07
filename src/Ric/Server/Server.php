@@ -527,6 +527,7 @@ class Ric_Server_Server {
     }
 
     /**
+     * todo necessary?
      * todo merge with grep
      * @throws RuntimeException
      */
@@ -547,6 +548,7 @@ class Ric_Server_Server {
     }
 
     /**
+     * todo necessary?
      * @throws RuntimeException
      */
     public function actionGrep(){
@@ -693,9 +695,12 @@ class Ric_Server_Server {
 
     /**
      * outputs the file size
+     * @param string $fileName
+     * @param string $version
      */
-    public function actionGetFileSize(){
-        echo filesize($this->getFilePath());
+    public function showFileSize($fileName, $version){
+        $filePath = $this->fileManager->getFilePath($fileName, $version);
+        echo filesize($filePath);
     }
 
     /**
