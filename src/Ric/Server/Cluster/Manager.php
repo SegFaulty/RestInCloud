@@ -40,6 +40,29 @@ class Ric_Server_Cluster_Manager{
         echo H::json(['Status' => 'OK']);
     }
 
+    /**
+     * remove selected or "all" servers
+     * @param $server
+     */
+    public function removeServer($server){
+        $this->removeServerFromConfig($server);
+
+        header('Content-Type: application/json');
+        echo H::json(['Status' => 'OK']);
+    }
+
+    /**
+     * todo check if parameter value all is wanted
+     * @param $server
+     */
+    protected function removeServerFromConfig($server){
+        if( $server=='all' ){
+            $servers = [];
+        } else {
+            $servers = array_diff($this->configService->get('servers'), [$server]);
+        }
+        $this->configService->setRuntimeConfig('servers', $servers);
+    }
 
     /**
      * @param string $fileName

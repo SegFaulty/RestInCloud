@@ -199,17 +199,6 @@ class Ric_Server_Server {
     }
 
     /**
-     * remove selected or "all" servers
-     * @param $server
-     */
-    public function removeServer($server){
-        $this->removeServerFromConfig($server);
-
-        header('Content-Type: application/json');
-        echo H::json(['Status' => 'OK']);
-    }
-
-    /**
      * todo check if parameter value all is wanted
      * @param $server
      */
