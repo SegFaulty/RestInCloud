@@ -105,6 +105,33 @@ class Ric_Server_Api{
     }
 
     /**
+     * handle POST, file refresh
+     */
+    public function handlePostRequest(){
+        $this->auth(Ric_Server_Auth_Definition::ROLE__WRITER);
+        $action = H::getRP('action');
+        if( parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)=='/' ){ // homepage
+            // post actions
+            if( $action=='addServer' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
+                $this->server->actionAddServer();
+            }elseif( $action=='removeServer' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
+                $this->server->actionRemoveServer();
+            }elseif( $action=='joinCluster' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
+                $this->server->actionJoinCluster();
+            }elseif( $action=='leaveCluster' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
+                $this->server->actionLeaveCluster();
+            }elseif( $action=='removeFromCluster' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
+                $this->server->actionRemoveFromCluster();
+            }else{
+                throw new RuntimeException('unknown action or no file given [Post]', 400);
+            }
+        }else{
+            // not "/" .. this is a file, refresh action
+            $this->server->actionPostRefresh();
+        }
+    }
+
+    /**
      * user admin>writer>reader
      * @param string $user
      * @param bool $isRequired

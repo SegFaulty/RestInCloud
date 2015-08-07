@@ -152,37 +152,10 @@ class Ric_Server_Server {
     }
 
     /**
-     * handle POST, file refresh
-     */
-    public function handlePostRequest(){
-        $this->auth(Ric_Server_Auth_Definition::ROLE__WRITER);
-        $action = H::getRP('action');
-        if( parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)=='/' ){ // homepage
-            // post actions
-            if( $action=='addServer' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
-                $this->actionAddServer();
-            }elseif( $action=='removeServer' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
-                $this->actionRemoveServer();
-            }elseif( $action=='joinCluster' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
-                $this->actionJoinCluster();
-            }elseif( $action=='leaveCluster' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
-                $this->actionLeaveCluster();
-            }elseif( $action=='removeFromCluster' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
-                $this->actionRemoveFromCluster();
-            }else{
-                throw new RuntimeException('unknown action or no file given [Post]', 400);
-            }
-        }else{
-            // not "/" .. this is a file, refresh action
-            $this->actionPostRefresh();
-        }
-    }
-
-    /**
      * check and refresh a with a post request
      * @throws RuntimeException
      */
-    protected function actionPostRefresh(){
+    public function actionPostRefresh(){
         // not / .. this is a file, refresh action
         $result = '0';
         $version = H::getRP('sha1');
@@ -259,7 +232,7 @@ class Ric_Server_Server {
     /**
      * @throws RuntimeException
      */
-    protected function actionAddServer(){
+    public function actionAddServer(){
         $server = H::getRP('addServer');
         $info = json_decode(Ric_Rest_Client::get('http://'.$server.'/', ['info'=>1,'token'=>$this->config['readerToken']]), true);
         if( $info AND H::getIKS($info, 'serverTimestamp') ){
@@ -276,7 +249,7 @@ class Ric_Server_Server {
      * remove selected or "all" servers
      * @throws RuntimeException
      */
-    protected function actionRemoveServer(){
+    public function actionRemoveServer(){
         $server = H::getRP('removeServer');
         $this->removeServer($server);
 
@@ -302,7 +275,7 @@ class Ric_Server_Server {
      * if it fails, the cluster is in inconsistent state, send leaveCluster command
      * @throws RuntimeException
      */
-    protected function actionJoinCluster(){
+    public function actionJoinCluster(){
         $server = H::getRP('joinCluster');
         $ownServer = $this->getOwnHostPort();
         $response = Ric_Rest_Client::get('http://' . $server . '/', ['info' => 1, 'token' => $this->config['adminToken']]);
@@ -336,7 +309,7 @@ class Ric_Server_Server {
      * if it fails, the cluster is in inconsistent state, send leaveCluster command
      * @throws RuntimeException
      */
-    protected function actionLeaveCluster(){
+    public function actionLeaveCluster(){
         $ownServer = $this->getOwnHostPort();
         list($leavedServers, $errorMsg) = $this->removeServerFromCluster($ownServer);
         $this->setRuntimeConfig('servers', []);
@@ -353,7 +326,7 @@ class Ric_Server_Server {
      * send removeServer to all servers
      * @throws RuntimeException
      */
-    protected function actionRemoveFromCluster(){
+    public function actionRemoveFromCluster(){
         $server = H::getRP('removeFromCluster');
         list($leavedServers, $errorMsg) = $this->removeServerFromCluster($server);
         if( $errorMsg!='' ){
