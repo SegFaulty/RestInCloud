@@ -246,24 +246,6 @@ class Ric_Server_Server {
     }
 
     /**
-     * leaving a cluster
-     * send removeServer to all servers
-     * if it fails, the cluster is in inconsistent state, send leaveCluster command
-     * @throws RuntimeException
-     */
-    public function leaveCluster(){
-        $ownServer = $this->getOwnHostPort();
-        list($leavedServers, $errorMsg) = $this->removeServerFromCluster($ownServer);
-        $this->configService->setRuntimeConfig('servers', []);
-
-        if( $errorMsg!='' ){
-            throw new RuntimeException('leaveCluster failed! '.$errorMsg.' Inconsitent cluster state! (please remove me manually) succesfully removed from: '.join('; ', $leavedServers), 400);
-        }
-        header('Content-Type: application/json');
-        echo H::json(['Status' => 'OK']);
-    }
-
-    /**
      * remove a server from the cluster
      * send removeServer to all servers
      * @param string $server

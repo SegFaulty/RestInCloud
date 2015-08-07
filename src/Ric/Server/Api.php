@@ -228,7 +228,7 @@ class Ric_Server_Api{
      * @throws RuntimeException
      */
     protected function actionLeaveCluster(){
-        $this->server->leaveCluster();
+        $this->clusterManager->leaveCluster();
     }
 
     /**

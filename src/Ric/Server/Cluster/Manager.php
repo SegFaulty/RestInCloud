@@ -52,6 +52,47 @@ class Ric_Server_Cluster_Manager{
     }
 
     /**
+     * leaving a cluster
+     * send removeServer to all servers
+     * if it fails, the cluster is in inconsistent state, send leaveCluster command
+     * @throws RuntimeException
+     */
+    public function leaveCluster(){
+        $ownServer = $this->getOwnHostPort();
+        list($leavedServers, $errorMsg) = $this->removeServerFromCluster($ownServer);
+        $this->configService->setRuntimeConfig('servers', []);
+
+        if( $errorMsg!='' ){
+            throw new RuntimeException('leaveCluster failed! '.$errorMsg.' Inconsitent cluster state! (please remove me manually) succesfully removed from: '.join('; ', $leavedServers), 400);
+        }
+        header('Content-Type: application/json');
+        echo H::json(['Status' => 'OK']);
+    }
+
+    /**
+     * leaving a cluster
+     * send removeServer to all servers
+     * if it fails, the cluster is in inconsistent state, send leaveCluster command
+     * @param $server
+     * @return array
+     */
+    protected function removeServerFromCluster($server){
+        $leftServers = [];
+        $errorMsg = '';
+        foreach( $this->configService->get('servers') as $clusterServer ){
+            $response = Ric_Rest_Client::post('http://' . $clusterServer . '/', ['action' => 'removeServer', 'removeServer' => $server, 'token' => $this->configService->get('adminToken')]);
+            $result = json_decode($response, true);
+            if( H::getIKS($result, 'Status')!='OK' ){
+                $errorMsg.= 'removeServer failed from '.$clusterServer.' failed! ['.$response.']';
+            }else{
+                $leftServers[] = $clusterServer;
+            }
+        }
+        $this->removeServerFromConfig($server);
+        return [$leftServers, $errorMsg];
+    }
+
+    /**
      * todo check if parameter value all is wanted
      * @param $server
      */
@@ -86,5 +127,25 @@ class Ric_Server_Cluster_Manager{
             }
         }
         return $replicas;
+    }
+
+    /**
+     * get the own address
+     * @throws RuntimeException
+     */
+    public function getOwnHostPort(){
+        static $hostName = '';
+        if( empty($hostName) ){
+            $hostAndPort = $this->configService->get('hostPort');
+            if( !empty($hostAndPort) ){
+                $hostName = $this->configService->get('hostPort');
+            }else{
+                $hostName = gethostname(); // servers host name
+            }
+        }
+        if( empty($hostName) OR strstr($hostName, '.')===false ){
+            throw new RuntimeException('wrong hostname: ['.$hostName.'] - hostPort in config is missing and "hostname"-command returns not an host name with ".",  can not perform remote operation, please set "hostPort" in config or hostname on host to a reachable value (FQH: ric.example.com:3333)');
+        }
+        return $hostName;
     }
 }
