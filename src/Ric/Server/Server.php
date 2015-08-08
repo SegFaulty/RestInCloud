@@ -98,6 +98,7 @@ class Ric_Server_Server {
      * @param string $retention @see Ric_Server_Definition::RETENTION__*
      * @param int $timestamp
      * @param boolean $noSync
+     * @return Ric_Server_Response
      * @throws RuntimeException
      */
     public function saveFileInCloud($tmpFilePath, $fileName, $retention, $timestamp, $noSync){
@@ -126,8 +127,11 @@ class Ric_Server_Server {
 
         // todo differentiate between error and stdout
         // TODO kein 201 liefern wenn $syncResult!='' , da dann mindestens ein server nicht erreicht wurde, muss das hier komplett failen
-        header('HTTP/1.1 201 Created', true, 201);
-        echo $result.PHP_EOL;
+//        header('HTTP/1.1 201 Created', true, 201);
+        $response = new Ric_Server_Response();
+        $response->addHeader('HTTP/1.1 201 Created', 201);
+        $response->setOutput($result.PHP_EOL);
+        return $response;
     }
 
     /**
@@ -137,6 +141,7 @@ class Ric_Server_Server {
      * @param string $retention
      * @param int $timestamp
      * @param boolean $noSync
+     * @return Ric_Server_Response
      */
     public function refreshFile($fileName, $version, $retention, $timestamp, $noSync){
         $result = '0';
@@ -153,18 +158,22 @@ class Ric_Server_Server {
             // file not found
             $result = '0';
         }
-        echo $result.PHP_EOL;
+        $response = new Ric_Server_Response();
+        $response->setOutput($result.PHP_EOL);
+        return $response;
     }
 
     /**
      * mark one or all versions of the File as deleted
      * @param string $fileName
      * @param string $version
+     * @return Ric_Server_Response
      */
     public function deleteFile($fileName, $version){
         $filesDeleted = $this->fileManager->deleteFile($fileName, $version);
-        header('Content-Type: application/json');
-        echo H::json(['filesDeleted' => $filesDeleted]);
+        $response = new Ric_Server_Response();
+        $response->setResult(['filesDeleted' => $filesDeleted]);
+        return $response;
     }
 
     /**
@@ -176,6 +185,7 @@ class Ric_Server_Server {
      * @param int $minSize
      * @param int $minTimestamp
      * @param int $minReplicas
+     * @return Ric_Server_Response
      */
     public function checkFile($fileName, $fileVersion, $sha1, $minSize, $minTimestamp, $minReplicas=null){
         $result = [];
@@ -220,17 +230,19 @@ class Ric_Server_Server {
             $result['msg'] = trim($result['msg'].PHP_EOL.'not enough replicas ('.$infos['replicas'].'/'.$minReplicas.')');
         }
         $result['fileInfo'] = $infos;
-        header('Content-Type: application/json');
-        echo H::json($result);
+        $response = new Ric_Server_Response();
+        $response->setResult($result);
+        return $response;
     }
 
     /**
- * list files
- * @param string $pattern
- * @param int $start
- * @param int $limit
- * @param boolean $showDeleted
- */
+     * list files
+     * @param string $pattern
+     * @param int $start
+     * @param int $limit
+     * @param boolean $showDeleted
+     * @return Ric_Server_Response
+     */
     public function listFileNames($pattern, $start, $limit, $showDeleted=false){
         $fileInfos = $this->fileManager->getFileInfosForPattern($pattern, $showDeleted, $start, $limit);
         $lines = [];
@@ -241,8 +253,9 @@ class Ric_Server_Server {
             }
         }
 
-        header('Content-Type: application/json');
-        echo H::json($lines);
+        $response = new Ric_Server_Response();
+        $response->setResult($lines);
+        return $response;
     }
 
     /**
@@ -251,6 +264,7 @@ class Ric_Server_Server {
      * @param int $start
      * @param int $limit
      * @param boolean $showDeleted
+     * @return Ric_Server_Response
      */
     public function listFileInfos($pattern, $start, $limit, $showDeleted=false){
         $fileInfos = $this->fileManager->getFileInfosForPattern($pattern, $showDeleted, $start, $limit);
@@ -269,8 +283,9 @@ class Ric_Server_Server {
             $index++;
         }
 
-        header('Content-Type: application/json');
-        echo H::json($lines);
+        $response = new Ric_Server_Response();
+        $response->setResult($lines);
+        return $response;
     }
 
     /**
@@ -278,6 +293,7 @@ class Ric_Server_Server {
      * @param string $fileName
      * @param int $limit
      * @param bool $showDeleted
+     * @return Ric_Server_Response
      */
     public function listVersions($fileName, $limit, $showDeleted=false){
         $lines = [];
@@ -299,8 +315,9 @@ class Ric_Server_Server {
             ];
 
         }
-        header('Content-Type: application/json');
-        echo H::json($lines);
+        $response = new Ric_Server_Response();
+        $response->setResult($lines);
+        return $response;
     }
 
     /**
@@ -309,13 +326,16 @@ class Ric_Server_Server {
      * @param string $fileName
      * @param string $fileVersion
      * @param int $lines
+     * @return Ric_Server_Response
      * @throws RuntimeException
      */
     public function getLinesFromFile($fileName, $fileVersion, $lines){
+        $response = new Ric_Server_Response();
         $dataLines = $this->fileManager->getLinesFromFile($fileName, $fileVersion, $lines);
         foreach($dataLines as $line) {
-            echo $line;
+            $response->addOutput($line);
         }
+        return $response;
     }
 
     /**
@@ -323,9 +343,11 @@ class Ric_Server_Server {
      * @param string $fileName
      * @param string $fileVersion
      * @param string $regex
+     * @return Ric_Server_Response
      * @throws RuntimeException
      */
     public function grepFromFile($fileName, $fileVersion, $regex){
+        $response = new Ric_Server_Response();
         $filePath = $this->fileManager->getFileInfosForPattern($fileName, $fileVersion);
         $fp = gzopen($filePath, 'r');
         if( !$fp ){
@@ -333,22 +355,28 @@ class Ric_Server_Server {
         }
         while(($line = gzgets($fp,100000))){
             if( preg_match($regex, $line) ){
-                echo $line;
+                $response->addOutput($line);
             }
         }
         gzclose($fp);
+        return $response;
     }
 
     /**
      * get server info
+     * @param bool $isAdmin
+     * @return Ric_Server_Response
      */
     public function showServerInfo($isAdmin=false){
-        header('Content-Type: application/json');
-        echo H::json($this->buildInfo($isAdmin));
+        $response = new Ric_Server_Response();
+        $response->setResult($this->buildInfo($isAdmin));
+        return $response;
     }
 
     /**
      * get server info
+     * @param bool $isAdmin
+     * @return array
      */
     protected function buildInfo($isAdmin=false){
         $info['serverTimestamp'] = time();
@@ -378,6 +406,8 @@ class Ric_Server_Server {
      * quota <85%; every server knowns every server
      *
      * get server info
+     * @param bool $isAdmin
+     * @return Ric_Server_Response
      * @throws RuntimeException
      */
     public function getHealthInfo($isAdmin=false){
@@ -386,11 +416,12 @@ class Ric_Server_Server {
         $msg = '';
 
         $serversFailures = [];
-        $clusterServers = array_merge([$this->getOwnHostPort()], $this->configService->get('servers'));
+        $ownHostPort = $this->getOwnHostPort();
+        $clusterServers = array_merge([$ownHostPort], $this->configService->get('servers'));
         sort($clusterServers);
         // get serverInfos
         $serverInfos = [];
-        $serverInfos[$this->getOwnHostPort()] = $this->buildInfo(true);
+        $serverInfos[$ownHostPort] = $this->buildInfo(true);
         foreach( $this->configService->get('servers') as $server ){
             try{
                 $url = 'http://'.$server.'/?info&token='.$this->configService->get('adminToken');
@@ -436,15 +467,18 @@ class Ric_Server_Server {
         // ok servers:
         $msg.= 'servers ok: '.(count($this->configService->get('servers'))+1-count($serversFailures)).PHP_EOL;
 
-        echo $status.PHP_EOL;
+        $response = new Ric_Server_Response();
+        $response->addOutput($status.PHP_EOL);
         if( $isAdmin ){
-            echo $msg.PHP_EOL;
+            $response->addOutput($msg.PHP_EOL);
         }
+        return $response;
     }
 
 
     /**
      * help
+     * @return Ric_Server_Response
      */
     public function getHelpInfo(){
         $helpString = '';
@@ -460,26 +494,34 @@ class Ric_Server_Server {
         $retentions.= '     '.Ric_Server_Definition::RETENTION__LAST7.' : keep last 7 versions'.PHP_EOL;
         $retentions.= '     '.Ric_Server_Definition::RETENTION__3L7D4W12M.' : keep last 3 versions then last of 7 days, 4 weeks, 12 month (max 23 Versions)'.PHP_EOL;
         $helpString = str_replace('{retentionList}', $retentions, $helpString);
-        echo '<pre>'.htmlentities($helpString).'</pre>';
+
+        $response = new Ric_Server_Response();
+        $response->addOutput('<pre>'.htmlentities($helpString).'</pre>');
+        return $response;
     }
 
     /**
      * outputs the file size
      * @param string $fileName
      * @param string $version
+     * @return Ric_Server_Response
      */
     public function showFileSize($fileName, $version){
+        $response = new Ric_Server_Response();
         $filePath = $this->fileManager->getFilePath($fileName, $version);
-        echo filesize($filePath);
+        $response->addOutput(filesize($filePath));
+        return $response;
     }
 
     /**
      * send an existing file
      * @param string $fileName
      * @param string $fileVersion
+     * @return Ric_Server_Response
      * @throws RuntimeException
      */
     public function sendFile($fileName, $fileVersion){
+        $response = new Ric_Server_Response();
         $fileInfo = $this->fileManager->getFileInfo($fileName, $fileVersion);
 
         $lastModified = gmdate('D, d M Y H:i:s \G\M\T', $fileInfo->getTimestamp());
@@ -489,19 +531,22 @@ class Ric_Server_Server {
         $ifMod = isset($_SERVER['HTTP_IF_MODIFIED_SINCE']) ? $_SERVER['HTTP_IF_MODIFIED_SINCE'] == $lastModified : null;
         $ifTag = isset($_SERVER['HTTP_IF_NONE_MATCH']) ? $_SERVER['HTTP_IF_NONE_MATCH'] == $eTag : null;
         if (($ifMod || $ifTag) && ($ifMod !== false && $ifTag !== false)) {
-            header('HTTP/1.0 304 Not Modified');
+//            header('HTTP/1.0 304 Not Modified');
+            $response->addHeader('HTTP/1.0 304 Not Modified');
         } else {
             $filePath = $this->fileManager->getFilePath($fileName, $fileVersion);
             if(!file_exists($filePath)){
                 throw new RuntimeException('File not found! '.$filePath, 404);
             }
-            header('Content-Type: application/octet-stream');
-            header('Content-Disposition: attachment; filename="'.$fileName.'"');
-            header('Content-Length: '.$fileInfo->getSize());
-            header('Last-Modified:'.$lastModified);
-            header('ETag: '.$eTag);
-            readfile($filePath);
+            $response->addHeader('Content-Type: application/octet-stream');
+            $response->addHeader('Content-Disposition: attachment; filename="'.$fileName.'"');
+            $response->addHeader('Content-Length: '.$fileInfo->getSize());
+            $response->addHeader('Last-Modified:'.$lastModified);
+            $response->addHeader('ETag: '.$eTag);
+//            readfile($filePath);
+            $response->setOutput(file_get_contents($filePath));
         }
+        return $response;
     }
 
     /***************/
@@ -509,23 +554,27 @@ class Ric_Server_Server {
 
     /**
      * @param string $server
+     * @return Ric_Server_Response
      * @throws RuntimeException
      */
     public function addServer($server){
         $this->clusterManager->addServer($server);
-        header('Content-Type: application/json');
-        echo H::json(['Status' => 'OK']);
+        $response = new Ric_Server_Response();
+        $response->setResult(['Status' => 'OK']);
+        return $response;
     }
 
     /**
      * remove selected or "all" servers
      * @param $server
+     * @return Ric_Server_Response
      */
     public function removeServer($server){
         $this->clusterManager->removeServer($server);
 
-        header('Content-Type: application/json');
-        echo H::json(['Status' => 'OK']);
+        $response = new Ric_Server_Response();
+        $response->setResult(['Status' => 'OK']);
+        return $response;
     }
 
     /**
@@ -533,13 +582,15 @@ class Ric_Server_Server {
      * get all servers of the given clusterMember an send an addServer to all
      * if it fails, the cluster is in inconsistent state, send leaveCluster command
      * @param string $server
+     * @return Ric_Server_Response
      * @throws RuntimeException
      */
     public function joinCluster($server){
         $this->clusterManager->joinCluster($server);
 
-        header('Content-Type: application/json');
-        echo H::json(['Status' => 'OK']);
+        $response = new Ric_Server_Response();
+        $response->setResult(['Status' => 'OK']);
+        return $response;
     }
 
     /**
@@ -550,20 +601,25 @@ class Ric_Server_Server {
      */
     public function leaveCluster(){
         $this->clusterManager->leaveCluster();
-        header('Content-Type: application/json');
-        echo H::json(['Status' => 'OK']);
+
+        $response = new Ric_Server_Response();
+        $response->setResult(['Status' => 'OK']);
+        return $response;
     }
 
     /**
      * remove a server from the cluster
      * send removeServer to all servers
      * @param string $server
+     * @return Ric_Server_Response
      * @throws RuntimeException
      */
     public function removeFromCluster($server){
         $this->clusterManager->removeFromCluster($server);
-        header('Content-Type: application/json');
-        echo H::json(['Status' => 'OK']);
+
+        $response = new Ric_Server_Response();
+        $response->setResult(['Status' => 'OK']);
+        return $response;
     }
 
     /*** CLUSTER ***/
@@ -572,6 +628,7 @@ class Ric_Server_Server {
     /**
      * @param string $fileName
      * @param string $retention
+     * @return Ric_Server_Response
      * @throws RuntimeException
      */
     protected function executeRetention($fileName, $retention){
@@ -596,6 +653,10 @@ class Ric_Server_Server {
         foreach( $deleteFilePaths as $version ){
             $this->fileManager->markFileAsDeleted($fileName, $version);
         }
+
+        $response = new Ric_Server_Response();
+        $response->setResult(['Status' => 'OK']);
+        return $response;
     }
 
     /**

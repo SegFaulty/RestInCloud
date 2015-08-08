@@ -143,7 +143,8 @@ class Ric_Server_Api{
         $tmpFilePath = $this->readInputStreamToTempFile();
 
         $fileName = $this->extractFileNameFromRequest();
-        $this->server->saveFileInCloud($tmpFilePath, $fileName, $retention, $timestamp, $noSync);
+        $response = $this->server->saveFileInCloud($tmpFilePath, $fileName, $retention, $timestamp, $noSync);
+        $this->sendResponse($response);
     }
 
     /**
@@ -166,7 +167,8 @@ class Ric_Server_Api{
         $fileName = $this->extractFileNameFromRequest();
         $fileVersion = $this->extractVersionFromRequest();
 
-        $this->server->sendFile($fileName, $fileVersion);
+        $response = $this->server->sendFile($fileName, $fileVersion);
+        $this->sendResponse($response);
     }
 
     /**
@@ -183,7 +185,8 @@ class Ric_Server_Api{
             throw new RuntimeException('?sha1=1342.. is required', 400);
         }
         $fileName = $this->extractFileNameFromRequest();
-        $this->server->refreshFile($fileName, $version, $retention, $timestamp, $noSync);
+        $response = $this->server->refreshFile($fileName, $version, $retention, $timestamp, $noSync);
+        $this->sendResponse($response);
     }
 
     /**
@@ -191,7 +194,8 @@ class Ric_Server_Api{
      */
     protected function actionAddServer(){
         $server = H::getRP('addServer');
-        $this->server->addServer($server);
+        $response = $this->server->addServer($server);
+        $this->sendResponse($response);
     }
 
     /**
@@ -200,7 +204,8 @@ class Ric_Server_Api{
      */
     public function actionRemoveServer(){
         $server = H::getRP('removeServer');
-        $this->server->removeServer($server);
+        $response = $this->server->removeServer($server);
+        $this->sendResponse($response);
     }
 
     /**
@@ -211,7 +216,8 @@ class Ric_Server_Api{
      */
     protected function actionJoinCluster(){
         $server = H::getRP('joinCluster');
-        $this->server->joinCluster($server);
+        $response = $this->server->joinCluster($server);
+        $this->sendResponse($response);
     }
 
     /**
@@ -221,7 +227,8 @@ class Ric_Server_Api{
      * @throws RuntimeException
      */
     protected function actionLeaveCluster(){
-        $this->server->leaveCluster();
+        $response = $this->server->leaveCluster();
+        $this->sendResponse($response);
     }
 
     /**
@@ -231,7 +238,8 @@ class Ric_Server_Api{
      */
     protected function actionRemoveFromCluster(){
         $server = H::getRP('removeFromCluster');
-        $this->server->removeFromCluster($server);
+        $response = $this->server->removeFromCluster($server);
+        $this->sendResponse($response);
     }
 
     /**
@@ -242,7 +250,8 @@ class Ric_Server_Api{
      */
     protected function actionHealth(){
         $isAdmin = $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN, false);
-        $this->server->getHealthInfo($isAdmin);
+        $response = $this->server->getHealthInfo($isAdmin);
+        $this->sendResponse($response);
     }
 
     /**
@@ -250,7 +259,8 @@ class Ric_Server_Api{
      */
     public function actionInfo(){
         $isAdmin = $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN, false);
-        $this->server->showServerInfo($isAdmin);
+        $response = $this->server->showServerInfo($isAdmin);
+        $this->sendResponse($response);
     }
 
     /**
@@ -260,7 +270,8 @@ class Ric_Server_Api{
         $fileName = $this->extractFileNameFromRequest();
         $version = $this->extractVersionFromRequest();
 
-        $this->server->deleteFile($fileName, $version);
+        $response = $this->server->deleteFile($fileName, $version);
+        $this->sendResponse($response);
     }
 
     /**
@@ -277,7 +288,8 @@ class Ric_Server_Api{
         $minTimestamp = H::getRP('minTimestamp', 0); // default no check
         $minReplicas = H::getRP('minReplicas', null); // if parameter omitted, don't check replicas!!!! or deadlock
 
-        $this->server->checkFile($fileName, $fileVersion, $sha1, $minSize, $minTimestamp, $minReplicas);
+        $response = $this->server->checkFile($fileName, $fileVersion, $sha1, $minSize, $minTimestamp, $minReplicas);
+        $this->sendResponse($response);
     }
 
     /**
@@ -292,7 +304,8 @@ class Ric_Server_Api{
         if( $lines<=0 ){
             $lines = 10;
         }
-        $this->server->getLinesFromFile($fileName, $fileVersion, $lines);
+        $response = $this->server->getLinesFromFile($fileName, $fileVersion, $lines);
+        $this->sendResponse($response);
     }
 
     /**
@@ -306,7 +319,8 @@ class Ric_Server_Api{
         if(!Ric_Server_Helper_RegexValidator::isValid($regex, $errorMessage)){
             throw new RuntimeException('not a valid regex: '.$errorMessage, 400);
         }
-        $this->server->grepFromFile($fileName, $fileVersion, $regex);
+        $response = $this->server->grepFromFile($fileName, $fileVersion, $regex);
+        $this->sendResponse($response);
     }
 
     /**
@@ -328,10 +342,11 @@ class Ric_Server_Api{
         $limit = min(1000, H::getRP('limit', 100));
 
         if($details){
-            $this->server->listFileInfos($pattern, $start, $limit, $showDeleted);
+            $response = $this->server->listFileInfos($pattern, $start, $limit, $showDeleted);
         }else{
-            $this->server->listFileNames($pattern, $start, $limit, $showDeleted);
+            $response = $this->server->listFileNames($pattern, $start, $limit, $showDeleted);
         }
+        $this->sendResponse($response);
     }
 
     /**
@@ -343,7 +358,8 @@ class Ric_Server_Api{
         $limit = min(1000, H::getRP('limit', 100));
         $fileName = $this->extractFileNameFromRequest();
 
-        $this->server->listVersions($fileName, $limit, $showDeleted);
+        $response = $this->server->listVersions($fileName, $limit, $showDeleted);
+        $this->sendResponse($response);
     }
 
     /**
@@ -352,14 +368,16 @@ class Ric_Server_Api{
     protected function actionGetFileSize(){
         $fileName = $this->extractFileNameFromRequest();
         $version = $this->extractVersionFromRequest();
-        $this->server->showFileSize($fileName, $version);
+        $response = $this->server->showFileSize($fileName, $version);
+        $this->sendResponse($response);
     }
 
     /**
      * help
      */
     protected function actionHelp(){
-        $this->server->getHelpInfo();
+        $response = $this->server->getHelpInfo();
+        $this->sendResponse($response);
     }
 
     protected function extractFileNameFromRequest(){
@@ -396,5 +414,27 @@ class Ric_Server_Api{
      */
     protected function auth($user=Ric_Server_Auth_Definition::ROLE__READER, $isRequired=true){
         return $this->authService->auth($user, $isRequired);
+    }
+
+    /**
+     * @param Ric_Server_Response $response
+     */
+    protected function sendResponse(Ric_Server_Response $response){
+        foreach($response->getHeaders() as $header){
+            if(isset($header['code']) AND $header['code']>0){
+                header($header['text'], $header['code']);
+            } else {
+                header($header['text']);
+            }
+        }
+        $result = $response->getResult();
+        if($result) {
+            header('Content-Type: application/json');
+            echo H::json($result);
+        } else {
+            foreach($response->getOutput() as $output) {
+                echo $output;
+            }
+        }
     }
 }
