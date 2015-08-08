@@ -31,7 +31,7 @@ class Ric_Server_Response{
      * @param string $text
      * @param int $code
      */
-    public function addHeader($text, $code){
+    public function addHeader($text, $code=0){
         $this->headers[] = [
             'text' => $text,
             'code' => $code,
