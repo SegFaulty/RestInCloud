@@ -2,6 +2,7 @@
 
 /**
  * Class Ric_Server_Server
+ * @todo dont respond when file is marked as deleted
  */
 class Ric_Server_Server {
 
