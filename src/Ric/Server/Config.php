@@ -43,7 +43,7 @@ class Ric_Server_Config {
 	 * @return array
 	 * @throws RuntimeException
 	 */
-	public function loadConfig($configFilePath){
+	protected function loadConfig($configFilePath){
 
 		if( !file_exists($configFilePath) ){
 			throw new RuntimeException('config file not found: ' . $configFilePath);
