@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# remove old
+rm -rf tmpBuild
+mkdir -p tmpBuild
+cp Dockerfile tmpBuild/
+cp config.json tmpBuild/
+cd tmpBuild
+
+git clone https://github.com/SegFaulty/RestInCloud.git
+
+docker build -t ric-server .
+
+# inject hostname from docker host server into the container
+# core@nginx ~/docker-nginx-base $ docker run -e HOST_HOSTNAME=`hostname` -ti nginx-base /bin/bash
+# root@fe268098920a:/# echo $HOST_HOSTNAME
+
+docker run -d -p 3070:80 -v /var/ric3070:/var/ric/ ric-server
