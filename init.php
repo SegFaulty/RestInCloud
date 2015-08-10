@@ -1,5 +1,7 @@
 <?php
 
+define('PROJECT_ROOT', __DIR__.'/');
+
 // Helper syntactic sugar function
 class H{
     /* getKeyIfSet */ static public function getIKS(&$array, $key, $default=null){return (array_key_exists($key, $array) ? $array[$key] : $default );}
@@ -8,7 +10,7 @@ class H{
     /* implodeKeyValue */ 	static public function implodeKeyValue($inputArray,$delimiter=', ',$keyValueDelimiter=': '){implode($delimiter,array_map(function($k,$v) use ($keyValueDelimiter)  {return $k.$keyValueDelimiter.$v;},array_keys($inputArray),$inputArray));}
 }
 
-set_include_path(get_include_path().PATH_SEPARATOR.realpath(__DIR__.'/src'));
+set_include_path(get_include_path().PATH_SEPARATOR.realpath(PROJECT_ROOT.'/src'));
 spl_autoload_register(function($class){
     $filePath = $class;
     $filePath = str_replace('\\', '/', $filePath);

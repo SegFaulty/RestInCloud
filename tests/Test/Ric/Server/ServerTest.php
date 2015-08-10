@@ -11,9 +11,13 @@ class Test_Ric_Server_ServerTest extends \PHPUnit_Framework_TestCase {
 	 */
 	public function __construct($name = null, array $data = array(), $dataName = ''){
 		parent::__construct($name, $data, $dataName);
-		$this->storageDir = realpath(__DIR__ . '/../../../../var/test/') . '/';
-		if( empty($this->storageDir) OR !is_writeable($this->storageDir) ){
-			throw new Exception('storage directory is needed');
+		$testsDir = PROJECT_ROOT.'var/tests/';
+		if( !is_writeable($testsDir) ){
+			throw new Exception('writable test storage directory is needed at '.$testsDir);
+		}
+		$this->storageDir = $testsDir.uniqid(__CLASS__.'_').'/';
+		if( !mkdir($this->storageDir) ){
+			throw new Exception('failed to create tmp test dir '.$this->storageDir);
 		}
 		$this->configManager = new Test_Ric_Server_TestConfigManager(__DIR__ . '/config.json');
 		$this->configManager->set('storeDir', $this->storageDir);
@@ -39,10 +43,8 @@ class Test_Ric_Server_ServerTest extends \PHPUnit_Framework_TestCase {
 		$fileName = str_replace(':', '_', __METHOD__);
 		$data = 'data' . rand(1000, 9999);
 		$timestamp = time()-rand(1000, 9999);
-
 		// create test file
 		file_put_contents($testFile, $data);
-
 		// save file in cloud
 		$server = $this->getServer();
 		$response = $server->saveFileInCloud($testFile, $fileName, Ric_Server_Definition::RETENTION__LAST7, $timestamp, false);
@@ -112,7 +114,8 @@ class Test_Ric_Server_ServerTest extends \PHPUnit_Framework_TestCase {
 		self::assertNotEmpty($filePath);
 
 		$response = $server->sendFile($fileName, $sha1);
-		self::assertNotEmpty($response->getOutput());
+		self::assertEmpty($response->getOutput());
+		self::assertNotEmpty($response->getOutputFilePath());
 	}
 
 	public function testListAllVersions(){
@@ -211,32 +214,31 @@ class Test_Ric_Server_ServerTest extends \PHPUnit_Framework_TestCase {
 	}
 
 	/**
-	 * @param string $dirOrFile
+	 * @param string $dir
+	 * @param bool $deleteParent
+	 * @throws RuntimeException
+	 * @return bool
 	 */
-	protected function deleteFiles($dirOrFile){
-		foreach( glob($dirOrFile . '*') as $filePath ){
-			if( substr($filePath, 0, 1)=='.' ){
-				continue;
+	public static function delTree($dir, $deleteParent=true) {
+		if( realpath($dir)<realpath(PROJECT_ROOT) ){
+			throw new RuntimeException('unexpected path: '.$dir.' expected under: '.PROJECT_ROOT);
+		}
+		$files = array_diff(scandir($dir), array('.','..'));
+		foreach( $files as $file ){
+			$path = $dir.'/'.$file;
+			if( is_dir($path) ){
+				self::delTree($path);
+			}else{
+				unlink($path);
 			}
-			if( is_dir($filePath) ){
-				if( substr($filePath, -1)!='/' ){
-					$filePath .= '/';
-				}
-				$this->deleteFiles($filePath, true);
-				rmdir($filePath);
-			} elseif( is_file($filePath) ) {
-				unlink($filePath);
-			}
+		}
+		if( $deleteParent ){
+			rmdir($dir);
 		}
 	}
 
-	public function setUp(){
-		parent::setUp();
-		$this->deleteFiles($this->storageDir);
-	}
-
 	public function tearDown(){
-		$this->deleteFiles($this->storageDir);
+		self::delTree($this->storageDir);
 		parent::tearDown();
 	}
 }
