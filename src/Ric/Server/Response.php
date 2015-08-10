@@ -1,5 +1,6 @@
 <?php
-class Ric_Server_Response{
+
+class Ric_Server_Response {
     /**
      * @var array
      */
@@ -14,16 +15,14 @@ class Ric_Server_Response{
     /**
      * @return mixed
      */
-    public function getResult()
-    {
+    public function getResult(){
         return $this->result;
     }
 
     /**
      * @param mixed $result
      */
-    public function setResult($result)
-    {
+    public function setResult($result){
         $this->result = $result;
     }
 
@@ -31,7 +30,7 @@ class Ric_Server_Response{
      * @param string $text
      * @param int $code
      */
-    public function addHeader($text, $code=0){
+    public function addHeader($text, $code = 0){
         $this->headers[] = [
             'text' => $text,
             'code' => $code,
@@ -41,16 +40,14 @@ class Ric_Server_Response{
     /**
      * @return array
      */
-    public function getHeaders()
-    {
+    public function getHeaders(){
         return $this->headers;
     }
 
     /**
      * @return string[]
      */
-    public function getOutput()
-    {
+    public function getOutput(){
         return $this->output;
     }
 
@@ -64,8 +61,7 @@ class Ric_Server_Response{
     /**
      * @param string $output
      */
-    public function setOutput($output)
-    {
+    public function setOutput($output){
         $this->output = [$output];
     }
 }

@@ -20,3 +20,9 @@
 # todo coreos add weave layer howto
 # todo coreos cloud.config single host
 # todo coreos fleet
+
+
+
+# todo cli ric check --verifySha1=randFactor   (1=every request, 2=50% ...) default: 10
+# todo sha1 vorkommen prüfen und die gesamte version/sha1 thematik ueberblicken
+# todo client sendet versions anforderung an den server, server explodiert wenn nicht erfüllt

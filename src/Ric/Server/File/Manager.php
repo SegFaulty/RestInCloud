@@ -3,10 +3,11 @@
 class Ric_Server_File_Manager{
     protected $storageDir;
 
-    /**
-     * Ric_Server_File_Manager constructor.
-     * @param $storageDir
-     */
+	/**
+	 * Ric_Server_File_Manager constructor.
+	 * @param $storageDir
+	 * @throws RuntimeException
+	 */
     public function __construct($storageDir) {
         if( !is_dir($storageDir) OR !is_writable($storageDir) ){
             throw new RuntimeException('document root ['.$storageDir.'] is not a writable dir!');
@@ -15,11 +16,12 @@ class Ric_Server_File_Manager{
     }
 
 
-    /**
-     * @param string $fileName
-     * @param string $version optional
-     * @return string
-     */
+	/**
+	 * @param string $fileName
+	 * @param string $version optional
+	 * @throws RuntimeException
+	 * @return string
+	 */
     public function getFilePath($fileName, $version=''){
         $filePath = '';
         if( $fileName!='' ){
@@ -36,12 +38,13 @@ class Ric_Server_File_Manager{
         return $filePath;
     }
 
-    /**
-     * @param $fileName
-     * @param $fileVersion
-     * @param $lines
-     * @return string[]
-     */
+	/**
+	 * @param $fileName
+	 * @param $fileVersion
+	 * @param $lines
+	 * @throws RuntimeException
+	 * @return string[]
+	 */
     public function getLinesFromFile($fileName, $fileVersion, $lines){
         $result = [];
         $filePath = $this->getFileInfosForPattern($fileName, $fileVersion);
@@ -56,11 +59,12 @@ class Ric_Server_File_Manager{
         return $result;
     }
 
-    /**
-     * @param string $fileName
-     * @param string $tmpFilePath
-     * @return string version
-     */
+	/**
+	 * @param string $fileName
+	 * @param string $tmpFilePath
+	 * @throws RuntimeException
+	 * @return string version
+	 */
     public function storeFile($fileName, $tmpFilePath){
 
         // get correct filePath

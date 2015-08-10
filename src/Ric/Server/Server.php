@@ -7,9 +7,9 @@
 class Ric_Server_Server {
 
     /**
-     * @var Ric_Server_Config
+     * @var Ric_Server_ConfigManager
      */
-    protected $configService;
+    protected $configManager;
 
     /**
      * @var Ric_Server_File_Manager
@@ -21,18 +21,19 @@ class Ric_Server_Server {
      */
     protected $clusterManager;
 
-    /**
-     * construct
-     * @param Ric_Server_Config $configService
-     */
-    public function __construct($configService){
-        $this->configService = $configService;
-        $config = $configService->getConfig();
+	/**
+	 * construct
+	 * @param Ric_Server_ConfigManager $configManager
+	 * @throws RuntimeException
+	 */
+    public function __construct($configManager){
+        $this->configManager = $configManager;
+        $config = $configManager->getConfig();
         if(empty($config)){
             throw new RuntimeException('No config found');
         }
-        $this->fileManager = new Ric_Server_File_Manager($this->configService->get('storeDir'));
-        $this->clusterManager = new Ric_Server_Cluster_Manager($configService);
+        $this->fileManager = new Ric_Server_File_Manager($this->configManager->getValue('storeDir'));
+        $this->clusterManager = new Ric_Server_Cluster_Manager($configManager);
     }
 
 
@@ -67,7 +68,7 @@ class Ric_Server_Server {
         $result['deletedFiles'] = 0;
         $result['deletedBytes'] = 0;
         $result['runTime'] = microtime(true);
-        $dirIterator = new RecursiveDirectoryIterator($this->configService->get('storeDir'));
+        $dirIterator = new RecursiveDirectoryIterator($this->configManager->getValue('storeDir'));
         $iterator = new RecursiveIteratorIterator($dirIterator, RecursiveIteratorIterator::SELF_FIRST);
         foreach( $iterator as $splFileInfo ){ /** @var SplFileInfo $splFileInfo */
             if( $splFileInfo->isFile() ){
@@ -108,8 +109,8 @@ class Ric_Server_Server {
         $version = $this->fileManager->storeFile($fileName, $tmpFilePath);
 
         // check quota
-        if( $this->configService->get('quota')>0 ){
-            if( $this->fileManager->getDirectorySize()>$this->configService->get('quota')*1024*1024 ){
+        if( $this->configManager->getValue('quota')>0 ){
+            if( $this->fileManager->getDirectorySize()>$this->configManager->getValue('quota')*1024*1024 ){
                 $filePath = $this->fileManager->getFilePath($fileName, $version);
                 unlink($filePath);
                 throw new RuntimeException('Quota exceeded!', 507);
@@ -194,7 +195,7 @@ class Ric_Server_Server {
         $result['msg'] = '';
 
         if($minReplicas==null){
-            $minReplicas = max(1, count($this->configService->get('servers'))-1); // min 1, or 1 invalid of current servers
+            $minReplicas = max(1, count($this->configManager->getValue('servers'))-1); // min 1, or 1 invalid of current servers
         }
 
         $fileInfo = $this->fileManager->getFileInfo($fileName, $fileVersion);
@@ -385,19 +386,19 @@ class Ric_Server_Server {
         $directorySizeMb = ceil($directorySize /1024/1024); // IN MB
         $info['usageByte'] = $directorySize;
         $info['usage'] = $directorySizeMb;
-        $info['quota'] = $this->configService->get('quota');
-        if( $this->configService->get('quota')>0 ){
-            $info['quotaLevel'] = ceil($directorySizeMb/$this->configService->get('quota')*100);
-            $info['quotaFreeLevel'] = max(0,min(100,100-ceil($directorySizeMb/$this->configService->get('quota')*100)));
-            $info['quotaFree'] = max(0, intval($this->configService->get('quota')-$directorySizeMb));
+        $info['quota'] = $this->configManager->getValue('quota');
+        if( $this->configManager->getValue('quota')>0 ){
+            $info['quotaLevel'] = ceil($directorySizeMb/$this->configManager->getValue('quota')*100);
+            $info['quotaFreeLevel'] = max(0,min(100,100-ceil($directorySizeMb/$this->configManager->getValue('quota')*100)));
+            $info['quotaFree'] = max(0, intval($this->configManager->getValue('quota')-$directorySizeMb));
         }
         if( $isAdmin ){ // only for admins
-            $info['config'] = $this->configService->getConfig();
+            $info['config'] = $this->configManager->getConfig();
             $info['runtimeConfig'] = false;
-            if( file_exists($this->configService->get('storeDir').'intern/config.json') ){
-                $info['runtimeConfig'] = json_decode(file_get_contents($this->configService->get('storeDir').'intern/config.json'), true);
+            if( file_exists($this->configManager->getValue('storeDir').'intern/config.json') ){
+                $info['runtimeConfig'] = json_decode(file_get_contents($this->configManager->getValue('storeDir').'intern/config.json'), true);
             }
-            $info['defaultConfig'] = $this->configService->getDefaultConfig();
+            $info['defaultConfig'] = $this->configManager->getDefaultConfig();
         }
         return $info;
     }
@@ -418,14 +419,14 @@ class Ric_Server_Server {
 
         $serversFailures = [];
         $ownHostPort = $this->clusterManager->getOwnHostPort();
-        $clusterServers = array_merge([$ownHostPort], $this->configService->get('servers'));
+        $clusterServers = array_merge([$ownHostPort], $this->configManager->getValue('servers'));
         sort($clusterServers);
         // get serverInfos
         $serverInfos = [];
         $serverInfos[$ownHostPort] = $this->buildInfo(true);
-        foreach( $this->configService->get('servers') as $server ){
+        foreach( $this->configManager->getValue('servers') as $server ){
             try{
-                $url = 'http://'.$server.'/?info&token='.$this->configService->get('adminToken');
+                $url = 'http://'.$server.'/?info&token='.$this->configManager->getValue('adminToken');
                 $result = json_decode(Ric_Rest_Client::get($url), true);
                 if( !array_key_exists('usageByte', $result) ){
                     throw new RuntimeException('info failed');
@@ -463,10 +464,10 @@ class Ric_Server_Server {
         // check if cluster in critical state
         if( count($serverInfos)<2 OR count($serversFailures)>1 ){
             $status = 'CRITICAL';
-            $msg.= 'replication critical! servers running: '.count($serverInfos).' remoteServer configured: '.count($this->configService->get('servers')).PHP_EOL;
+            $msg.= 'replication critical! servers running: '.count($serverInfos).' remoteServer configured: '.count($this->configManager->getValue('servers')).PHP_EOL;
         }
         // ok servers:
-        $msg.= 'servers ok: '.(count($this->configService->get('servers'))+1-count($serversFailures)).PHP_EOL;
+        $msg.= 'servers ok: '.(count($this->configManager->getValue('servers'))+1-count($serversFailures)).PHP_EOL;
 
         $response = new Ric_Server_Response();
         $response->addOutput($status.PHP_EOL);
