@@ -29,10 +29,16 @@ install nginx and php5
 
 	sudo apt-get install nginx php5-fpm
 
-todo: generate ssl key combination
+Generate ssl key combination (WITHOUT A PASSPHRASE)
 	
-	openssl req -new -days 999 -newkey rsa:4096bits -sha512 -x509 -nodes -out config/public.key -keyout private.key
-	openssl req -new -keyout server.pem > server.csr
+	openssl genrsa -des3 -out server.key 1024
+	openssl req -new -key server.key -out server.csr
+	cp server.key server.key.org
+    openssl rsa -in server.key.org -out server.key
+	openssl x509 -req -days 365 -in server.csr -signkey server.key -out server.crt
+	mv server.key config/
+	mv server.crt config/
+	rm server.csr server.key.org
 
 activate and restart apache, maybe it is /etc/apache2/sites-enabled (ubuntu)
 
