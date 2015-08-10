@@ -27,7 +27,7 @@ change: host
 	
 install nginx and php5
 
-	sudo apt-get install nginx php5-fpm
+	sudo apt-get install nginx php5-fpm php5-curl
 
 Generate ssl key combination (WITHOUT A PASSPHRASE)
 	
@@ -48,8 +48,6 @@ activate and restart apache, maybe it is /etc/apache2/sites-enabled (ubuntu)
 	
 
 ## Ubuntu
-
-    sudo apt-get install php5-curl
 
 in /etc/apache2/apache2.conf
 
