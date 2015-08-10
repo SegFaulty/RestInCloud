@@ -4,6 +4,9 @@
     git clone https://github.com/SegFaulty/RestInCloud.git
     cd RestInCloud/deployment/docker
     cp example-config.json config.json
+    # create volumeDir
+	mkdir -p /var/ric3777
+	sudo chmod 777 /var/ric3777
     # change hostPort and tokens
     vi config.json
     sh docker.sh

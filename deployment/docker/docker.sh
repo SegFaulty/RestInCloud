@@ -1,11 +1,5 @@
 #!/bin/bash
 
-
-# make volume dirs
-mkdir -p /var/ric3777
-# todo find a better way for volume permissions
-chmod 777 /var/ric3777
-
 # remove old
 rm -rf tmpBuild
 mkdir -p tmpBuild
