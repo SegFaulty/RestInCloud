@@ -4,7 +4,7 @@ require_once __DIR__ . '/../../../bootstrap.php';
 
 class Test_Ric_Server_ServerTest extends \PHPUnit_Framework_TestCase {
     protected $storageDir;
-    protected $configService;
+    protected $configManager;
 
     /**
      * Test_Ric_Server_ServerTest constructor.
@@ -15,8 +15,8 @@ class Test_Ric_Server_ServerTest extends \PHPUnit_Framework_TestCase {
         if(empty($this->storageDir) OR !is_writeable($this->storageDir)){
             throw new Exception('storage directory is needed');
         }
-        $this->configService = new Test_Ric_Server_TestConfigManager(__DIR__.'/config.json');
-        $this->configService->set('storeDir', $this->storageDir);
+        $this->configManager = new Test_Ric_Server_TestConfigManager(__DIR__.'/config.json');
+        $this->configManager->set('storeDir', $this->storageDir);
     }
 
 
@@ -24,15 +24,15 @@ class Test_Ric_Server_ServerTest extends \PHPUnit_Framework_TestCase {
      * @return Ric_Server_Server
      */
     protected function getServer(){
-        return new Ric_Server_Server($this->configService);
+        return new Ric_Server_Server($this->configManager);
     }
 
     /**
      * @return Test_Ric_Server_TestConfigManager
      */
-    public function getConfigService()
+    public function getConfigManager()
     {
-        return $this->configService;
+        return $this->configManager;
     }
 
     public function testSaveInCloud(){
@@ -155,7 +155,7 @@ class Test_Ric_Server_ServerTest extends \PHPUnit_Framework_TestCase {
     public function testAddServer(){
         $serverHostPort = 'localhost:6757';
 
-        self::assertEquals(null, $this->configService->getFromRuntimeConfig('servers'));
+        self::assertEquals(null, $this->configManager->getFromRuntimeConfig('servers'));
 
         // server will not respond correctly
         self::setExpectedException('RuntimeException', 'curl request failed');
@@ -166,12 +166,12 @@ class Test_Ric_Server_ServerTest extends \PHPUnit_Framework_TestCase {
     public function testRemoveServer(){
         $serverHostPort = 'localhost:5463';
 
-        $this->configService->setRuntimeValue('servers', [$serverHostPort]);
+        $this->configManager->setRuntimeValue('servers', [$serverHostPort]);
 
         $server = $this->getServer();
         $response = $server->removeServer($serverHostPort);
         self::assertEquals(['Status' => 'OK'], $response->getResult());
-        self::assertEquals([], $this->configService->getFromRuntimeConfig('servers'));
+        self::assertEquals([], $this->configManager->getFromRuntimeConfig('servers'));
     }
 
     protected function createTestFile($fileName){
