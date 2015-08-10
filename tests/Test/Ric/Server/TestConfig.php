@@ -1,5 +1,5 @@
 <?php
-class Test_Ric_Server_TestConfig extends Ric_Server_Config{
+class Test_Ric_Server_TestConfigManager extends Ric_Server_ConfigManager{
     protected $runtimeConfig = [];
 
     public function set($key, $value) {

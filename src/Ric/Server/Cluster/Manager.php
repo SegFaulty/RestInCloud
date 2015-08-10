@@ -10,15 +10,15 @@
 class Ric_Server_Cluster_Manager{
 
     /**
-     * @var Ric_Server_Config
+     * @var Ric_Server_ConfigManager
      */
     protected $configService;
 
     /**
      * Ric_Server_Cluster_Manager constructor.
-     * @param Ric_Server_Config $configService
+     * @param Ric_Server_ConfigManager $configService
      */
-    public function __construct(Ric_Server_Config $configService) {
+    public function __construct(Ric_Server_ConfigManager $configService) {
         $this->configService = $configService;
     }
 

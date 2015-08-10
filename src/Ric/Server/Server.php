@@ -7,7 +7,7 @@
 class Ric_Server_Server {
 
     /**
-     * @var Ric_Server_Config
+     * @var Ric_Server_ConfigManager
      */
     protected $configService;
 
@@ -23,7 +23,7 @@ class Ric_Server_Server {
 
     /**
      * construct
-     * @param Ric_Server_Config $configService
+     * @param Ric_Server_ConfigManager $configService
      */
     public function __construct($configService){
         $this->configService = $configService;

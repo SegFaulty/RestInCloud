@@ -15,7 +15,7 @@ class Test_Ric_Server_ServerTest extends \PHPUnit_Framework_TestCase {
         if(empty($this->storageDir) OR !is_writeable($this->storageDir)){
             throw new Exception('storage directory is needed');
         }
-        $this->configService = new Test_Ric_Server_TestConfig(__DIR__.'/config.json');
+        $this->configService = new Test_Ric_Server_TestConfigManager(__DIR__.'/config.json');
         $this->configService->set('storeDir', $this->storageDir);
     }
 
@@ -28,7 +28,7 @@ class Test_Ric_Server_ServerTest extends \PHPUnit_Framework_TestCase {
     }
 
     /**
-     * @return Test_Ric_Server_TestConfig
+     * @return Test_Ric_Server_TestConfigManager
      */
     public function getConfigService()
     {

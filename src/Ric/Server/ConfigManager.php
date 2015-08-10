@@ -1,6 +1,6 @@
 <?php
 
-class Ric_Server_Config {
+class Ric_Server_ConfigManager {
 
 	protected $defaultConfig = [
 			'hostPort' => '', // if empty use autoDetectSource host with default port
@@ -15,7 +15,7 @@ class Ric_Server_Config {
 	protected $config = [];
 
 	/**
-	 * Ric_Server_Config constructor.
+	 * Ric_Server_ConfigManager constructor.
 	 */
 	public function __construct($configFilePath){
 		$this->loadConfig($configFilePath);
