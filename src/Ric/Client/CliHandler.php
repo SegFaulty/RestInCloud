@@ -55,7 +55,9 @@ class Ric_Client_CliHandler{
 			}
 		}catch(Exception $e){
 			$status = 1;
-			file_put_contents("php://stderr", rtrim($e->getMessage()).PHP_EOL);
+			ini_set('display_errors', 'stderr'); // ensure we write to STDERR
+			fwrite(STDERR, trim('ERROR: '.$e->getMessage()).PHP_EOL);
+#			file_put_contents("php://stderr", rtrim($e->getMessage()).PHP_EOL);
 		}
 
 		if( !$cli->getOption('quite') ){
@@ -115,9 +117,13 @@ class Ric_Client_CliHandler{
 	 * @throws RuntimeException
 	 */
 	static protected function commandCheck($client, $cli){
-		$targetFileName = $cli->arguments[0];
+		$targetFileName = $cli->getArgument(1);
 		$targetFileName = $cli->getOption('prefix','').$targetFileName;
-		$client->check($targetFileName, $cli->getOption('minReplicas'), $cli->getOption('sha1'), $cli->getOption('minSize'), $cli->getOption('minTimestamp'));
+		$minTimestamp = $cli->getOption('minTimestamp');
+		if( $minTimestamp<0 ){
+			$minTimestamp = time()+intval($minTimestamp); // add because $minTimestamp is negative
+		}
+		$client->check($targetFileName, $cli->getOption('minReplicas'), $cli->getOption('sha1'), $cli->getOption('minSize'), $minTimestamp);
 		return 'OK';
 	}
 

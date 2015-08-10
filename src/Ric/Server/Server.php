@@ -629,6 +629,24 @@ class Ric_Server_Server {
     /**
      * @param string $fileName
      * @param string $retention
+     * @throws RuntimeException
+     */
+    protected function executeRetention($fileName, $retention){
+        $allVersions = $this->fileManager->getAllVersions($fileName);
+        $wantedVersions = Ric_Server_Helper_RetentionCalculator::getVersionsForRetentionString($allVersions, $retention);
+        $unwantedVersions = array_diff(array_keys($allVersions), array_values($wantedVersions));
+        if( count($unwantedVersions)>=$allVersions ){
+            throw new RuntimeException('count($unwantedVersions)>=$allVersions this must be wrong! retention:'.$retention );
+        }
+        foreach( $unwantedVersions as $version ){
+            $filePath = $this->fileManager->getFilePath($fileName, $version);
+            $this->markFileDeleted($filePath);
+        }
+    }
+    
+    /**
+     * @param string $fileName
+     * @param string $retention
      * @return Ric_Server_Response
      * @throws RuntimeException
      */
