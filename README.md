@@ -60,6 +60,38 @@ simple restfully dockerized distributed open source cloud backup server ;-)
  auth (only as parameter supported yet)
  * use &token=YourAdminToken to authenticate as admin or writer or reader (e.g. for info command)
 
+## Usecase
+
+### Backup a Dir
+
+dir to back up: /home/www/configs/
+server identification: myServer
+encryption password: fooSecret
+ricServer: ric1.server.de
+ricWriterToke: barSecret
+
+####store the passwords
+
+	echo "fooSecret" > /home/www/ricPassFile.txt
+	chmod 600 /home/www/ricPassFile.txt
+	echo "barSecret" > /home/www/ricWriterFile.txt
+	chmod 600 /home/www/ricPassFile.txt
+
+#### cronjobs (with sic monitoring)
+
+    */5 * * * * /usr/local/sbin/ric backup /home/www/configs/ myServer-configs.tar.bz2 --retention=last7 --passFile=/home/www/ricPassFile.txt --prefix=myServer- --authFile=/home/www/ricWriterFile.txt --server=ric1.server.de 2>&1 >/dev/null | /usr/local/sbin/sic /myServer/ric-backup --STDINasCRITICAL
+    */2 * * * * /usr/local/sbin/ric check myServer-configs.tar.bz2 --prefix=myServer- --authFile=/home/www/ricWriterFile.txt --server=ric1.server.de --minTimestamp=-300  2>&1 >/dev/null | /usr/local/sbin/sic /myServer/ric-backup/check --STDINasCRITICAL
+
+#### manual actions
+
+show versions
+
+    ric list myServer-configs.tar.bz2 --prefix=myServer- --authFile=/home/www/ricWriterFile.txt --server=ric1.server.de
+
+    ric check myServer-configs.tar.bz2 --prefix=myServer- --authFile=/home/www/ricWriterFile.txt --server=ric1.server.de --verbose
+
+
+
 ## License
 
 The MIT License (MIT)

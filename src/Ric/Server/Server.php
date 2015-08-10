@@ -533,7 +533,6 @@ class Ric_Server_Server {
         $ifMod = isset($_SERVER['HTTP_IF_MODIFIED_SINCE']) ? $_SERVER['HTTP_IF_MODIFIED_SINCE'] == $lastModified : null;
         $ifTag = isset($_SERVER['HTTP_IF_NONE_MATCH']) ? $_SERVER['HTTP_IF_NONE_MATCH'] == $eTag : null;
         if (($ifMod || $ifTag) && ($ifMod !== false && $ifTag !== false)) {
-//            header('HTTP/1.0 304 Not Modified');
             $response->addHeader('HTTP/1.0 304 Not Modified');
         } else {
             $filePath = $this->fileManager->getFilePath($fileName, $fileVersion);
@@ -545,8 +544,7 @@ class Ric_Server_Server {
             $response->addHeader('Content-Length: '.$fileInfo->getSize());
             $response->addHeader('Last-Modified:'.$lastModified);
             $response->addHeader('ETag: '.$eTag);
-//            readfile($filePath);
-            $response->setOutput(file_get_contents($filePath));
+            $response->setOutputFilePath($filePath);
         }
         return $response;
     }
