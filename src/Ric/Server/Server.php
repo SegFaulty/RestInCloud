@@ -6,6 +6,8 @@
  */
 class Ric_Server_Server {
 
+	const VERSION = '0.3.0';
+
     /**
      * @var Ric_Server_ConfigManager
      */
@@ -340,6 +342,7 @@ class Ric_Server_Server {
      */
     protected function buildInfo($isAdmin=false){
         $info['serverTimestamp'] = time();
+        $info['serverVersion'] = self::VERSION;
         $directorySize = $this->fileManager->getDirectorySize();
         $directorySizeMb = ceil($directorySize /1024/1024); // IN MB
         $info['usageByte'] = $directorySize;
@@ -408,6 +411,10 @@ class Ric_Server_Server {
             if( $expectedClusterServers!=$existingServers ){
                 $serversFailures[$server][] = 'unxpected clusterServer: '.join(',', $existingServers). ' (expected: '.join(',', $expectedClusterServers).')';
             }
+	        // check versions
+	        if( $serverInfo['serverVersion']!==self::VERSION ){
+		        $serversFailures[$server][] = 'different serverVersion ['.$serverInfo['serverVersion'].'] at '.$server.' (my Version is : '.self::VERSION.')';
+	        }
         }
         // build quota info
         foreach( $serverInfos as $server=>$serverInfo ){
