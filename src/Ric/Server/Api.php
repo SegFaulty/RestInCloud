@@ -428,7 +428,7 @@ class Ric_Server_Api{
             }
         }
         $result = $response->getResult();
-        if($result) {
+        if($result!==null) {
             header('Content-Type: application/json');
             echo H::json($result);
         } else {

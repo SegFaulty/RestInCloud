@@ -9,7 +9,7 @@ class Ric_Server_Response{
      */
     protected $output = [];
 
-    protected $result;
+    protected $result = null;
 
     /**
      * @return mixed
