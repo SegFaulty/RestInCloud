@@ -52,7 +52,6 @@ class Ric_Client_Client{
 	protected function logDebug($msg){
 		if( $this->debug ){
 			$this->log.= date('Y-m-d H:i:s').' '.$msg.PHP_EOL;
-echo $msg.PHP_EOL; //todo logger
 		}
 	}
 
@@ -417,11 +416,15 @@ echo $msg.PHP_EOL; //todo logger
 
 	/**
 	 * check cluster health
+	 * @throws RuntimeException
 	 * @return string
 	 */
 	public function health(){
 		$response = Ric_Rest_Client::get($this->buildUrl('', 'health'), [], $headers);
 		$this->checkServerResponse($response, $headers);
+		if( substr($response,0,2)!='OK' ){
+			throw new RuntimeException('health check critical: '.$response);
+		}
 		return $response;
 	}
 
