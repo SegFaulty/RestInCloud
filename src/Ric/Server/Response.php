@@ -1,71 +1,67 @@
 <?php
-class Ric_Server_Response{
-    /**
-     * @var array
-     */
-    protected $headers = [];
-    /**
-     * @var string[]
-     */
-    protected $output = [];
 
-    protected $result;
+class Ric_Server_Response {
+	/**
+	 * @var array
+	 */
+	protected $headers = [];
+	/**
+	 * @var string[]
+	 */
+	protected $output = [];
 
-    /**
-     * @return mixed
-     */
-    public function getResult()
-    {
-        return $this->result;
-    }
+	protected $result;
 
-    /**
-     * @param mixed $result
-     */
-    public function setResult($result)
-    {
-        $this->result = $result;
-    }
+	/**
+	 * @return mixed
+	 */
+	public function getResult(){
+		return $this->result;
+	}
 
-    /**
-     * @param string $text
-     * @param int $code
-     */
-    public function addHeader($text, $code=0){
-        $this->headers[] = [
-            'text' => $text,
-            'code' => $code,
-        ];
-    }
+	/**
+	 * @param mixed $result
+	 */
+	public function setResult($result){
+		$this->result = $result;
+	}
 
-    /**
-     * @return array
-     */
-    public function getHeaders()
-    {
-        return $this->headers;
-    }
+	/**
+	 * @param string $text
+	 * @param int $code
+	 */
+	public function addHeader($text, $code = 0){
+		$this->headers[] = [
+				'text' => $text,
+				'code' => $code,
+		];
+	}
 
-    /**
-     * @return string[]
-     */
-    public function getOutput()
-    {
-        return $this->output;
-    }
+	/**
+	 * @return array
+	 */
+	public function getHeaders(){
+		return $this->headers;
+	}
 
-    /**
-     * @param string $text
-     */
-    public function addOutput($text){
-        $this->output[] = $text;
-    }
+	/**
+	 * @return string[]
+	 */
+	public function getOutput(){
+		return $this->output;
+	}
 
-    /**
-     * @param string $output
-     */
-    public function setOutput($output)
-    {
-        $this->output = [$output];
-    }
+	/**
+	 * @param string $text
+	 */
+	public function addOutput($text){
+		$this->output[] = $text;
+	}
+
+	/**
+	 * @param string $output
+	 */
+	public function setOutput($output){
+		$this->output = [$output];
+	}
 }
