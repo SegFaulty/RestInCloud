@@ -175,7 +175,8 @@ class Ric_Rest_Client {
 
 		$curlResponse = curl_exec($ch);
 		if( $curlResponse===false ){
-			throw new RuntimeException('curl request failed: '.$method.' > '.$url.' err:'.curl_errno($ch).': '.curl_error($ch));
+			$maskedUrl = preg_replace('~token=\w+~', 'token=***', $url);
+			throw new RuntimeException('curl request failed: '.$method.' > '.$maskedUrl.' err:'.curl_errno($ch).': '.curl_error($ch));
 		}
 		$curlInfo = curl_getinfo($ch);
 		if( $curl===false ){
