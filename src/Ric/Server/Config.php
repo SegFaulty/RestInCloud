@@ -2,42 +2,40 @@
 
 class Ric_Server_Config {
 
-    protected $defaultConfig = [
-        'hostPort' => '', // if empty use autoDetectSource host with default port
-        'storeDir' => '/nonExistingDir/ric/',
-        'quota' => 0,
-        'servers' => [],
-        'adminToken' => 'admin',
-        'writerToken' => 'writer',
-        'readerToken' => '',
-        'defaultRetention' => Ric_Server_Definition::RETENTION__LAST3,
-    ];
+	protected $defaultConfig = [
+			'hostPort' => '', // if empty use autoDetectSource host with default port
+			'storeDir' => '/nonExistingDir/ric/',
+			'quota' => 0,
+			'servers' => [],
+			'adminToken' => 'admin',
+			'writerToken' => 'writer',
+			'readerToken' => '',
+			'defaultRetention' => Ric_Server_Definition::RETENTION__LAST3,
+	];
 	protected $config = [];
 
-    /**
-     * Ric_Server_Config constructor.
-     */
-    public function __construct($configFilePath) {
-        $this->loadConfig($configFilePath);
-    }
+	/**
+	 * Ric_Server_Config constructor.
+	 */
+	public function __construct($configFilePath){
+		$this->loadConfig($configFilePath);
+	}
 
-    /**
-     * @return array
-     */
-    public function getConfig()
-    {
-        return $this->config;
-    }
+	/**
+	 * @return array
+	 */
+	public function getConfig(){
+		return $this->config;
+	}
 
-    /**
-     * @return array
-     */
-    public function getDefaultConfig()
-    {
-        return $this->defaultConfig;
-    }
+	/**
+	 * @return array
+	 */
+	public function getDefaultConfig(){
+		return $this->defaultConfig;
+	}
 
-    /**
+	/**
 	 * load config default -> given config -> docRoot/intern/config.json
 	 * @param string $configFilePath
 	 * @return array
@@ -63,12 +61,17 @@ class Ric_Server_Config {
 		return $this->config;
 	}
 
-    public function get($key){
-        if(!isset($this->config[$key])){
-            throw new RuntimeException('Config not found: '.$key);
-        }
-        return $this->config[$key];
-    }
+	/**
+	 * @param string $key
+	 * @return mixed
+	 * @throws RuntimeException
+	 */
+	public function getValue($key){
+		if( !isset($this->config[$key]) ){
+			throw new RuntimeException('Config not found: ' . $key);
+		}
+		return $this->config[$key];
+	}
 
 	/**
 	 * set, update, remove (null) a value in runtimeConfig (and config)

@@ -27,12 +27,12 @@ class Ric_Server_Cluster_Manager{
      * @throws RuntimeException
      */
     public function addServer($server){
-        $response = Ric_Rest_Client::get('http://' . $server . '/', ['info' => 1, 'token' => $this->configService->get('readerToken')]);
+        $response = Ric_Rest_Client::get('http://' . $server . '/', ['info' => 1, 'token' => $this->configService->getValue('readerToken')]);
         $info = json_decode($response, true);
         if( $info AND H::getIKS($info, 'serverTimestamp') ){
-            $servers = $this->configService->get('servers');
+            $servers = $this->configService->getValue('servers');
             $servers[] = $server;
-            $this->configService->setRuntimeValue('servers', $this->configService->get('servers'));
+            $this->configService->setRuntimeValue('servers', $this->configService->getValue('servers'));
         }else{
             throw new RuntimeException('server is not responding properly', 400);
         }
@@ -47,14 +47,14 @@ class Ric_Server_Cluster_Manager{
      */
     public function joinCluster($server){
         $ownServer = $this->getOwnHostPort();
-        $response = Ric_Rest_Client::get('http://' . $server . '/', ['info' => 1, 'token' => $this->configService->get('adminToken')]);
+        $response = Ric_Rest_Client::get('http://' . $server . '/', ['info' => 1, 'token' => $this->configService->getValue('adminToken')]);
         $info = json_decode($response, true);
         if( isset($info['config']['servers']) ){
             $servers = $info['config']['servers'];
             $joinedServers = [];
             $servers[] = $server;
             foreach( $servers as $clusterServer ){
-                $response = Ric_Rest_Client::post('http://' . $clusterServer . '/', ['action' => 'addServer', 'addServer' => $ownServer, 'token' => $this->configService->get('adminToken')]);
+                $response = Ric_Rest_Client::post('http://' . $clusterServer . '/', ['action' => 'addServer', 'addServer' => $ownServer, 'token' => $this->configService->getValue('adminToken')]);
                 $result = json_decode($response, true);
                 if( H::getIKS($result, 'Status')!='OK' ){
                     throw new RuntimeException('join cluster failed! addServer to '.$clusterServer.' failed! ['.$response.'] Inconsitent cluster state! I\'m added to this servers (please remove me): '.join('; ', $joinedServers), 400);
@@ -117,8 +117,8 @@ class Ric_Server_Cluster_Manager{
     protected function removeServerFromCluster($server){
         $leftServers = [];
         $errorMsg = '';
-        foreach( $this->configService->get('servers') as $clusterServer ){
-            $response = Ric_Rest_Client::post('http://' . $clusterServer . '/', ['action' => 'removeServer', 'removeServer' => $server, 'token' => $this->configService->get('adminToken')]);
+        foreach( $this->configService->getValue('servers') as $clusterServer ){
+            $response = Ric_Rest_Client::post('http://' . $clusterServer . '/', ['action' => 'removeServer', 'removeServer' => $server, 'token' => $this->configService->getValue('adminToken')]);
             $result = json_decode($response, true);
             if( H::getIKS($result, 'Status')!='OK' ){
                 $errorMsg.= 'removeServer failed from '.$clusterServer.' failed! ['.$response.']';
@@ -138,7 +138,7 @@ class Ric_Server_Cluster_Manager{
         if( $server=='all' ){
             $servers = [];
         } else {
-            $servers = array_diff($this->configService->get('servers'), [$server]);
+            $servers = array_diff($this->configService->getValue('servers'), [$server]);
         }
         $this->configService->setRuntimeValue('servers', $servers);
     }
@@ -151,11 +151,11 @@ class Ric_Server_Cluster_Manager{
      */
     public function getReplicaCount($fileName, $version, $sha1){
         $replicas = 0;
-        foreach( $this->configService->get('servers') as $server ){
+        foreach( $this->configService->getValue('servers') as $server ){
             try{
                 $serverUrl = 'http://'.$server.'/';
                 // check file
-                $url = $serverUrl.$fileName.'?check&version='.$version.'&sha1='.$sha1.'&minReplicas=0&token='.$this->configService->get('readerToken'); // &minReplicas=0  otherwise loopOfDeath
+                $url = $serverUrl.$fileName.'?check&version='.$version.'&sha1='.$sha1.'&minReplicas=0&token='.$this->configService->getValue('readerToken'); // &minReplicas=0  otherwise loopOfDeath
                 $response = json_decode(Ric_Rest_Client::get($url), true);
                 if( H::getIKS($response, 'status')=='OK' ){
                     $replicas++;
@@ -183,15 +183,15 @@ class Ric_Server_Cluster_Manager{
         if( !$noSync ){
             // SYNC
             $sha1 = sha1_file($filePath);
-            foreach( $this->configService->get('servers') as $server ){
+            foreach( $this->configService->getValue('servers') as $server ){
                 try{
                     $serverUrl = 'http://'.$server.'/';
                     // try to refresh file
-                    $url = $serverUrl.$fileName.'?sha1='.$sha1.'&timestamp='.$timestamp.'&retention='.$retention.'&noSync=1&token='.$this->configService->get('writerToken');
+                    $url = $serverUrl.$fileName.'?sha1='.$sha1.'&timestamp='.$timestamp.'&retention='.$retention.'&noSync=1&token='.$this->configService->getValue('writerToken');
                     $response = Ric_Rest_Client::post($url);
                     if( trim($response)!='1' ){
                         // refresh failed, upload
-                        $url = $serverUrl.$fileName.'?timestamp='.$timestamp.'&retention='.$retention.'&noSync=1&token='.$this->configService->get('writerToken');
+                        $url = $serverUrl.$fileName.'?timestamp='.$timestamp.'&retention='.$retention.'&noSync=1&token='.$this->configService->getValue('writerToken');
                         $response = Ric_Rest_Client::putFile($url, $filePath);
                         if( trim($response)!='OK' ){
                             $result = trim($result."\n".'failed to upload to '.$server.' :'.$response);
@@ -212,9 +212,9 @@ class Ric_Server_Cluster_Manager{
     public function getOwnHostPort(){
         static $hostName = '';
         if( empty($hostName) ){
-            $hostAndPort = $this->configService->get('hostPort');
+            $hostAndPort = $this->configService->getValue('hostPort');
             if( !empty($hostAndPort) ){
-                $hostName = $this->configService->get('hostPort');
+                $hostName = $this->configService->getValue('hostPort');
             }else{
                 $hostName = gethostname(); // servers host name
             }
