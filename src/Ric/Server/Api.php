@@ -428,7 +428,7 @@ class Ric_Server_Api {
 		}
 		$result = $response->getResult();
 		$outputFilePath = $response->getOutputFilePath();
-		if( $outputFilePath !== null ){
+		if( $outputFilePath!='' ){
 			readfile($outputFilePath);
 		}elseif( $result !== null ){
 			header('Content-Type: application/json');
