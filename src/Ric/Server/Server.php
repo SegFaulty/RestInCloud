@@ -323,30 +323,6 @@ class Ric_Server_Server {
     }
 
     /**
-     * todo necessary?
-     * @param string $fileName
-     * @param string $fileVersion
-     * @param string $regex
-     * @return Ric_Server_Response
-     * @throws RuntimeException
-     */
-    public function grepFromFile($fileName, $fileVersion, $regex){
-        $response = new Ric_Server_Response();
-        $filePath = $this->fileManager->getFileInfosForPattern($fileName, $fileVersion);
-        $fp = gzopen($filePath, 'r');
-        if( !$fp ){
-            throw new RuntimeException('open file failed');
-        }
-        while(($line = gzgets($fp,100000))){
-            if( preg_match($regex, $line) ){
-                $response->addOutput($line);
-            }
-        }
-        gzclose($fp);
-        return $response;
-    }
-
-    /**
      * get server info
      * @param bool $isAdmin
      * @return Ric_Server_Response
