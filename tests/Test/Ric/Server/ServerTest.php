@@ -108,6 +108,25 @@ class Test_Ric_Server_ServerTest extends \PHPUnit_Framework_TestCase {
         self::assertNotEmpty($response->getOutput());
     }
 
+    public function testListAllVersions(){
+        $fileName = str_replace(':', '_', __METHOD__);
+        $version1 = $this->createTestFile($fileName);
+        $version2 = $this->createTestFile($fileName);
+        self::assertNotEquals($version1, $version2);
+
+        $server = $this->getServer();
+        $response = $server->listVersions($fileName, 10);
+        $result = $response->getResult();
+        self::assertEquals(2, count($result));
+        $versions = [];
+        foreach($result as $fileArray){
+            self::assertTrue(isset($fileArray['version']));
+            $versions[] = $fileArray['version'];
+        }
+        self::assertContains($version1, $versions);
+        self::assertContains($version2, $versions);
+    }
+
     protected function createTestFile($fileName){
         $testFile = $this->storageDir.'test.txt';
         $data = 'data' . rand(1000, 9999);
