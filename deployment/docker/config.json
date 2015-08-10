@@ -1,7 +1,7 @@
 {
 	"COMMENT": "this file is only a place holder, will be overwriten in docker context in Dockerfile",
 	"hostPort": "ric.lcl",
-	"storeDir": "/usr/share/RestInCloud/var/data/",
+	"storeDir": "/var/ric/",
 	"quota": 10000,
 	"adminToken": "admin",
 	"writerToken": "writer",

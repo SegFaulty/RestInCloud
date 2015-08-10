@@ -4,9 +4,17 @@ COPY ./RestInCloud/ /usr/src/RestInCloud/
 
 COPY config.json /usr/src/RestInCloud/config/
 
-COPY nginx-ric.conf /etc/nginx/sites-enabled/
+COPY ./RestInCloud/deployment/docker/nginx-ric.conf /etc/nginx/conf.d/
+COPY ./RestInCloud/deployment/docker/nginx.conf /etc/nginx/nginx.conf
 
-RUN mkdir -p /var/ric \
-    && chmod 777 /var/ric
+RUN mkdir -p /var/ric && \
+	chmod 777 /var/ric && \
+	rm /etc/nginx/conf.d/default.conf && \
 
-CMD ["/usr/sbin/nginx"]
+	apt-get -y update && apt-get -y install \
+	php5-fpm \
+	php5-curl \
+	&& \
+	rm -rf /var/lib/apt/lists/*
+
+CMD service php5-fpm start && nginx
