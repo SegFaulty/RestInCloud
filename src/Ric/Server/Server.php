@@ -443,10 +443,12 @@ class Ric_Server_Server {
                 $serversFailures[$server][] = 'quotaFreeLevel:'. $serverInfo['quotaFreeLevel'].'%';
             }
             // check servers
-            $expectedClusterServers = array_diff($clusterServers, [$server]);
+            $expectedClusterServers = array_values(array_diff($clusterServers, [$server]));
+	        $existingServers = array_values($serverInfo['config']['servers']);
             rsort($expectedClusterServers);
-            if( array_values($expectedClusterServers)!=array_values($serverInfo['config']['servers']) ){
-                $serversFailures[$server][] = 'unxpected clusterServer: '.join(',', $serverInfo['config']['servers']). ' (expected: '.join(',', $expectedClusterServers).')';
+            rsort($existingServers);
+            if( $expectedClusterServers!=$existingServers ){
+                $serversFailures[$server][] = 'unxpected clusterServer: '.join(',', $existingServers). ' (expected: '.join(',', $expectedClusterServers).')';
             }
         }
         // build quota info
