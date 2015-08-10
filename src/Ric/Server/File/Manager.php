@@ -42,27 +42,6 @@ class Ric_Server_File_Manager{
     }
 
 	/**
-	 * @param $fileName
-	 * @param $fileVersion
-	 * @param $lines
-	 * @throws RuntimeException
-	 * @return string[]
-	 */
-    public function getLinesFromFile($fileName, $fileVersion, $lines){
-        $result = [];
-        $filePath = $this->getFileInfosForPattern($fileName, $fileVersion);
-        $fp = gzopen($filePath, 'r');
-        if( !$fp ){
-            throw new RuntimeException('open file failed');
-        }
-        while($lines-- AND ($line = gzgets($fp, 100000))!==false){
-            $result[] = $line;
-        }
-        gzclose($fp);
-        return $result;
-    }
-
-	/**
 	 * @param string $fileName
 	 * @param string $tmpFilePath
 	 * @throws RuntimeException

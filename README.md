@@ -33,8 +33,6 @@ simple restfully dockerized distributed open source cloud backup server ;-)
  * GET http://ric1.server/error.log - download a file (etag and lastmodified supported)
  * GET http://ric1.server/error.log?&version=13445afe23423423 - version selects a specific version, if omitted the latest version is assumed (must not: ...error.log?version... )
  * GET http://ric1.server/error.log?list - show all (or &limit) versions for this file; (ordered by latest); &showDeleted=1 to include files marked for deletion
- * GET http://ric1.server/error.log?head - show first (10) lines of file
- * GET http://ric1.server/error.log?head=20 - show first n lines of the file
  * GET http://ric1.server/error.log?size - return the filesize
  * GET http://ric1.server/error.log?grep=EAN:.*\d+501 - scan the file for this (regex) pattern
  * GET http://ric1.server/error.log?check&minSize=40000&minReplicas=2&minTimestamp=14234234&sha=1234ef23

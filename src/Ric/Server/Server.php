@@ -324,24 +324,6 @@ class Ric_Server_Server {
 
     /**
      * todo necessary?
-     * todo merge with grep
-     * @param string $fileName
-     * @param string $fileVersion
-     * @param int $lines
-     * @return Ric_Server_Response
-     * @throws RuntimeException
-     */
-    public function getLinesFromFile($fileName, $fileVersion, $lines){
-        $response = new Ric_Server_Response();
-        $dataLines = $this->fileManager->getLinesFromFile($fileName, $fileVersion, $lines);
-        foreach($dataLines as $line) {
-            $response->addOutput($line);
-        }
-        return $response;
-    }
-
-    /**
-     * todo necessary?
      * @param string $fileName
      * @param string $fileVersion
      * @param string $regex

@@ -90,8 +90,6 @@ class Ric_Server_Api {
 			$this->actionCheck();
 		} elseif( $action=='list' ) {
 			$this->actionListVersions();
-		} elseif( $action=='head' ) {
-			$this->actionHead();
 		} elseif( $action=='grep' ) {
 			$this->actionGrep();
 		} elseif( $action=='help' ) {
@@ -288,22 +286,6 @@ class Ric_Server_Api {
 		$minReplicas = H::getRP('minReplicas', null); // if parameter omitted, don't check replicas!!!! or deadlock
 
 		$response = $this->server->checkFile($fileName, $fileVersion, $sha1, $minSize, $minTimestamp, $minReplicas);
-		$this->sendResponse($response);
-	}
-
-	/**
-	 * todo necessary?
-	 * todo merge with grep
-	 * @throws RuntimeException
-	 */
-	public function actionHead(){
-		$fileName = $this->extractFileNameFromRequest();
-		$fileVersion = $this->extractVersionFromRequest();
-		$lines = H::getRP('head', 10);
-		if( $lines<=0 ){
-			$lines = 10;
-		}
-		$response = $this->server->getLinesFromFile($fileName, $fileVersion, $lines);
 		$this->sendResponse($response);
 	}
 
