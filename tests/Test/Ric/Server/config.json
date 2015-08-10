@@ -1,0 +1,8 @@
+{
+  "hostPort": "",
+  "storeDir": "",
+  "quota": 10000,
+  "adminToken": "yourAdminToken",
+  "writerToken": "yourWriterToken",
+  "readerToken": "yourReaderToken"
+}

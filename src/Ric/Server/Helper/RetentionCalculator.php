@@ -1,7 +1,14 @@
 <?php
 
 class Ric_Server_Helper_RetentionCalculator {
+    protected static $debug = false;
 
+    /**
+     * @param boolean $debug
+     */
+    public static function setDebug($debug) {
+        self::$debug = $debug;
+    }
 
 	/**
 	 * returns wanted versions by retentionsString (like: 3l7d4w12m)
@@ -82,18 +89,22 @@ class Ric_Server_Helper_RetentionCalculator {
 		if( $firstOrLast!='last' ){
 			krsort($timestampVersions);
 		}
-echo 'start: '.$startTimestamp.' '.date('Y-m-d H:i:s', $startTimestamp).PHP_EOL;
-echo 'end: '.$endTimestamp_excluded.' '.date('Y-m-d H:i:s', $endTimestamp_excluded).PHP_EOL;
-echo 'rAll: '.PHP_EOL;
-foreach( $timestampVersions as $timestamp=>$version){
-	echo $timestamp.' '.date('Y-m-d H:i:s', $timestamp).' '.$version.PHP_EOL;
-}
+        if(self::$debug){
+            echo 'start: '.$startTimestamp.' '.date('Y-m-d H:i:s', $startTimestamp).PHP_EOL;
+            echo 'end: '.$endTimestamp_excluded.' '.date('Y-m-d H:i:s', $endTimestamp_excluded).PHP_EOL;
+            echo 'rAll: '.PHP_EOL;
+            foreach( $timestampVersions as $timestamp=>$version){
+                echo $timestamp.' '.date('Y-m-d H:i:s', $timestamp).' '.$version.PHP_EOL;
+            }
+        }
 		foreach( $timestampVersions as $timestamp=>$version ){
 			if( $timestamp<$endTimestamp_excluded AND $timestamp>=$startTimestamp ){
 				$resultVersion = $version;
 			}
 		}
-echo 'resultVer: '.$resultVersion.PHP_EOL;
+        if(self::$debug){
+            echo 'resultVer: '.$resultVersion.PHP_EOL;
+        }
 		return $resultVersion;
 	}
 

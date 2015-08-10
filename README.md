@@ -20,9 +20,11 @@ simple restfully dockerized distributed open source cloud backup server ;-)
      curl -X PUT --upload "/home/www/phperror.log" "http://ric1.server/error.log&retention=last7&timestamp=1429628531"
 
  * POST http://ric1.server/error.log?sha1=23423ef3d..&timestamp=1422653.. - check and refresh a file
-   - use &noSync to suppress syncronisation to replication servers (used for internal sync)
-   - check if version exists and updates timestamp, no need to upload the same version
+   - checks if version exists and updates timestamp
    - returns 1 if version was updated, 0 if version not exists
+   - if 1 is returned, there is no need to upload the same version
+   - use &noSync to suppress syncronisation to replication servers (used for internal sync)
+   - if &noSync is not set, refresh is also performed on the replication servers (with &noSync)
 
  * POST http://ric1.server/error.log  ?action=delete  - delete a file !! Attention if version is omitted, ALL Versions will be deleted (Files are marked for deletion, purge will delete them)
  * DELETE http://ric1.server/error.log   - delete a file !! Attention if version is omitted, ALL Versions will be deleted (Files are marked for deletion, purge will delete them)

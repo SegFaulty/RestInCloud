@@ -7,10 +7,15 @@ checkout and copy configs
     cp config/example-config.json config/config.json
     cp deployment/apache/example-apache-ric-vhost.conf config/apache-ric-vhost.conf
 
+optionally: create log path
+
+	mkdir -p var/logs
+
 create data dir an set permissions
 
 	mkdir -p var/data
 	chown www-data.www-data var/ -R
+
 
 change: tokens, path, quota
 

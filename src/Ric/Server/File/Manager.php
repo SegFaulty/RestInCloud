@@ -3,21 +3,25 @@
 class Ric_Server_File_Manager{
     protected $storageDir;
 
-    /**
-     * Ric_Server_File_Manager constructor.
-     * @param $storageDir
-     */
-    public function __construct($storageDir)
-    {
+	/**
+	 * Ric_Server_File_Manager constructor.
+	 * @param $storageDir
+	 * @throws RuntimeException
+	 */
+    public function __construct($storageDir) {
+        if( !is_dir($storageDir) OR !is_writable($storageDir) ){
+            throw new RuntimeException('document root ['.$storageDir.'] is not a writable dir!');
+        }
         $this->storageDir = $storageDir;
     }
 
 
-    /**
-     * @param string $fileName
-     * @param string $version optional
-     * @return string
-     */
+	/**
+	 * @param string $fileName
+	 * @param string $version optional
+	 * @throws RuntimeException
+	 * @return string
+	 */
     public function getFilePath($fileName, $version=''){
         $filePath = '';
         if( $fileName!='' ){
@@ -34,11 +38,33 @@ class Ric_Server_File_Manager{
         return $filePath;
     }
 
-    /**
-     * @param string $fileName
-     * @param string $tmpFilePath
-     * @return string version
-     */
+	/**
+	 * @param $fileName
+	 * @param $fileVersion
+	 * @param $lines
+	 * @throws RuntimeException
+	 * @return string[]
+	 */
+    public function getLinesFromFile($fileName, $fileVersion, $lines){
+        $result = [];
+        $filePath = $this->getFileInfosForPattern($fileName, $fileVersion);
+        $fp = gzopen($filePath, 'r');
+        if( !$fp ){
+            throw new RuntimeException('open file failed');
+        }
+        while($lines-- AND ($line = gzgets($fp, 100000))!==false){
+            $result[] = $line;
+        }
+        gzclose($fp);
+        return $result;
+    }
+
+	/**
+	 * @param string $fileName
+	 * @param string $tmpFilePath
+	 * @throws RuntimeException
+	 * @return string version
+	 */
     public function storeFile($fileName, $tmpFilePath){
 
         // get correct filePath
@@ -57,6 +83,48 @@ class Ric_Server_File_Manager{
             $version = '';
         }
         return $version;
+    }
+
+    /**
+     * @param string $fileName
+     * @param string $version
+     * @param int $timestamp
+     */
+    public function updateTimestamp($fileName, $version, $timestamp){
+        $filePath = $this->getFilePath($fileName, $version);
+        touch($filePath, $timestamp);
+    }
+
+    /**
+     * @param string $fileName
+     * @param string $version
+     * @return bool
+     */
+    public function markFileAsDeleted($fileName, $version){
+        $result = false;
+        $filePath = $this->getFilePath($fileName, $version);
+        if( file_exists($filePath) AND filemtime($filePath)!=Ric_Server_Definition::MAGIC_DELETION_TIMESTAMP ){
+            $result = touch($filePath, Ric_Server_Definition::MAGIC_DELETION_TIMESTAMP) ;
+        }
+        return $result;
+    }
+
+    /**
+     * mark one or all versions of the File as deleted
+     * @param string $fileName
+     * @param string $version
+     * @return int
+     */
+    public function deleteFile($fileName, $version){
+        $filesDeleted = 0;
+        if( $version ){
+            $filesDeleted+= $this->markFileAsDeleted($fileName, $version);
+        }else{
+            foreach( $this->getAllVersions($fileName) as $version=>$timestamp){
+                $filesDeleted+= $this->markFileAsDeleted($fileName, $version);
+            }
+        }
+        return $filesDeleted;
     }
 
     /**
@@ -93,7 +161,7 @@ class Ric_Server_File_Manager{
      * @param bool|false $showDeleted
      * @param int $start
      * @param int $limit
-     * @return array [[string => string]]
+     * @return Ric_Server_File_FileInfo[]
      */
     public function getFileInfosForPattern($pattern='', $showDeleted=false, $start=0, $limit=100){
         $result = [];
@@ -129,20 +197,13 @@ class Ric_Server_File_Manager{
     /**
      * @param string $fileName
      * @param string $version
-     * @return array
+     * @return Ric_Server_File_FileInfo
      */
     public function getFileInfo($fileName, $version){
         $filePath = $this->getFilePath($fileName, $version);
         list($fileName, $version) = $this->extractVersionFromFullFileName($filePath);
         $fileTimestamp = filemtime($filePath);
-        $info = [
-            'name' => $fileName,
-            'version' => $version,
-            'sha1' => sha1_file($filePath), // ja sollte das selbe wie version sein, das bestätigt aber, das das file noch physisch korrekt ist
-            'size' => filesize($filePath),
-            'timestamp' => $fileTimestamp,
-            'dateTime' => date('Y-m-d H:i:s', $fileTimestamp),
-        ];
+        $info = new Ric_Server_File_FileInfo($fileName, $version, sha1_file($filePath), filesize($filePath), $fileTimestamp);
         return $info;
     }
 
