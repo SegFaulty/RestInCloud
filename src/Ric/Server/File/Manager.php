@@ -9,8 +9,11 @@ class Ric_Server_File_Manager{
 	 * @throws RuntimeException
 	 */
     public function __construct($storageDir) {
-        if( !is_dir($storageDir) OR !is_writable($storageDir) ){
-            throw new RuntimeException('document root ['.$storageDir.'] is not a writable dir!');
+        if( !is_dir($storageDir) ){
+            throw new RuntimeException('document root ['.$storageDir.'] not found or not a dir!');
+        }
+        if( !is_writable($storageDir) ){
+            throw new RuntimeException('document root ['.$storageDir.'] exists but is not a writable dir!');
         }
         $this->storageDir = $storageDir;
     }
