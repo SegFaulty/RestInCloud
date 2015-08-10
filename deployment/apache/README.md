@@ -55,6 +55,10 @@ no default page: in /etc/apache2/sites-enabled/000-default.conf after "DocumentR
 
 activate mod_rewrite:
 
-    /etc/apache2/mods-enabled$ sudo ln -s ../mods-available/rewrite.load
+	sudo a2enmod rewrite
+	
+activate mod_ssl
+
+	sudo a2enmod ssl
 
 @todo aber auch das reicht noch nicht
