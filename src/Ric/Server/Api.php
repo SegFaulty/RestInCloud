@@ -185,7 +185,7 @@ class Ric_Server_Api {
 	}
 
 	/**
-	 * @throws RuntimeException
+	 * actionAddServer
 	 */
 	protected function actionAddServer(){
 		$server = H::getRP('addServer');
@@ -195,7 +195,6 @@ class Ric_Server_Api {
 
 	/**
 	 * remove selected or "all" servers
-	 * @throws RuntimeException
 	 */
 	public function actionRemoveServer(){
 		$server = H::getRP('removeServer');
@@ -207,7 +206,6 @@ class Ric_Server_Api {
 	 * join a existing cluster
 	 * get all servers of the given clusterMember an send an addServer to all
 	 * if it fails, the cluster is in inconsistent state, send leaveCluster command
-	 * @throws RuntimeException
 	 */
 	protected function actionJoinCluster(){
 		$server = H::getRP('joinCluster');
@@ -219,7 +217,6 @@ class Ric_Server_Api {
 	 * leaving a cluster
 	 * send removeServer to all servers
 	 * if it fails, the cluster is in inconsistent state, send leaveCluster command
-	 * @throws RuntimeException
 	 */
 	protected function actionLeaveCluster(){
 		$response = $this->server->leaveCluster();
@@ -229,7 +226,6 @@ class Ric_Server_Api {
 	/**
 	 * remove a server from the cluster
 	 * send removeServer to all servers
-	 * @throws RuntimeException
 	 */
 	protected function actionRemoveFromCluster(){
 		$server = H::getRP('removeFromCluster');
@@ -272,7 +268,6 @@ class Ric_Server_Api {
 	/**
 	 * todo check if $fileInfo->getVersion()==$fileInfo->getSha1()
 	 * list files or version of file
-	 * @throws RuntimeException
 	 */
 	protected function actionCheck(){
 		$fileName = $this->extractFileNameFromRequest();
@@ -315,7 +310,6 @@ class Ric_Server_Api {
 
 	/**
 	 * list versions of file
-	 * @throws RuntimeException
 	 */
 	protected function actionListVersions(){
 		$showDeleted = H::getRP('showDeleted');
@@ -374,7 +368,6 @@ class Ric_Server_Api {
 	 * @param string $user
 	 * @param bool $isRequired
 	 * @return bool
-	 * @throws RuntimeException
 	 */
 	protected function auth($user = Ric_Server_Auth_Definition::ROLE__READER, $isRequired = true){
 		return $this->authService->auth($user, $isRequired);
