@@ -634,6 +634,7 @@ class Ric_Server_Server {
      */
     protected function executeRetention($fileName, $retention){
         $allVersions = $this->fileManager->getAllVersions($fileName);
+//        Ric_Server_Helper_RetentionCalculator::setDebug(true);
         $wantedVersions = Ric_Server_Helper_RetentionCalculator::getVersionsForRetentionString($allVersions, $retention);
         $unwantedVersions = array_diff(array_keys($allVersions), array_values($wantedVersions));
         if( count($unwantedVersions)>=$allVersions ){
