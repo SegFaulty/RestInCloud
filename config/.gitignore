@@ -1,2 +1,3 @@
 config.json
 apache-ric-vhost.conf
+nginx-ric.conf
