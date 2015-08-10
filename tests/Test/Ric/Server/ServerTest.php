@@ -166,7 +166,7 @@ class Test_Ric_Server_ServerTest extends \PHPUnit_Framework_TestCase {
     public function testRemoveServer(){
         $serverHostPort = 'localhost:5463';
 
-        $this->configService->setRuntimeConfig('servers', [$serverHostPort]);
+        $this->configService->setRuntimeValue('servers', [$serverHostPort]);
 
         $server = $this->getServer();
         $response = $server->removeServer($serverHostPort);

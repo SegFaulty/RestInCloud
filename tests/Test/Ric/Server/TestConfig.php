@@ -11,7 +11,7 @@ class Test_Ric_Server_TestConfig extends Ric_Server_Config{
      * @param string $key
      * @param string $value
      */
-    public function setRuntimeConfig($key, $value) {
+    public function setRuntimeValue($key, $value) {
         $this->runtimeConfig[$key] = $value;
         $this->config[$key] = $value;
     }

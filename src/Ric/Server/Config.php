@@ -75,7 +75,7 @@ class Ric_Server_Config {
 	 * @param string $key
 	 * @param string $value
 	 */
-	public function setRuntimeConfig($key, $value){
+	public function setRuntimeValue($key, $value){
 		$runtimeConfig = [];
 		if( file_exists($this->config['storeDir'] . '/intern/config.json') ){
 			$runtimeConfig = json_decode(file_get_contents($this->config['storeDir'] . '/intern/config.json'), true);

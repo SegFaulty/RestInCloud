@@ -32,7 +32,7 @@ class Ric_Server_Cluster_Manager{
         if( $info AND H::getIKS($info, 'serverTimestamp') ){
             $servers = $this->configService->get('servers');
             $servers[] = $server;
-            $this->configService->setRuntimeConfig('servers', $this->configService->get('servers'));
+            $this->configService->setRuntimeValue('servers', $this->configService->get('servers'));
         }else{
             throw new RuntimeException('server is not responding properly', 400);
         }
@@ -61,7 +61,7 @@ class Ric_Server_Cluster_Manager{
                 }
                 $joinedServers[] = $clusterServer;
             }
-            $this->configService->setRuntimeConfig('servers', $servers);
+            $this->configService->setRuntimeValue('servers', $servers);
 
             // todo  pull a dump and restore
 
@@ -87,7 +87,7 @@ class Ric_Server_Cluster_Manager{
     public function leaveCluster(){
         $ownServer = $this->getOwnHostPort();
         list($leavedServers, $errorMsg) = $this->removeServerFromCluster($ownServer);
-        $this->configService->setRuntimeConfig('servers', []);
+        $this->configService->setRuntimeValue('servers', []);
 
         if( $errorMsg!='' ){
             throw new RuntimeException('leaveCluster failed! '.$errorMsg.' Inconsitent cluster state! (please remove me manually) succesfully removed from: '.join('; ', $leavedServers), 400);
@@ -140,7 +140,7 @@ class Ric_Server_Cluster_Manager{
         } else {
             $servers = array_diff($this->configService->get('servers'), [$server]);
         }
-        $this->configService->setRuntimeConfig('servers', $servers);
+        $this->configService->setRuntimeValue('servers', $servers);
     }
 
     /**
