@@ -140,6 +140,7 @@ class Ric_Server_File_Manager{
     }
 
     /**
+     * returns [version3=>ts3, version2=>ts2, version1... ]
      * @param string $fileName
      * @param bool $includeDeleted
      * @return array|int

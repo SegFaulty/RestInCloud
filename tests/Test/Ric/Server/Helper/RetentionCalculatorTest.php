@@ -5,13 +5,21 @@ require_once __DIR__.'/../../../../bootstrap.php';
 
 class Test_Ric_Server_Helper_RetentionCalculatorTest extends PHPUnit_Framework_TestCase {
 
-	public function test_getVersionForTimeRange(){
+	public function test_getVersionsForRetentionString_empty(){
 		$allVersions = [
-			'v3' => 1439010784,
-			'v2' => 1438853184,
-			'v1' => 1438835877,
+				'v3' => 1439010784,
+				'v2' => 1438853184,
+				'v1' => 1438835877,
 		];
-		self::assertEquals('v3', Test_Ric_Server_Helper_RetentionCalculator::getVersionForTimeRange_public($allVersions, 1438840000, 1500000000));
+		self::assertEquals(['v3','v2','v1'], Test_Ric_Server_Helper_RetentionCalculator::getVersionsForRetentionString($allVersions, ''));
+	}
+	public function test_getVersionsForRetentionString_off(){
+		$allVersions = [
+				'v3' => 1439010784,
+				'v2' => 1438853184,
+				'v1' => 1438835877,
+		];
+		self::assertEquals(['v3'], Test_Ric_Server_Helper_RetentionCalculator::getVersionsForRetentionString($allVersions, Ric_Server_Definition::RETENTION__OFF));
 	}
 
 	public function test_getVersionsForRetention_last(){
@@ -39,6 +47,15 @@ class Test_Ric_Server_Helper_RetentionCalculatorTest extends PHPUnit_Framework_T
 		self::assertEquals(['v4','v2','v1'], $versionsForRetention);
 		$versionsForRetention = Test_Ric_Server_Helper_RetentionCalculator::getVersionsForRetention($allVersions, Ric_Server_Definition::RETENTION_TYPE__DAYS, 4);
 		self::assertEquals(['v4','v2','v1'], $versionsForRetention);
+	}
+
+	public function test_getVersionForTimeRange(){
+		$allVersions = [
+			'v3' => 1439010784,
+			'v2' => 1438853184,
+			'v1' => 1438835877,
+		];
+		self::assertEquals('v3', Test_Ric_Server_Helper_RetentionCalculator::getVersionForTimeRange_public($allVersions, 1438840000, 1500000000));
 	}
 
 	public function test_getStartOfWeek(){

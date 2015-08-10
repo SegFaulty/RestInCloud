@@ -17,8 +17,9 @@ class Ric_Server_Helper_RetentionCalculator {
 	 * @return array
 	 */
 	static public function getVersionsForRetentionString($allVersions, $retentionString){
-		$retentionVersions = [];
+		$retentionVersions = array_keys($allVersions); // for safety reason, default is allVersions if $retentionString is empty
 		if( preg_match_all('~(\d+)([a-z])~', $retentionString, $matches) ){
+			$retentionVersions = []; // okay retention found, clear the list, no problem if its completely wrong, because this will throw an exception in getVersionsForRetention, so we are save
 			foreach( $matches[1] as $index=>$retentionCount ){
 				$retentionType = $matches[2][$index];
 				$retentionVersions = array_merge($retentionVersions, self::getVersionsForRetention($allVersions, $retentionType, $retentionCount));

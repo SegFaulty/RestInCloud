@@ -636,10 +636,16 @@ class Ric_Server_Server {
 //        Ric_Server_Helper_RetentionCalculator::setDebug(true);
         $wantedVersions = Ric_Server_Helper_RetentionCalculator::getVersionsForRetentionString($allVersions, $retention);
         $unwantedVersions = array_diff(array_keys($allVersions), array_values($wantedVersions));
-        if( count($unwantedVersions)>=$allVersions ){
-            throw new RuntimeException('count($unwantedVersions)>=$allVersions this must be wrong! retention:'.$retention );
+        if( count($unwantedVersions)>=count($allVersions) ){
+            throw new RuntimeException('count($unwantedVersions)>=$allVersions this must be really really wrong! retention:'.$retention );
         }
+	    // ensure we are not deleting the latest/current/newest version
+	    arsort($allVersions);
+		$currentVersion = key($allVersions);
         foreach( $unwantedVersions as $version ){
+	        if( $version==$currentVersion ){
+		        throw new RuntimeException('whoa we will delete the newest version this must be really really wrong! retention:'.$retention );
+	        }
             $this->fileManager->markFileAsDeleted($fileName, $version);
         }
         $response = new Ric_Server_Response();
