@@ -1,28 +1,21 @@
 
+# Deployment
 
-# todo admin joinCluster $serverIps / get servers from server, add to all servers, dump remote restore local
-# todo admin leaveCluster
-
-# todo delete (to all servers, now it deletes only local file)
-# todo admin flush
-# todo admin dump http://de2.php.net/manual/en/function.readfile.php
-# todo admin joinCluster $serverIps / get servers from server, add to all servers, dump remote restore local
-# todo admin leaveCluster
-# todo sync command push to all server
-# todo pull command dump, local restore
-# todo cli encryption
-
-# todo apache sapi
-# todo https (docker)
-# todo shell script
-# todo think about configstorage also download immer der neusten version, sollte ja einfach gehen (mit 304er)
-
-# todo coreos add weave layer howto
 # todo coreos cloud.config single host
 # todo coreos fleet
+# todo https (docker)
 
+# Server
 
+# todo client sendet versions anforderung an den server, server explodiert wenn nicht erfüllt
+# todo health checkt die server versionen wenn ungleich dann WARNING
+
+# Client
 
 # todo cli ric check --verifySha1=randFactor   (1=every request, 2=50% ...) default: 10
 # todo sha1 vorkommen prüfen und die gesamte version/sha1 thematik ueberblicken
-# todo client sendet versions anforderung an den server, server explodiert wenn nicht erfüllt
+
+# other
+
+# todo think about configstorage also download immer der neusten version, sollte ja einfach gehen (mit 304er)
+# todo sha1 und version glatt ziehen, sha1 nur das wo wirklich die hash ermittelt oder geprüft wird
