@@ -7,16 +7,16 @@ class Ric_Server_Api{
     protected $server;
 
     /**
-     * @var Ric_Server_Auth_Service
+     * @var Ric_Server_Auth_Manager
      */
     protected $authService;
 
     /**
      * Ric_Server_Api constructor.
      * @param Ric_Server_Server $server
-     * @param Ric_Server_Auth_Service $authService
+     * @param Ric_Server_Auth_Manager $authService
      */
-    public function __construct(Ric_Server_Server $server, Ric_Server_Auth_Service $authService)
+    public function __construct(Ric_Server_Server $server, Ric_Server_Auth_Manager $authService)
     {
         $this->server = $server;
         $this->authService = $authService;

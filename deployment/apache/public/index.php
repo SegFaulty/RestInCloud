@@ -6,5 +6,5 @@ $configPath = getenv('Ric_config') ? getenv('Ric_config') : realpath(__DIR__.'/.
 $configService = new Ric_Server_Config($configPath);
 $api = new Ric_Server_Api(
     new Ric_Server_Server($configService),
-    new Ric_Server_Auth_Service($configService->getConfig()));
+    new Ric_Server_Auth_Manager($configService->getConfig()));
 $api->handleRequest();
