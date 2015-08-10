@@ -57,6 +57,9 @@ simple restfully dockerized distributed open source cloud backup server ;-)
  auth (only as parameter supported yet)
  * use &token=YourAdminToken to authenticate as admin or writer or reader (e.g. for info command)
 
+ serverVersion
+ * use &minServerVersion=1.4.0 to require a minimal ServerVersion - it also acts reverse - if the client major version not matches the server major version - the request is rejected - to protect old clients from doing  mad things
+
 ## Usecase
 
 ### Backup a Dir

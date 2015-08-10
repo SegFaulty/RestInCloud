@@ -6,7 +6,7 @@
  */
 class Ric_Server_Server {
 
-	const VERSION = '0.3.0';
+	const VERSION = '1.3.0'; // dont forget to change the client(s) version | if you break api backward compatibility inc the major version | all clients will until they updated
 
     /**
      * @var Ric_Server_ConfigManager
@@ -30,12 +30,12 @@ class Ric_Server_Server {
 	 */
     public function __construct($configManager){
         $this->configManager = $configManager;
-        $config = $configManager->getConfig();
+        $config = $this->configManager->getConfig();
         if(empty($config)){
             throw new RuntimeException('No config found');
         }
         $this->fileManager = new Ric_Server_File_Manager($this->configManager->getValue('storeDir'));
-        $this->clusterManager = new Ric_Server_Cluster_Manager($configManager);
+        $this->clusterManager = new Ric_Server_Cluster_Manager($this->configManager);
     }
 
 

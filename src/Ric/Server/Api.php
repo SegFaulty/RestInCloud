@@ -26,6 +26,16 @@ class Ric_Server_Api {
 	 */
 	public function handleRequest(){
 		try{
+			// check server version if requested
+			$minServerVersion = H::getRP('minServerVersion','');
+			if( $minServerVersion!='' ){
+				if( version_compare($minServerVersion, Ric_Server_Server::VERSION, '>') ){
+					throw new RuntimeException('server to old ['.Ric_Server_Server::VERSION.']', 500);
+				}
+				if( preg_replace('~\..*~', '', $minServerVersion)!==preg_replace('~\..*~', '', Ric_Server_Server::VERSION) ){
+					throw new RuntimeException('client ['.preg_replace('~[^\d\.]~','',$minServerVersion).'] matches not the server major version ['.Ric_Server_Server::VERSION.']', 500);
+				}
+			}
 			$this->auth(Ric_Server_Auth_Definition::ROLE__READER, true);
 			if( $_SERVER['REQUEST_METHOD']=='PUT' ){
 				$this->handlePutRequest();

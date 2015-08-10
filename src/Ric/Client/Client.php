@@ -10,6 +10,8 @@
  */
 class Ric_Client_Client{
 
+	const MIN_SERVER_VERSION = '0.4.0'; // server needs to be on this or a higher version, BUT on the same MAJOR version  ok: 0.4.0 < 0.8.3  but fail:  0.4.0 < 2.3.0  because client is to old
+
 	protected $server = '';
 	protected $auth = '';
 	protected $log = '';
@@ -72,6 +74,7 @@ class Ric_Client_Client{
 		if( $this->auth!='' ){
 			$parameters+= ['token'=>$this->auth];  // add token
 		}
+		$parameters+= ['minServerVersion'=>self::MIN_SERVER_VERSION];
 		$url.= '?'.$command;
 		if( !empty($parameters) ){
 			$url.= '&'.http_build_query($parameters);
