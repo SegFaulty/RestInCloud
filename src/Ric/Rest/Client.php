@@ -2,13 +2,13 @@
 
 
 /**
- * Class Waps_Rest_Client
+ * Class Ric_Rest_Client
  * - use $header to send AND RECEIVE headers (status Code is added as header "Http-Code")
- *   $headers=['User-Agent' => 'Mozilla/5.0'];Waps_Rest_Client::post($apiUrl, $data, $headers, $curl);$status = $headers['Http-Code']
+ *   $headers=['User-Agent' => 'Mozilla/5.0'];Ric_Rest_Client::post($apiUrl, $data, $headers, $curl);$status = $headers['Http-Code']
  * - use $curl for faster subsequent requests to the same host (no reconnect)
- *   Waps_Rest_Client::post($apiUrl, $data, $headers, $curl); $headers=[]; Waps_Rest_Client::post($apiUrl, $otherData, $headers, $curl);
+ *   Ric_Rest_Client::post($apiUrl, $data, $headers, $curl); $headers=[]; Ric_Rest_Client::post($apiUrl, $otherData, $headers, $curl);
  * - use $outputFileHandle to store the response content in a file
- *   $oFH = fopen('response.html', 'w+'); Waps_Rest_Client::get($url, [], [], null, $oFh);fclose($oFH);
+ *   $oFH = fopen('response.html', 'w+'); Ric_Rest_Client::get($url, [], [], null, $oFh);fclose($oFH);
  */
 class Ric_Rest_Client {
 
