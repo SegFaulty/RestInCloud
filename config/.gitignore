@@ -1,2 +1,5 @@
 config.json
 apache-ric-vhost.conf
+nginx-ric.conf
+server.crt
+server.key

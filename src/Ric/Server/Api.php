@@ -428,9 +428,9 @@ class Ric_Server_Api {
 		}
 		$result = $response->getResult();
 		$outputFilePath = $response->getOutputFilePath();
-		if( $outputFilePath ){
+		if( $outputFilePath !== null ){
 			readfile($outputFilePath);
-		}elseif( $result ){
+		}elseif( $result !== null ){
 			header('Content-Type: application/json');
 			echo H::json($result);
 		} else {
