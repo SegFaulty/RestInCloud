@@ -3,6 +3,7 @@
 
     git clone https://github.com/SegFaulty/RestInCloud.git
     cd RestInCloud/deployment/docker
+    cp example-config.json config.json
     # change hostPort and tokens
     vi config.json
     sh docker.sh
