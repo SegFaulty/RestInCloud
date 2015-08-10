@@ -10,7 +10,8 @@ class Ric_Server_Response {
 	 */
 	protected $output = [];
 
-	protected $result;
+	protected $result = null;
+	protected $outputFilePath = '';
 
 	/**
 	 * @return mixed
@@ -63,5 +64,20 @@ class Ric_Server_Response {
 	 */
 	public function setOutput($output){
 		$this->output = [$output];
+
+	}
+
+	/**
+	 * @param $filePath
+	 */
+	public function setOutputFilePath($filePath){
+		$this->outputFilePath = $filePath;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getOutputFilePath(){
+		return $this->outputFilePath;
 	}
 }
