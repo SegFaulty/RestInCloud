@@ -417,7 +417,7 @@ class Ric_Server_Server {
         $msg = '';
 
         $serversFailures = [];
-        $ownHostPort = $this->getOwnHostPort();
+        $ownHostPort = $this->clusterManager->getOwnHostPort();
         $clusterServers = array_merge([$ownHostPort], $this->configService->get('servers'));
         sort($clusterServers);
         // get serverInfos
@@ -647,26 +647,5 @@ class Ric_Server_Server {
         $response->setResult(['Status' => 'OK']);
         return $response;
     }
-
-    /**
-     * get the own address
-     * @throws RuntimeException
-     */
-    public function getOwnHostPort(){
-        static $hostName = '';
-        if( empty($hostName) ){
-            $hostAndPort = $this->configService->get('hostPort');
-            if( !empty($hostAndPort) ){
-                $hostName = $this->configService->get('hostPort');
-            }else{
-                $hostName = gethostname(); // servers host name
-            }
-        }
-        if( empty($hostName) OR strstr($hostName, '.')===false ){
-            throw new RuntimeException('wrong hostname: ['.$hostName.'] - hostPort in config is missing and "hostname"-command returns not an host name with ".",  can not perform remote operation, please set "hostPort" in config or hostname on host to a reachable value (FQH: ric.example.com:3333)');
-        }
-        return $hostName;
-    }
-
 
 }
