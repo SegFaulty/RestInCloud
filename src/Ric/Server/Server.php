@@ -629,6 +629,7 @@ class Ric_Server_Server {
     /**
      * @param string $fileName
      * @param string $retention
+     * @return Ric_Server_Response
      * @throws RuntimeException
      */
     protected function executeRetention($fileName, $retention){
@@ -639,40 +640,8 @@ class Ric_Server_Server {
             throw new RuntimeException('count($unwantedVersions)>=$allVersions this must be wrong! retention:'.$retention );
         }
         foreach( $unwantedVersions as $version ){
-            $filePath = $this->fileManager->getFilePath($fileName, $version);
-            $this->markFileDeleted($filePath);
-        }
-    }
-    
-    /**
-     * @param string $fileName
-     * @param string $retention
-     * @return Ric_Server_Response
-     * @throws RuntimeException
-     */
-    protected function executeRetention($fileName, $retention){
-        $allVersions = $this->fileManager->getAllVersions($fileName);
-        $deleteFilePaths = [];
-        switch( $retention ){
-            case '':
-                // do nothing
-                break;
-            case Ric_Server_Definition::RETENTION__OFF:
-                $deleteFilePaths = array_slice(array_keys($allVersions),1); // remove from 3
-                break;
-            case Ric_Server_Definition::RETENTION__LAST3:
-                $deleteFilePaths = array_slice(array_keys($allVersions),3); // remove from 3
-                break;
-            case Ric_Server_Definition::RETENTION__LAST7:
-                $deleteFilePaths = array_slice(array_keys($allVersions),7);
-                break;
-            default:
-                throw new RuntimeException('unknown retention strategy', 400);
-        }
-        foreach( $deleteFilePaths as $version ){
             $this->fileManager->markFileAsDeleted($fileName, $version);
         }
-
         $response = new Ric_Server_Response();
         $response->setResult(['Status' => 'OK']);
         return $response;
