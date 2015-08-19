@@ -54,6 +54,11 @@ procedure:
 * if failed store file with put request
 * check the file (sha1, minSize, minReplicas)
 
+* use "STDIN" as resource string to backup the piped content
+*  useless example to backup the your hard-disk state for a year:
+*  df -h | ric backup STDIN partions.txt --retentions=365d
+
+
 ### backup options
 
 * --pass Password
@@ -140,4 +145,6 @@ a cluster is a bunch of servers, where all of them are added (addServer) to all 
 
 use the shell capabilities, wobei das, kein failed sendet, vielleicht gibts da noch was besseres, pipen oder so
 
-    ric backup /home/www/ric/config/ && sic /RicService/config-backup
+
+
+

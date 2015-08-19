@@ -302,6 +302,13 @@ class Ric_Client_Client{
 			touch($tmpTarFile, filemtime(rtrim($resource,'/').'/.')); // get the dir mod-date and set it to created tar
 			$this->logDebug('set modification time of tar to '.date('Y-m-d H:i:s', filemtime($tmpTarFile)));
 			$filePath = $tmpTarFile;
+		}elseif( $resource=='STDIN' ){
+			$filePath = $this->getTmpFilePath();
+			$handle = fopen("php://input", "rb");
+			while (!feof($handle)) {
+				$data = fread($handle, 1000000);
+				file_put_contents($filePath, $data, FILE_APPEND);
+			}
 		}elseif( preg_match('~^mysql://~', $resource) ){
 			throw new RuntimeException('resource type mysql not implemented');
 		}elseif( preg_match('~^redis://~', $resource) ){ // redis://pass@123.234.23.23:3343/mykeys_* <- dump as msgpack (ttls?)
