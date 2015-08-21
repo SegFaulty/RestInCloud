@@ -245,8 +245,8 @@ class Ric_Client_CliHandler{
 	}
 
 	/**
-	 * @param $command
-	 * @param $cli
+	 * @param string $command
+	 * @param Ric_Client_Cli $cli
 	 */
 	protected static function dumpParameters($command, $cli){
 		echo 'command: ' . $command . PHP_EOL;
@@ -257,6 +257,11 @@ class Ric_Client_CliHandler{
 		echo PHP_EOL;
 		echo 'options: ';
 		foreach( $cli->options as $key => $value ){
+			echo $key . ': "' . $value . '", ';
+		}
+		echo PHP_EOL;
+		echo 'configFileOptions: ';
+		foreach( $cli->configFileOptions as $key => $value ){
 			echo $key . ': "' . $value . '", ';
 		}
 		echo PHP_EOL;
