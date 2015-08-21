@@ -15,6 +15,7 @@ class Ric_Client_CliHandler{
 		$status = true;
 		$msg = '';
 		$cli = new Ric_Client_Cli($argv, $env);
+		$cli->loadConfigFile($cli->getArgument('configFile')); // load cofig file if present
 		$command = array_shift($cli->arguments);
 		if( $cli->getOption('verbose') ){
 			self::dumpParameters($command, $cli);
@@ -44,10 +45,10 @@ class Ric_Client_CliHandler{
 					$msg = self::commandAdmin($client, $cli);
 					break;
 				case 'help':
-					$msg = $client->getHelp(reset($cli->arguments));
+					$msg = self::getHelp(reset($cli->arguments));
 					break;
 				default:
-					throw new RuntimeException('command expected'.PHP_EOL.$client->getHelp());
+					throw new RuntimeException('command expected'.PHP_EOL.self::getHelp());
 
 			}
 			if( $cli->getOption('verbose') ){
@@ -83,6 +84,29 @@ class Ric_Client_CliHandler{
 			$secret = trim(file_get_contents($filePath));
 		}
 		return $secret;
+	}
+
+	/**
+	 * @param string $command
+	 * @return string
+	 */
+	static protected function getHelp($command='global'){
+		$helpString = '';
+		// extract from README-md
+		$readMePath = __DIR__.'/README.md';
+		if( file_exists($readMePath) ){
+			$helpString = file_get_contents($readMePath);
+		}else{
+			// ric command line single file README.md hack
+			$thisFileContent = file_get_contents(__FILE__);
+			if( preg_match('~^####### README.md #######$(.*?)^####### README.md #######$~sm', $thisFileContent, $matches) ){
+				$helpString = $matches[1];
+			}
+		}
+		if($command and preg_match('~\n## Help '.preg_quote($command, '~').'(.*?)(\n## |$)~s', $helpString, $matches) ){
+			$helpString = $matches[1];
+		}
+		return $helpString;
 	}
 
 	/**
@@ -193,7 +217,7 @@ class Ric_Client_CliHandler{
 	 */
 	static protected function commandAdmin($client, $cli){
 		if( count($cli->arguments)==0 ){
-			throw new RuntimeException('admin command expected'.PHP_EOL.$client->getHelp('admin'));
+			throw new RuntimeException('admin command expected'.PHP_EOL.self::getHelp('admin'));
 		}
 		$adminCommand = $cli->arguments[0];
 		if( $adminCommand=='info' ){

@@ -487,24 +487,6 @@ class Ric_Client_Client{
 		return $response;
 	}
 
-
-	/**
-	 * @param string $command
-	 * @return string
-	 */
-	public function getHelp($command='global'){
-		$helpString = '';
-		// extract from README-md
-		$readMePath = __DIR__.'/README.md';
-		if( file_exists($readMePath) ){
-			$helpString = file_get_contents($readMePath);
-		}
-		if($command and preg_match('~\n## Help '.preg_quote($command, '~').'(.*?)(\n## |$)~s', $helpString, $matches) ){
-			$helpString = $matches[1];
-		}
-		return $helpString;
-	}
-
 	##### TMP File handling ########
 	protected $tmpFilePaths = [];
 	protected $tmpFileDir = ''; // use system default
