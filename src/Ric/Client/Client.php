@@ -304,10 +304,12 @@ class Ric_Client_Client{
 			$filePath = $tmpTarFile;
 		}elseif( $resource=='STDIN' ){
 			$filePath = $this->getTmpFilePath();
-			$handle = fopen("php://input", "rb");
-			while (!feof($handle)) {
-				$data = fread($handle, 1000000);
+			while( !feof(STDIN) ) {
+				$data = fread(STDIN, 1000000);
 				file_put_contents($filePath, $data, FILE_APPEND);
+			}
+			if( filesize($filePath)==0 ){
+				throw new RuntimeException('STDIN was empty, i stop here');
 			}
 		}elseif( preg_match('~^mysql://~', $resource) ){
 			throw new RuntimeException('resource type mysql not implemented');
