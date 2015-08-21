@@ -1,14 +1,1310 @@
 #!/usr/bin/php -d variables_order=EGPCS
 <?php
 
-require_once __DIR__.'/CliHandler.php';
-require_once __DIR__.'/Client.php';
-require_once __DIR__.'/Cli.php';
-require_once __DIR__.'/../Rest/Client.php';
-exit(Ric_Client_CliHandler::handleExecute($argv, $_ENV)); // command line status
+
+
+
+
+exit(RC_CliHandler::handleExecute($argv, $_ENV)); // command line status
+
+
+// build: 2015-08-21 21:02:29
+
+
+# CliHandler.php
+
+
+/**
+ * todo check for to many arguments, helperFunction ?
+ * Class RC_CliHandler
+ */
+class RC_CliHandler{
+
+	/**
+	 * @param array $argv
+	 * @param $env
+	 * @return int
+	 */
+	static public function handleExecute($argv, $env){
+		$status = true;
+		$msg = '';
+		$cli = new RC_Cli($argv, $env);
+		$cli->loadConfigFile($cli->getArgument('configFile')); // load cofig file if present
+		$command = array_shift($cli->arguments);
+		if( $cli->getOption('verbose') ){
+			self::dumpParameters($command, $cli);
+		}
+
+		try{
+			$auth = $cli->getOption('auth', self::resolveSecretFile($cli->getOption('authFile')));
+			$client = new RC_Client($cli->getOption('server'), $auth);
+			$client->setDebug($cli->getOption('verbose'));
+			switch($command){
+				case 'backup':
+					$msg = self::commandBackup($client, $cli);
+					break;
+				case 'check':
+					$msg = self::commandCheck($client, $cli);
+					break;
+				case 'list':
+					$msg = self::commandList($client, $cli);
+					break;
+				case 'restore':
+					$msg = self::commandRestore($client, $cli);
+					break;
+				case 'delete':
+					$msg = self::commandDelete($client, $cli);
+					break;
+				case 'admin':
+					$msg = self::commandAdmin($client, $cli);
+					break;
+				case 'help':
+					$msg = self::getHelp(reset($cli->arguments));
+					break;
+				default:
+					throw new RuntimeException('command expected'.PHP_EOL.self::getHelp());
+
+			}
+			if( $cli->getOption('verbose') ){
+				echo $client->getLog();
+			}
+		}catch(Exception $e){
+			$status = 1;
+			ini_set('display_errors', 'stderr'); // ensure we write to STDERR
+			fwrite(STDERR, trim('ERROR: '.$e->getMessage()).PHP_EOL);
+#			file_put_contents("php://stderr", rtrim($e->getMessage()).PHP_EOL);
+		}
+
+		if( !$cli->getOption('quite') ){
+			echo rtrim($msg).PHP_EOL; // add trailing newline
+		}
+		if( is_bool($status) ){
+			$status = (int) !$status;
+		}
+		return $status; // success -> 0 , failed >= 1
+	}
+
+	/**
+	 * @param string $filePath
+	 * @throws RuntimeException
+	 * @return string
+	 */
+	static protected function resolveSecretFile($filePath){
+		$secret = '';
+		if( $filePath!='' ){
+			if( !file_exists($filePath) OR !is_readable($filePath) ){
+				throw new RuntimeException('authFile not found or not readable: '.$filePath);
+			}
+			$secret = trim(file_get_contents($filePath));
+		}
+		return $secret;
+	}
+
+	/**
+	 * @param string $command
+	 * @return string
+	 */
+	static protected function getHelp($command='global'){
+		$helpString = '';
+		// extract from README-md
+		$readMePath = __DIR__.'/README.md';
+		if( file_exists($readMePath) ){
+			$helpString = file_get_contents($readMePath);
+		}else{
+			// ric command line single file README.md hack
+			$thisFileContent = file_get_contents(__FILE__);
+			if( preg_match('~^####### README.md #######$(.*?)^####### README.md #######$~sm', $thisFileContent, $matches) ){
+				$helpString = $matches[1];
+			}
+		}
+		if($command and preg_match('~\n## Help '.preg_quote($command, '~').'(.*?)(\n## |$)~s', $helpString, $matches) ){
+			$helpString = $matches[1];
+		}
+		return $helpString;
+	}
+
+	/**
+	 * @param RC_Client $client
+	 * @param RC_Cli $cli
+	 * @return string
+	 * @throws RuntimeException
+	 */
+	static protected function commandBackup($client, $cli){
+		$resource = $cli->getArgument(1);
+		if( count($cli->arguments)==1 ){
+			if( is_file($resource) ){
+				$targetFileName = basename($resource);
+			}elseif( is_dir($resource) ){
+				$targetFileName = basename($resource).'.tar.bz2';
+			}else{
+				throw new RuntimeException('no targetFileName given, but resource is not a regular file or dir!');
+			}
+		}else{
+			$targetFileName = $cli->getArgument(2);
+		}
+		$targetFileName = $cli->getOption('prefix','').$targetFileName;
+		$password = $cli->getOption('pass', self::resolveSecretFile($cli->getOption('passFile')));
+		$client->backup($resource, $targetFileName, $password, $cli->getOption('retention'), $cli->getOption('timestamp'), $cli->getOption('minReplicas'), $cli->getOption('minSize'));
+		return 'OK'.PHP_EOL.$targetFileName;
+	}
+
+	/**
+	 * @param RC_Client $client
+	 * @param RC_Cli $cli
+	 * @return string
+	 * @throws RuntimeException
+	 */
+	static protected function commandCheck($client, $cli){
+		$targetFileName = $cli->getArgument(1);
+		$targetFileName = $cli->getOption('prefix','').$targetFileName;
+		$minTimestamp = $cli->getOption('minTimestamp');
+		if( $minTimestamp<0 ){
+			$minTimestamp = time()+intval($minTimestamp); // add because $minTimestamp is negative
+		}
+		$client->check($targetFileName, $cli->getOption('minReplicas'), $cli->getOption('sha1'), $cli->getOption('minSize'), $minTimestamp);
+		return 'OK';
+	}
+
+	/**
+	 * @param RC_Client $client
+	 * @param RC_Cli $cli
+	 * @return string
+	 * @throws RuntimeException
+	 */
+	static protected function commandList($client, $cli){
+		$msg = '';
+		$targetFileName = $cli->arguments[0];
+		$targetFileName = $cli->getOption('prefix','').$targetFileName;
+		$versions = $client->versions($targetFileName);
+		$msg.= $targetFileName.PHP_EOL;
+		$msg.= 'Date       Time     Version (sha1)                           Size'.PHP_EOL;
+		$msg.= '----------|--------|----------------------------------------|--------------'.PHP_EOL;
+		$size = 0;
+		foreach( $versions as $fileVersion ){
+			$msg.= date('Y-m-d H:i:s', $fileVersion['timestamp']).' '.$fileVersion['version'].' '.sprintf('%14d', $fileVersion['size']).PHP_EOL;
+			$size+=  $fileVersion['size'];
+		}
+		$msg.= '------------------------------------------------------------|--------------'.PHP_EOL;
+		$msg.= sprintf('versions: %-4d ', count($versions)).'                                              '.sprintf('%14d', $size).PHP_EOL;
+		return $msg;
+	}
+
+	/**
+	 * @param RC_Client $client
+	 * @param RC_Cli $cli
+	 * @return string
+	 * @throws RuntimeException
+	 */
+	static protected function commandRestore($client, $cli){
+		$targetFileName = $cli->arguments[0];
+		if( count($cli->arguments)==1 ){
+			$resource = getcwd().'/'.basename($targetFileName);
+		}else{
+			$resource = $cli->arguments[1];
+		}
+		$targetFileName = $cli->getOption('prefix','').$targetFileName;
+		$client->restore($targetFileName, $resource, $cli->getOption('pass'), $cli->getOption('version'), (true AND $cli->getOption('overwrite')));
+		return 'OK';
+	}
+
+	/**
+	 * @param RC_Client $client
+	 * @param RC_Cli $cli
+	 * @return string
+	 * @throws RuntimeException
+	 */
+	static protected function commandDelete($client, $cli){
+		$targetFileName = $cli->getArgument(1);
+		$version = $cli->getArgument(2);
+		if( $targetFileName===null OR $version===null ){
+			throw new RuntimeException('name and version needed, use "all" for all version');
+		}
+		$targetFileName = $cli->getOption('prefix','').$targetFileName;
+		return $client->delete($targetFileName, $version);
+	}
+
+	/**
+	 * @param RC_Client $client
+	 * @param RC_Cli $cli
+	 * @return string
+	 * @throws RuntimeException
+	 */
+	static protected function commandAdmin($client, $cli){
+		if( count($cli->arguments)==0 ){
+			throw new RuntimeException('admin command expected'.PHP_EOL.self::getHelp('admin'));
+		}
+		$adminCommand = $cli->arguments[0];
+		if( $adminCommand=='info' ){
+			$msg = json_encode($client->info(), JSON_PRETTY_PRINT);
+		}elseif( $adminCommand=='list' ){
+			$msg = join(PHP_EOL, $client->listFiles());
+		}elseif( $adminCommand=='listDetails' ){
+			$msg = print_r($client->listFileDetails(), true);
+		}elseif( $adminCommand=='health' ){
+			$msg = $client->health();
+		}elseif( $adminCommand=='addServer' ){
+			$msg = $client->addServer($cli->arguments[1]);
+		}elseif( $adminCommand=='removeServer' ){
+			$msg = $client->removeServer($cli->arguments[1]);
+		}elseif( $adminCommand=='joinCluster' ){
+			$msg = $client->joinCluster($cli->arguments[1]);
+		}elseif( $adminCommand=='leaveCluster' ){
+			$msg = $client->leaveCluster();
+		}elseif( $adminCommand=='removeFromCluster' ){
+			$msg = $client->removeFromCluster($cli->arguments[1]);
+		}else{
+			throw new RuntimeException('unknown admin command');
+		}
+		return $msg;
+	}
+
+	/**
+	 * @param string $command
+	 * @param RC_Cli $cli
+	 */
+	protected static function dumpParameters($command, $cli){
+		echo 'command: ' . $command . PHP_EOL;
+		echo 'arguments: ';
+		foreach( $cli->arguments as $value ){
+			echo '"' . $value . '", ';
+		}
+		echo PHP_EOL;
+		echo 'options: ';
+		foreach( $cli->options as $key => $value ){
+			echo $key . ': "' . $value . '", ';
+		}
+		echo PHP_EOL;
+		echo 'configFileOptions: ';
+		foreach( $cli->configFileOptions as $key => $value ){
+			echo $key . ': "' . $value . '", ';
+		}
+		echo PHP_EOL;
+		echo 'environment: ';
+		foreach( $cli->env as $key => $value ){
+			echo $key . ': "' . $value . '", ';
+		}
+		echo PHP_EOL;
+	}
+
+}
+
+# Client.php
+
+
+/**
+ * encryption
+ * http://www.shellhacks.com/en/Encrypt-And-Decrypt-Files-With-A-Password-Using-OpenSSL
+ * openssl enc -aes-256-cbc -salt -in file.txt -out file.txt.enc -k PASS
+ * openssl enc -aes-256-cbc -d -in file.txt.enc -out file.txt -k PASS
+ *
+ * Class RC_Client
+ */
+class RC_Client{
+
+	const MIN_SERVER_VERSION = '0.4.0'; // server needs to be on this or a higher version, BUT on the same MAJOR version  ok: 0.4.0 < 0.8.3  but fail:  0.4.0 < 2.3.0  because client is to old
+
+	protected $server = '';
+	protected $auth = '';
+	protected $log = '';
+	protected $debug = false;
+
+	/**
+	 * @param string $serverHostPort
+	 * @param $auth
+	 */
+	public function __construct($serverHostPort, $auth){
+		$this->server = $serverHostPort;
+		$this->logDebug('server:'.$serverHostPort);
+		$this->auth = $auth;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getLog(){
+		return $this->log;
+	}
+
+	/**
+	 * @param $bool
+	 */
+	public function setDebug($bool){
+		$this->debug = (true AND $bool);
+	}
+
+	/**
+	 * @param string $msg
+	 */
+	protected function log($msg){
+		$this->log.= $msg.PHP_EOL;
+	}
+
+	/**
+	 * @param string $msg
+	 */
+	protected function logDebug($msg){
+		if( $this->debug ){
+			$this->log.= date('Y-m-d H:i:s').' '.$msg.PHP_EOL;
+		}
+	}
+
+	/**
+	 * build api url
+	 * @param string $fileName
+	 * @param string $command
+	 * @param array $parameters
+	 * @throws RuntimeException
+	 * @return string
+	 */
+	protected function buildUrl($fileName, $command='', $parameters=[]){
+		if( $this->server=='' ){
+			throw new RuntimeException('no server given');
+		}
+		$url = 'http://'.$this->server.'/';
+		$url.= $fileName;
+		if( $this->auth!='' ){
+			$parameters+= ['token'=>$this->auth];  // add token
+		}
+		$parameters+= ['minServerVersion'=>self::MIN_SERVER_VERSION];
+		$url.= '?'.$command;
+		if( !empty($parameters) ){
+			$url.= '&'.http_build_query($parameters);
+		}
+		$this->logDebug(__METHOD__.' url:'.$url);
+		return $url;
+	}
+
+	/**
+	 * @param string $response
+	 * @param array $headers
+	 * @param string $responseFilePAth
+	 * @throws RuntimeException
+	 */
+	protected function checkServerResponse($response, $headers, $responseFilePAth=''){
+		if( !isset($headers['Http-Code']) ){
+			throw new RuntimeException('no api response code');
+		}
+		if( $headers['Http-Code']>=400 ){
+			$msg = 'Failed: with code: '.$headers['Http-Code'];
+			if( $response=='' AND $responseFilePAth!='' AND file_exists($responseFilePAth) AND filesize($responseFilePAth)<100000 ){
+				$response = file_get_contents($responseFilePAth);
+			}
+			$result = json_decode($response, true);
+			if( !empty($result['error']) ){
+				$msg.= ' Error: '.$result['error'];
+			}else{
+				$msg.= $response;
+			}
+			throw new RuntimeException($msg);
+		}
+	}
+
+	/**
+	 * @param string $filePath
+	 * @param string $name
+	 * @param int $timestamp to set correct modificationTime [default:requestTime]
+	 * @param string $retention to select the backup retention strategy [default:last3]
+	 * @param bool $noSync to suppress synchronisation to replication servers (used for internal sync)
+	 * @return array
+	 * @throws RuntimeException
+	 */
+	public function storeFile($filePath, $name='', $retention=null, $timestamp=null, $noSync=false){
+		$params = [];
+		if( $timestamp!==null ){
+			$params['timestamp'] = $timestamp;
+		}
+		if( $retention!==null ){
+			$params['retention'] = $retention;
+		}
+		if( $noSync ){
+			$params['noSync'] = 1;
+		}
+		$result = RR_Client::putFile($this->buildUrl($name, '', $params), $filePath, $headers);
+		$this->checkServerResponse($result, $headers);
+		return $result;
+	}
+
+	/**
+	 *
+	 * @param string $resource
+	 * @param string $targetFileName
+	 * @param string $password
+	 * @param string $retention
+	 * @param int $timestamp
+	 * @param int $minReplicas
+	 * @param int $minSize
+	 * @throws RuntimeException
+	 * @return bool
+	 */
+	public function backup($resource, $targetFileName, $password=null, $retention=null, $timestamp=null, $minReplicas=null, $minSize=1){
+		$rawFilePath = $this->getFilePathForResource($resource);
+
+		if( $timestamp=='file' ){
+			$timestamp = filemtime($rawFilePath);
+		}
+		if( $timestamp=='now' OR $timestamp<=0 ){
+			$timestamp = time();
+		}
+
+		if( filesize($rawFilePath)<$minSize ){
+			throw new RuntimeException('required min file size('.$minSize.') not reached (was '.filesize($rawFilePath).')');
+		}
+
+		$filePath = $this->getEncryptedFilePath($rawFilePath, $password, substr(md5($targetFileName),0,8)); // we have to provide the same salt for the same filename to get a file with the same sha1, but it should be not the same for all files, so we take the $targetFileName itself ;-)
+
+		$sha1 = sha1_file($filePath);
+		$params = [];
+		$params['sha1'] = $sha1;
+		$params['timestamp'] = $timestamp;
+		if( $retention ){
+			$params['retention'] = $retention;
+		}
+		$fileUrl = $this->buildUrl($targetFileName, '', $params);
+		// Post
+		$this->logDebug('POST refresh to: '.$fileUrl.' with timestamp: '.$timestamp.'('.date('Y-m-d H:i:s', $timestamp).')');
+		$headers = [];
+		$response = trim(RR_Client::post($fileUrl, [], $headers));
+		$this->checkServerResponse($response, $headers);
+		if( $response!=='1' ){
+			// Put
+			$this->logDebug('POST refresh failed, file has to be sent via PUT');
+			$headers = [];
+			$response = RR_Client::putFile($fileUrl, $filePath, $headers);
+			$this->checkServerResponse($response, $headers);
+			$this->logDebug('PUT result:'. $response);
+		}else{
+			$this->logDebug('POST refresh succeeded, no file transfer necessary');
+		}
+		// Verify
+		$this->check($targetFileName, $minReplicas, $sha1);
+		return true;
+	}
+
+	/**
+	 * @param $targetFileName
+	 * @param int $minReplicas
+	 * @param string $sha1
+	 * @param int $minSize
+	 * @param int $minTimestamp
+	 * @throws RuntimeException
+	 * @return bool
+	 */
+	public function check($targetFileName, $minReplicas=null, $sha1=null, $minSize=null, $minTimestamp=null){
+		$params = [];
+		if( $minReplicas!==null ){
+			$params['minReplicas'] = $minReplicas;
+		}
+		if( $sha1!==null ){
+			$params['sha1'] = $sha1;
+		}
+		if( $minSize!==null ){
+			$params['minSize'] = $minSize;
+		}
+		if( $minTimestamp!==null ){
+			$params['minTimestamp'] = $minTimestamp;
+		}
+		$fileUrl = $this->buildUrl($targetFileName, 'check', $params);
+		$response = trim(RR_Client::get($fileUrl, [], $headers));
+		$this->checkServerResponse($response, $headers);
+		$this->logDebug('Check ('.$fileUrl.') result: '.$response);
+		$result = json_decode($response, true);
+		if( !isset($result['status']) OR $result['status']!='OK' ){
+			throw new RuntimeException('check failed: '.$response);
+		}
+		return true;
+	}
+
+	/**
+	 *
+	 * @param string $targetFileName
+	 * @param string $resource
+	 * @param null $password
+	 * @param string $version
+	 * @param bool $overwrite
+	 * @return bool
+	 */
+	public function restore($targetFileName, $resource, $password=null, $version=null, $overwrite=true){
+		$tmpFilePath = $this->getTmpFilePath();
+		$params = [];
+		if( $version ){
+			$params['version'] = $version;
+		}
+		$fileUrl = $this->buildUrl($targetFileName, '', $params);
+		// get
+		$oFH = fopen($tmpFilePath, 'w+');
+		$this->logDebug('get: '.$fileUrl);
+		RR_Client::get($fileUrl, [], $headers, $oFH);
+		$this->checkServerResponse('', $headers, $tmpFilePath);
+		$this->restoreResourceFromFile($tmpFilePath, $resource, $password, $overwrite);
+		return true;
+	}
+
+	/**
+	 * @param $encryptedFilePath
+	 * @param string $resource
+	 * @param string $password
+	 * @param bool $overwrite
+	 * @throws RuntimeException
+	 * @internal param string $filePath
+	 */
+	protected function restoreResourceFromFile($encryptedFilePath, $resource, $password, $overwrite=true){
+		$this->logDebug('downloaded as tmpFile: '.$encryptedFilePath. '['.filesize($encryptedFilePath).']');
+		$filePath = $this->getDecryptedFilePath($encryptedFilePath, $password);
+		if( preg_match('~^mysql://~', $resource) ){
+			throw new RuntimeException('resource type mysql not implemented');
+		}elseif( preg_match('~^redis://~', $resource) ){ // redis://pass@123.234.23.23:3343/mykeys_* <- dump as msgpack (ttls?)
+			throw new RuntimeException('resource type mysql not implemented');
+		}else{
+			// restore as file
+			if( file_exists($resource) AND !$overwrite ){
+				throw new RuntimeException('resource ['.realpath($resource).'] (file or dir) already exists! restore skipped');
+			}
+			$this->logDebug('restore as file: '.$resource);
+			if( !copy($filePath, $resource) ){
+				throw new RuntimeException('restore as file: '.$resource.' failed!');
+			}
+		}
+	}
+
+	/**
+	 * transfor a resource into a file
+	 * file->file
+	 * dir-> tar.gz->file
+	 * mysql -> sql-dump-file
+	 * redis -> ?
+	 * -
+	 * @param string $resource
+	 * @throws RuntimeException
+	 * @return string
+	 */
+	protected function getFilePathForResource($resource){
+		if( is_file($resource) ){
+			$this->logDebug('file resource detected');
+			$filePath = $resource;
+		}elseif( is_dir($resource) ){
+			$this->logDebug('dir resource detected');
+			$tmpTarFile = $this->getTmpFilePath('.tar.bz2');
+			$command = 'tar -cjf '.$tmpTarFile.' -C '.realpath($resource).' .'; // change to dir and backup content of dir not the upper path     backup /etc/apache/ -> will back conf,sites-enabled ... not /etc/apache/conf
+			$this->logDebug('dir as tar with bzip: '.$command);
+			exec($command, $output, $status);
+			if( $status!=0 ){
+				throw new RuntimeException('tar dir failed: '.$command.' with: '.print_r($output, true), 500);
+			}
+			touch($tmpTarFile, filemtime(rtrim($resource,'/').'/.')); // get the dir mod-date and set it to created tar
+			$this->logDebug('set modification time of tar to '.date('Y-m-d H:i:s', filemtime($tmpTarFile)));
+			$filePath = $tmpTarFile;
+		}elseif( $resource=='STDIN' ){
+			$filePath = $this->getTmpFilePath();
+			$handle = fopen("php://input", "rb");
+			while (!feof($handle)) {
+				$data = fread($handle, 1000000);
+				file_put_contents($filePath, $data, FILE_APPEND);
+			}
+		}elseif( preg_match('~^mysql://~', $resource) ){
+			throw new RuntimeException('resource type mysql not implemented');
+		}elseif( preg_match('~^redis://~', $resource) ){ // redis://pass@123.234.23.23:3343/mykeys_* <- dump as msgpack (ttls?)
+			throw new RuntimeException('resource type mysql not implemented');
+		}else{
+			throw new RuntimeException('resource not found or unsupported type');
+		}
+		return $filePath;
+	}
+
+	/**
+	 * encrypt to a new file
+	 * if the passowrd is empty, the result file is still encoded with a salt !!!
+	 * @param string $filePath
+	 * @param string $password
+	 * @param string $salt
+	 * @throws RuntimeException
+	 * @return string
+	 */
+	protected function getEncryptedFilePath($filePath, $password, $salt='_sdffHGetdsga'){
+		if( !is_file($filePath) ){
+			throw new RuntimeException('file not found or not a regular file: '.$filePath);
+		}
+
+		$encryptedFilePath = $this->getTmpFilePath('.ricenc');
+
+		$command = 'openssl enc -aes-256-cbc -S '.bin2hex(substr($salt,0,8)).' -in '.$filePath.' -out '.$encryptedFilePath.' -k '.escapeshellarg((string) $password);
+		exec($command, $output, $status);
+		if( $status!=0 ){
+			throw new RuntimeException('encryption failed: '.$command.' with: '.print_r($output, true), 500);
+		}
+
+		return $encryptedFilePath;
+	}
+
+	/**
+	 * encrypt to a new file
+	 * if the passowrd is empty, the result file is still encoded with a salt !!!
+	 * @param string $encryptedFilePath
+	 * @param string $password
+	 * @return string
+	 * @throws RuntimeException
+	 */
+	protected function getDecryptedFilePath($encryptedFilePath, $password){
+		if( !is_file($encryptedFilePath) ){
+			throw new RuntimeException('file not found or not a regular file: '.$encryptedFilePath);
+		}
+		$decryptedFilePath = $this->getTmpFilePath();
+		$command = 'openssl enc -aes-256-cbc -d -in '.$encryptedFilePath.' -out '.$decryptedFilePath.' -k '.escapeshellarg((string) $password);
+		exec($command, $output, $status);
+		if( $status!=0 ){
+			throw new RuntimeException('decryption failed '.$command.' with '.print_r($output, true), 500);
+		}
+
+		return $decryptedFilePath;
+	}
+
+	/**
+	 * delete on backupClster
+	 * @param string $targetFileName
+	 * @param string|null $version
+	 * @return string
+	 */
+	public function delete($targetFileName, $version=null){
+		$params = [];
+		if( $version!==null AND $version!='all' ){
+			$params['version'] = $version;
+		}
+		$response = RR_Client::delete($this->buildUrl($targetFileName, 'delete', $params), [], $headers);
+		$this->checkServerResponse($response, $headers);
+		return $response;
+	}
+
+	/**
+	 * get version list of a file
+	 * @param $targetFileName
+	 * @return array
+	 */
+	public function versions($targetFileName){
+		$response = RR_Client::get($this->buildUrl($targetFileName, 'list'), [], $headers);
+		$this->checkServerResponse($response, $headers);
+		return json_decode($response, true);
+	}
+
+	/**
+	 * get server info
+	 * if admin, you get more info
+	 * @return array
+	 */
+	public function info(){
+		$response = RR_Client::get($this->buildUrl('', 'info'), [], $headers);
+		$this->checkServerResponse($response, $headers);
+		return json_decode($response, true);
+	}
+
+	/**
+	 * list files
+	 * @return array
+	 */
+	public function listFiles(){
+		$response = RR_Client::get($this->buildUrl('', 'list'), [], $headers);
+		$this->checkServerResponse($response, $headers);
+		return json_decode($response, true);
+	}
+
+	/**
+	 * list files with details
+	 * @return array
+	 */
+	public function listFileDetails(){
+		$response = RR_Client::get($this->buildUrl('', 'listDetails'), [], $headers);
+		$this->checkServerResponse($response, $headers);
+		return json_decode($response, true);
+	}
+
+	/**
+	 * check cluster health
+	 * @throws RuntimeException
+	 * @return string
+	 */
+	public function health(){
+		$response = RR_Client::get($this->buildUrl('', 'health'), [], $headers);
+		$this->checkServerResponse($response, $headers);
+		if( substr($response,0,2)!='OK' ){
+			throw new RuntimeException('health check critical: '.$response);
+		}
+		return $response;
+	}
+
+	/**
+	 * @param $serverHostPort
+	 * @return string
+	 */
+	public function addServer($serverHostPort){
+		$response = RR_Client::post($this->buildUrl('', '', ['action'=>'addServer', 'addServer'=>$serverHostPort]), [], $headers);
+		$this->checkServerResponse($response, $headers);
+		return $response;
+	}
+
+	/**
+	 * @param $serverHostPort
+	 * @return string
+	 */
+	public function removeServer($serverHostPort){
+		$response = RR_Client::post($this->buildUrl('', '', ['action'=>'removeServer', 'removeServer'=>$serverHostPort]), [], $headers);
+		$this->checkServerResponse($response, $headers);
+		return $response;
+	}
+
+	/**
+	 * @param $serverHostPort
+	 * @return string
+	 */
+	public function joinCluster($serverHostPort){
+		$response = RR_Client::post($this->buildUrl('', '', ['action'=>'joinCluster', 'joinCluster'=>$serverHostPort]), [], $headers);
+		$this->checkServerResponse($response, $headers);
+		return $response;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function leaveCluster(){
+		$response = RR_Client::post($this->buildUrl('', '', ['action'=>'leaveCluster']), [], $headers);
+		$this->checkServerResponse($response, $headers);
+		return $response;
+	}
+
+	/**
+	 * @param string $serverHostPort
+	 * @return string
+	 */
+	public function removeFromCluster($serverHostPort){
+		$response = RR_Client::post($this->buildUrl('', '', ['action'=>'removeFromCluster', 'removeFromCluster'=>$serverHostPort]), [], $headers);
+		$this->checkServerResponse($response, $headers);
+		return $response;
+	}
+
+	##### TMP File handling ########
+	protected $tmpFilePaths = [];
+	protected $tmpFileDir = ''; // use system default
+
+	/**
+	 * set the tmpDir to writable and secure location
+	 * @param $dir
+	 */
+	public function setTmpDir($dir){
+		$this->tmpFileDir = $dir;
+	}
+	/**
+	 * return filePath
+	 * file will be delete on script termination (via register_shutdown_function deleteTmpFiles)
+	 * extension ".jpg" for imagemagick zum beispiel
+	 * use __CLASS__
+	 * if self::$tmpFileDir is empty the system default tmp dir is used
+	 * @param string $extension
+	 * @return string
+	 */
+	public function getTmpFilePath($extension=''){
+		$tmpFile = $this->tmpFileDir;
+		if( $tmpFile=='' ){
+			$tmpFile = sys_get_temp_dir();
+		}
+		$tmpFile.= '/_'.__CLASS__.'_'.uniqid('', true).$extension;
+		$this->tmpFilePaths[] = $tmpFile;
+		return $tmpFile;
+	}
+
+	/**
+	 * remove all tmpFiles
+	 */
+	public function __destruct(){
+		foreach( $this->tmpFilePaths as $tmpFilePath ){
+			if( file_exists($tmpFilePath) ){
+				unlink($tmpFilePath);
+			}
+		}
+	}
+}
+
+# Cli.php
+
+
+class RC_Cli {
+
+	public $scriptName = '';
+	public $arguments = [];
+	public $options = [];
+	public $configFileOptions = [];
+	public $env = [];
+
+	/**
+	 * @param array $argv
+	 * @param $env
+	 * @param string $envPrefix
+	 * @param string $configFilePath
+	 */
+	public function __construct($argv, $env, $envPrefix='ric', $configFilePath=''){
+		$this->scriptName = array_shift($argv);
+		while( ($arg = array_shift($argv))!==null ){
+			if( substr($arg, 0, 2)==='--' ){// Is it a option? (prefixed with --)
+				$option = substr($arg, 2);
+				if( strpos($option, '=')!==false ){// is it the syntax '--option=argument'?
+					list($key,$value) = explode('=', $option, 2);
+					$this->options[$key] = $value;
+				}else{
+					$this->options[$option] = true;
+				}
+			}elseif( substr($arg, 0, 1)==='-' ){ // Is it a flag or a serial of flags? (prefixed with -)
+				for($i = 1; isset($arg[$i]); $i++){
+					$this->options[ $arg[$i]] = true;
+				}
+			}else{
+				$this->arguments[] = $arg;// finally, it is not option, nor flag
+			}
+		}
+		// env
+		foreach( $env as $key=>$value ){
+			if( preg_match('~^'.$envPrefix.'([A-Z].+)$~', $key, $matches) ){
+				$this->env[lcfirst($matches[1])] = $value;
+			}
+		}
+		$this->loadConfigFile($configFilePath);
+	}
+
+	/**
+	 * @param string $configFilePath
+	 * @throws RuntimeException
+	 */
+	public function loadConfigFile($configFilePath){
+		if( $configFilePath!='' ){
+			if( !file_exists($configFilePath) ){
+				throw new RuntimeException('config file not found: '.$configFilePath);
+			}
+			foreach( file($configFilePath) as $index=>$configLine ){
+				$configLine = trim($configLine);
+				if( $configLine=='' OR substr($configLine,0,1)=='#' OR substr($configLine,0,1)=='//' ){
+					continue;
+				}
+				if( !preg_match('~^(\w+):\s*(.*)~', $configLine, $matches) ){
+					throw new RuntimeException('invalid config at line: '.($index+1).' "'.$configLine.'"');
+				}
+				$this->configFileOptions[$matches[1]] = $matches[2];
+			}
+		}
+	}
+
+	/**
+	 * @param int $argumentPosition // starts with 1 !!!
+	 * @param string|null $default
+	 * @return null
+	 */
+	public function getArgument($argumentPosition=1, $default=null){
+		$argsIndex = $argumentPosition-1;
+		return isset($this->arguments[$argsIndex]) ? $this->arguments[$argsIndex] : $default;
+	}
+
+	/**
+	 * return option > configFile > env > default
+	 * @param string $name
+	 * @param string $default
+	 * @return string
+	 */
+	public function getOption($name, $default=null){
+		$return = $default;
+		if( array_key_exists($name, $this->options) ){
+			$return = $this->options[$name];
+		}elseif( array_key_exists($name, $this->configFileOptions) ){
+			$return = $this->configFileOptions[$name];
+		}elseif( array_key_exists($name, $this->env) ){
+			$return = $this->env[$name];
+		}
+		return $return;
+	}
+}
+# ../Rest/Client.php
+
+
+
+/**
+ * Class RR_Client
+ * - use $header to send AND RECEIVE headers (status Code is added as header "Http-Code")
+ *   $headers=['User-Agent' => 'Mozilla/5.0'];RR_Client::post($apiUrl, $data, $headers, $curl);$status = $headers['Http-Code']
+ * - use $curl for faster subsequent requests to the same host (no reconnect)
+ *   RR_Client::post($apiUrl, $data, $headers, $curl); $headers=[]; RR_Client::post($apiUrl, $otherData, $headers, $curl);
+ * - use $outputFileHandle to store the response content in a file
+ *   $oFH = fopen('response.html', 'w+'); RR_Client::get($url, [], [], null, $oFh);fclose($oFH);
+ */
+class RR_Client {
+
+	/**
+	 * @param string $url
+	 * @param array $parameters
+	 * @param array $headers
+	 * @return string
+	 */
+	static public function head($url, $parameters=[], &$headers=[]){
+		return self::doRequest($url, 'HEAD', $parameters, $headers);
+	}
+
+	/**
+	 * @param string $url
+	 * @param array $parameters
+	 * @param array $headers
+	 * @param null|resource $outputFileHandle
+	 * @return string
+	 */
+	static public function get($url, $parameters=[], &$headers=[], $outputFileHandle=null){
+		return self::doRequest($url, 'GET', $parameters, $headers, $curl, $outputFileHandle);
+	}
+
+	/**
+	 * post('http..', ['a'=>'b','foo'=>..]) - post array
+	 * post('http..', '[jsoncontent]') - post the content
+	 * post('http..', '@/home/www/..') - post the content of a file with post
+	 * @param string $url
+	 * @param string|array $dataStringOrArray
+	 * @param array $headers
+	 * @param null|resource $outputFileHandle
+	 * @return string
+	 */
+	static public function post($url, $dataStringOrArray=null, &$headers=[], $outputFileHandle=null){
+		return self::doRequest($url, 'POST', $dataStringOrArray, $headers, $curl, $outputFileHandle);
+	}
+
+	/**
+	 * @param string $url
+	 * @param string|array $dataStringOrArray
+	 * @param array $headers
+	 * @param null|resource $outputFileHandle
+	 * @return string
+	 */
+	static public function put($url, $dataStringOrArray=null, &$headers=[], $outputFileHandle=null){
+		return self::doRequest($url, 'PUT', $dataStringOrArray, $headers, $curl, $outputFileHandle);
+	}
+
+	/**
+	 * @param string $url
+	 * @param string $filePath
+	 * @param array $headers
+	 * @param null|resource $outputFileHandle
+	 * @return string
+	 */
+	static public function putFile($url, $filePath, &$headers=[], $outputFileHandle=null){
+		return self::doRequest($url, 'PUT-FILE', $filePath, $headers, $curl, $outputFileHandle);
+	}
+
+	/**
+	 * @param string $url
+	 * @param array $data
+	 * @param array $headers
+	 * @return string
+	 */
+	static public function delete($url, $data=[], &$headers=[]){
+		return self::doRequest($url, 'DELETE', $data, $headers);
+	}
+
+	/**
+	 *
+	 * $outputFileHandle: open fileHandle (fopen('..', 'w+)
+	 * $curl: you can get the curl handle (and provide it to avoid reconnects to the same host)
+	 * @param string $url
+	 * @param string $method
+	 * @param string|array $data
+	 * @param array|string $headers
+	 * @param bool|null|resource $curl
+	 * @param null|resource $outputFileHandle
+	 * @throws RuntimeException
+	 * @return string
+	 */
+	static public function doRequest($url, $method='GET', $data, &$headers=[], &$curl=false, $outputFileHandle=null){
+
+		// get request headers
+		$requestHeaders = [];
+		$headers = (array) $headers; // cast explizit, damit es es null uebergeben werden kann
+		foreach( $headers as $key=>$header ){
+			if( !is_int($key) ){
+				$header = $key.': '.$header;
+			}
+			$requestHeaders[] = $header;
+		}
+		$requestHeaders[] = 'Expect:';  // suppress code 100 request -> response  some infos https://support.urbanairship.com/entries/59909909--Expect-100-Continue-Issues-and-Risks
+		$headers = []; // clear for response headers
+
+		if( is_array($data) ){
+			$data = http_build_query($data);
+		}
+
+		if( is_resource($curl) ){
+			$ch = $curl;
+		}else{
+			$ch = curl_init();
+		}
+
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+		switch(strtoupper($method)){
+
+			/** @noinspection PhpMissingBreakStatementInspection */
+			case 'HEAD':
+				curl_setopt($ch, CURLOPT_NOBODY, true); // noBody > head
+			// then same as GET so fall through
+			case 'GET':
+				if( $data!='' ){
+					// todo check if url contains a ? then use &
+					$url.= '?'.$data;
+				}
+				break;
+			case 'POST':
+				curl_setopt($ch, CURLOPT_POST, TRUE);
+				curl_setopt($ch, CURLOPT_POSTFIELDS, $data); // array or string or filename mit "@/home/www..."
+				break;
+			case 'DELETE':
+				curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
+				curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+				break;
+			case 'PUT':
+				curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT');
+				curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+				break;
+			case 'PUT-FILE':
+				$filePath = $data;
+				if( !is_file($filePath) ){
+					throw new RuntimeException('put file: file '.$filePath.' not found or not a regular file');
+				}
+				$fh = fopen($filePath, 'rb');
+				curl_setopt($ch, CURLOPT_PUT, true);
+				curl_setopt($ch, CURLOPT_INFILE, $fh);
+				curl_setopt($ch, CURLOPT_INFILESIZE, filesize($filePath));
+				break;
+			default:
+				throw new RuntimeException('unknown method: '.$method);
+		}
+		curl_setopt($ch, CURLOPT_URL, $url);
+		curl_setopt($ch, CURLOPT_HTTPHEADER, $requestHeaders);
+		curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+		curl_setopt($ch, CURLOPT_HEADER, TRUE);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+
+		$headerFileHandle = fopen('php://memory', 'w+');
+		if( $outputFileHandle!==null ){
+			$contentFileHandle = $outputFileHandle;
+		}else{
+			$contentFileHandle = fopen('php://memory', 'w+');
+		}
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, false);
+		curl_setopt($ch, CURLOPT_FILE, $contentFileHandle);
+		curl_setopt($ch, CURLOPT_HEADER, false);
+		curl_setopt($ch, CURLOPT_WRITEHEADER, $headerFileHandle);
+
+		$curlResponse = curl_exec($ch);
+		if( $curlResponse===false ){
+			$maskedUrl = preg_replace('~token=\w+~', 'token=***', $url);
+			throw new RuntimeException('curl request failed: '.$method.' > '.$maskedUrl.' err:'.curl_errno($ch).': '.curl_error($ch));
+		}
+		$curlInfo = curl_getinfo($ch);
+		if( $curl===false ){
+			curl_close($ch);
+		}else{
+			$curl = $ch; // return curl handle
+		}
+		// headers
+		$headers['Http-Code'] = $curlInfo['http_code'];
+		rewind($headerFileHandle);
+		$headersString = fread($headerFileHandle, 10000000);
+		fclose($headerFileHandle);
+		$headers+= self::parseHeaders(trim($headersString));
+		// content
+		rewind($contentFileHandle);
+		$content = '';
+		if( $outputFileHandle===null ){
+			while (!feof($contentFileHandle)) {
+				$content.= fread($contentFileHandle, 81920);
+			}
+			fclose($contentFileHandle);
+		}
+		return $content;
+	}
+
+	/**
+	 * @param string $headerContent
+	 * @return array
+	 */
+	static protected function parseHeaders($headerContent){
+		$headerStrings = explode("\r\n", $headerContent);
+		$headers = [];
+		foreach( $headerStrings as $headerString ){
+			if( $headerString=='' ){
+				$headers = []; // reset all header, ist a new header block because of redirects!
+				continue;
+			}
+			$parts = explode(':', $headerString, 2);
+			if( count($parts)==2 ){
+				$headers[$parts[0]] = $parts[1];
+			}else{
+				$headers[$headerString] = $headerString;
+			}
+		}
+		return $headers;
+	}
+
+}
+/*
+
+####### README.md #######
+# RestInCloud Client
+
+## install
+
+	cd /downloads
+    wget https://raw.githubusercontent.com/SegFaulty/RestInCloud/master/src/Ric/Client/ric
+    chmod 755 ric
+	cd /usr/local/sbin/
+	ln -s /downloads/ric
+	ric help
+
+## Help global
+
+this commandline tool hilft dir resourcen (files, dirs, databases) als file in einem RestInCloud-Cluster zu backupen
+
+aus einer resource wird immer eine datei generiert, diese wird gzipped und encrypted und dann upgeloaded
+
+* wird das password weggelassen, wird die datei immernoch mit einem salt encrypted, kann also nicht im klartext gelesen werden, allerdings kann sie jeder entschluesseln
+
+
+### commands
+
+* ric help - show help
+* ric backup - store a a resource (file/dir/dump) in RestInCloud Backup Server
+* ric check - check if a resource is valid backuped
+* ric list - all versions of a resource
+* ric restore - restore a backuped resource
+* ric delete - delete a resource
+* ric admin - manage RestInCloud Server and Cluster
+
+use ric help {command} for command details
+
+### global options and configuration
+
+you can define every option as environment variable with prefix "ric" (server -> ricServer)
+
+* --config configFilePath (you can define all options in this config file, one per line "option: value" ...
+* --verbose show debug details default: false
+* --quite don't print anything except failures default: false
+* --auth {token}  default: ENV ricAuth -> ''
+* --authFile {tokenFilePath} read auth from file default: ENV ricAuthFile -> ''
+* --server RicServer default: ENV ricServer -> ''
+* --prefix prefix all target names default: ENV ricPrefix -> ''
+
+the configuration order is
+* use commandline option if present,
+* if not use option from config file if given and option present
+* if not use ric* environment variable if set
+* if not use application default
+
+## Help backup
+    ric backup {resource} [{targetFileName}] [options]
+
+    ric backup /home/www/ric/config/
+    ric backup /home/www/ric/config/ testService_host1_config.tar.gz --retention=last7
+
+backups the config dir (as tar.gz) with last7 versions
+procedure:
+* detect resource type (file, dir, mysql, redis ..) and make a file of it
+* encrypt the file with salt(based on targetFileName) and (optionally) password
+* (optionaly check minSize)
+* refresh this file with post request
+* if failed store file with put request
+* check the file (sha1, minSize, minReplicas)
+
+* use "STDIN" as resource string to backup the piped content
+*  useless example to backup the your hard-disk state for a year:
+*  df -h | ric backup STDIN partions.txt --retentions=365d
+
+
+### backup options
+
+* --pass Password
+* --passFile {passFilePath} read pass from file default: ENV ricPassFile -> ''
+* --retention default: last3
+* --timestamp as int or 'now' or 'file' default: now
+* --minReplicas default: max(1, count(servers)-1)
+* --minSize default: 1
+* --prefix
+
+## Help check
+
+    ric check testService_host1_config.tar.gz --minSize=100000 --minTimestamp=-3600
+
+### check options
+
+* --minTimestamp 123131231  or -86400 (see it as maxAge)
+* --minSize 23423
+* --sha1
+* --minReplicas 3
+* --prefix
+
+* --sic aktivere sic (nur nötig wenn keine andere sic option)
+* --sicChannel default --target
+* --sicServer default ENV: sicServer
+// setzt sic auf critical, if verified failed
+
+
+## Help restore
+
+	ric restore {fileName} [{localResource}] [options]
+
+    ric restore hostname%??%??homewww/ric/config.tar.gz /tmp/restore/
+
+### restore options
+
+* --pass Password
+* --overwrite   overwrite existing resource
+* --prefix
+
+ if --prefix is set, the restored file will not contains the prefix!
+
+## Help list
+
+    ric check /home/www/ric/config/
+
+## Help delete
+
+    ric delete {fileName} {version}
+
+    use version: "all" to delete all versions of {fileName}
+
+    ric delete error.config all
+    ric delete error.config 8aaa6c7bd96811293a2879ed45879b3cf5e4165b
+### delete options
+
+* --prefix
+
+## Help admin
+
+* info - sever info, as admin config included
+* health - cluster info, as admin with quota infos and failure details  "OK" / "WARNING" / "CRITICAL"
+* list - list all file(name)s
+* listDetails - list all files with details incl. all versions
+* joinCluster - join/build a cluster
+* leaveCluster - disconnect from a cluser and remove from all clusterNodes
+* removeFromCluster - remove given server from all clusterNodes
+* addServer - add a replication client
+* removeServer - remove a replication client
+
+a cluster is a bunch of servers, where all of them are added (addServer) to all servers, every server is a replicant of every server .. u got it
+
+    ric admin list
+    ric admin listDetails
+    ric admin info
+    ric admin health
+    ric admin joinCluster {clusterServer}
+    ric admin leaveCluster
+    ric admin removeFromCluster {server}
+    ric admin addServer {server}
+    ric admin removeServer {server}
+
+## Sic integration
+
+use the shell capabilities, wobei das, kein failed sendet, vielleicht gibts da noch was besseres, pipen oder so
 
 
 
 
 
-
+####### README.md #######
+*/

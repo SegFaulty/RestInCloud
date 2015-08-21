@@ -2,9 +2,11 @@
 
 ## install
 
-    git clone https://github.com/SegFaulty/RestInCloud.git
+	cd /downloads
+    wget https://raw.githubusercontent.com/SegFaulty/RestInCloud/master/src/Ric/Client/ric
+    chmod 755 ric
 	cd /usr/local/sbin/
-	ln -s /home/www/RestInCloud/src/Ric/Client/ric
+	ln -s /downloads/ric
 	ric help
 
 ## Help global
@@ -28,16 +30,23 @@ aus einer resource wird immer eine datei generiert, diese wird gzipped und encry
 
 use ric help {command} for command details
 
-### global options
+### global options and configuration
 
 you can define every option as environment variable with prefix "ric" (server -> ricServer)
 
+* --config configFilePath (you can define all options in this config file, one per line "option: value" ...
 * --verbose show debug details default: false
 * --quite don't print anything except failures default: false
 * --auth {token}  default: ENV ricAuth -> ''
 * --authFile {tokenFilePath} read auth from file default: ENV ricAuthFile -> ''
 * --server RicServer default: ENV ricServer -> ''
 * --prefix prefix all target names default: ENV ricPrefix -> ''
+
+the configuration order is
+* use commandline option if present,
+* if not use option from config file if given and option present
+* if not use ric* environment variable if set
+* if not use application default
 
 ## Help backup
     ric backup {resource} [{targetFileName}] [options]
