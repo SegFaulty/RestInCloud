@@ -56,7 +56,7 @@ the configuration order is
 
 backups the config dir (as tar.gz) with last7 versions
 procedure:
-* detect resource type (file, dir, mysql, redis ..) and make a file of it
+* detect resource type (file, dir, STDIN, (mysql, redis) ..) and make a file of it
 * encrypt the file with salt(based on targetFileName) and (optionally) password
 * (optionaly check minSize)
 * refresh this file with post request
