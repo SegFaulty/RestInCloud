@@ -1,4 +1,4 @@
-## Build
+## INSTALL
 * login to your docker host
 
     git clone https://github.com/SegFaulty/RestInCloud.git
@@ -11,7 +11,16 @@
     vi config.json
     sh docker.sh
 
-## Run
+## UPDATE to new version, with same config
+
+	cd RestInCloud/
+	git pull
+	cd RestInCloud/deployment/docker
+	sh docker.sh
+
+
+
+## debug run
 * docker run -d -p 3070:3070 -v /var/ric3070:/var/ric/ ric-server
 * browse to: http://serverIp:3070/?info
 * then: http://serverIp:3070/?info&token=admin (use your adminToken)
