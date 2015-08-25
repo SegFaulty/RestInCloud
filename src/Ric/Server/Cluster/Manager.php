@@ -32,7 +32,7 @@ class Ric_Server_Cluster_Manager{
         if( !H::getIKS($info, 'serverTimestamp') ){
             throw new RuntimeException('server is not responding properly', 400);
         }
-	    $remoteServerId = H::getIKS($info, 'serverId');
+	    $remoteServerId = $info['serverId'];
         if( $remoteServerId=='' ){
             throw new RuntimeException('server ('.$server.')has no serverId', 400);
         }

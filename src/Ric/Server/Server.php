@@ -360,6 +360,7 @@ class Ric_Server_Server {
      * @return array
      */
     protected function buildInfo($isAdmin=false){
+        $info['serverId'] = $this->configManager->getValue('serverId');
         $info['serverTimestamp'] = time();
         $info['serverVersion'] = self::VERSION;
         $directorySize = $this->fileManager->getDirectorySize();
