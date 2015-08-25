@@ -125,8 +125,7 @@ class Ric_Rest_Client {
 			// then same as GET so fall through
 			case 'GET':
 				if( $data!='' ){
-					// todo check if url contains a ? then use &
-					$url.= '?'.$data;
+					$url.= ( strstr($url,'?') ? '&' : '?' ).$data; // ?data or &data if ? already in use
 				}
 				break;
 			case 'POST':
