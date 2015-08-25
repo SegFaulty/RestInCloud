@@ -270,8 +270,9 @@ class Ric_Server_Api {
 	protected function actionDelete(){
 		$fileName = $this->extractFileNameFromRequest();
 		$version = $this->extractVersionFromRequest();
+		$noSync = (bool)H::getRP('noSync');
 
-		$response = $this->server->deleteFile($fileName, $version);
+		$response = $this->server->deleteFile($fileName, $version, $noSync);
 		$this->sendResponse($response);
 	}
 
