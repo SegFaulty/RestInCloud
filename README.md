@@ -2,6 +2,14 @@
 
 simple restfully dockerized distributed open source cloud backup server ;-)
 
+
+## Client for CLI
+
+if your ric-servers are running, you can use the smart "ric" cli tool to backup etc. and manage the cluster
+
+[Client-README](src/Ric/Client/README.md)
+
+
 ## Help
 
  * GET http://ric1.server/?help - show this help
