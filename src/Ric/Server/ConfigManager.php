@@ -11,6 +11,7 @@ class Ric_Server_ConfigManager {
 			'writerToken' => 'writer',
 			'readerToken' => '',
 			'defaultRetention' => Ric_Server_Definition::RETENTION__LAST3,
+			'serverId' => '',
 	];
 	protected $config = [];
 

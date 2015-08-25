@@ -28,15 +28,20 @@ class Ric_Server_Server {
 	 * @param Ric_Server_ConfigManager $configManager
 	 * @throws RuntimeException
 	 */
-    public function __construct($configManager){
-        $this->configManager = $configManager;
-        $config = $this->configManager->getConfig();
-        if(empty($config)){
-            throw new RuntimeException('No config found');
-        }
-        $this->fileManager = new Ric_Server_File_Manager($this->configManager->getValue('storeDir'));
-        $this->clusterManager = new Ric_Server_Cluster_Manager($this->configManager);
-    }
+	public function __construct($configManager){
+		$this->configManager = $configManager;
+		$config = $this->configManager->getConfig();
+		if( empty($config) ){
+			throw new RuntimeException('No config found');
+		}
+		$this->fileManager = new Ric_Server_File_Manager($this->configManager->getValue('storeDir'));
+		$this->clusterManager = new Ric_Server_Cluster_Manager($this->configManager);
+
+		// check server id, set if empty, the serverId is a randomHexString for every instanu to prevent a server add its own because of different host names
+		if( $this->configManager->getValue('serverId')=='' ){
+			$this->configManager->setRuntimeValue('serverId', substr(md5(uniqid('', true)), 0, 8));
+		}
+	}
 
 
 //    /**
