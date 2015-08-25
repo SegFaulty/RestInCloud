@@ -170,57 +170,88 @@ class Ric_Server_Cluster_Manager{
     /**
      * sync file to other servers
      * upload (put) if necessary
+     * returns empty string if all is fine
      * @param $fileName
      * @param $version
      * @param string $filePath
      * @param int $timestamp
      * @param string $retention
-     * @param bool $noSync
      * @return array|string
      */
-    public function syncFile($fileName, $version, $filePath, $timestamp, $retention, $noSync=false){
+    public function syncFile($fileName, $version, $filePath, $timestamp, $retention){
         $result = '';
-        if( !$noSync ){
-            // SYNC
-            $sha1 = sha1_file($filePath);
-            foreach( $this->configManager->getValue('servers') as $server ){
-                try{
-                    $serverUrl = 'http://'.$server.'/';
-                    // try to refresh file
-                    $url = $serverUrl.$fileName.'?sha1='.$sha1.'&timestamp='.$timestamp.'&retention='.$retention.'&noSync=1&token='.$this->configManager->getValue('writerToken');
-                    $response = Ric_Rest_Client::post($url);
-                    if( trim($response)!='1' ){
-                        // refresh failed, upload
-                        $url = $serverUrl.$fileName.'?timestamp='.$timestamp.'&retention='.$retention.'&noSync=1&token='.$this->configManager->getValue('writerToken');
-                        $response = Ric_Rest_Client::putFile($url, $filePath);
-                        if( trim($response)!='OK' ){
-                            $result = trim($result."\n".'failed to upload to '.$server.' :'.$response);
-                        }
+        $sha1 = sha1_file($filePath);
+        foreach( $this->configManager->getValue('servers') as $server ){
+            try{
+                $serverUrl = 'http://'.$server.'/';
+                // try to refresh file
+                $url = $serverUrl.$fileName.'?sha1='.$sha1.'&timestamp='.$timestamp.'&retention='.$retention.'&noSync=1&token='.$this->configManager->getValue('writerToken');
+                $response = Ric_Rest_Client::post($url);
+                if( trim($response)!='1' ){
+                    // refresh failed, upload
+                    $url = $serverUrl.$fileName.'?timestamp='.$timestamp.'&retention='.$retention.'&noSync=1&token='.$this->configManager->getValue('writerToken');
+                    $response = Ric_Rest_Client::putFile($url, $filePath);
+                    if( trim($response)!='OK' ){
+                        $result = trim($result."\n".'failed to upload to '.$server.' :'.$response);
                     }
-                }catch(Exception $e){
-                    $result = trim($result."\n".'failed to upload to '.$server);
                 }
+            }catch(Exception $e){
+                $result = trim($result."\n".'failed to upload to '.$server);
             }
         }
         return $result;
     }
 
-    /**
+	/**
+	 * delete file from other servers
+	 * returns deleted files count
+	 * @param $fileName
+	 * @param $version
+	 * @param string $error
+	 * @return int
+	 */
+	public function deleteFile($fileName, $version, &$error = ''){
+		$deletedCount = 0;
+		foreach( $this->configManager->getValue('servers') as $server ){
+			try{
+				$serverUrl = 'http://' . $server . '/';
+				$url = $serverUrl . $fileName . '?version=' . $version . '&noSync=1&token=' . $this->configManager->getValue('writerToken');
+				$serverResponse = Ric_Rest_Client::delete($url);
+				$serverResult = json_decode($serverResponse, true);
+				if( isset($serverResult['filesDeleted']) ){
+					$deletedCount += $serverResult['filesDeleted'];
+				} else {
+					$error = trim($error . "\n" . 'failed at delete from ' . $server . ' :' . $serverResponse);
+				}
+			} catch(Exception $e){
+				$error = trim($error . "\n" . 'failed to delete from ' . $server . '!');
+			}
+		}
+		return $deletedCount;
+	}
+
+	/**
      * get the own address
      * @throws RuntimeException
      */
     public function getOwnHostPort(){
         static $hostName = '';
         if( empty($hostName) ){
-            $hostAndPort = $this->configManager->getValue('hostPort');
-            if( !empty($hostAndPort) ){
-                $hostName = $this->configManager->getValue('hostPort');
-            }else{
-                $hostName = gethostname(); // servers host name
+	        $hostName = $this->configManager->getValue('hostPort');
+            if( empty($hostName) AND  strstr(gethostname(), '.')!==false){
+	            $hostName = gethostname();
             }
-        }
-        if( empty($hostName) OR strstr($hostName, '.')===false ){
-            throw new RuntimeException('wrong hostname: ['.$hostName.'] - hostPort in config is missing and "hostname"-command returns not an host name with ".",  can not perform remote operation, please set "hostPort" in config or hostname on host to a reachable value (FQH: ric.example.com:3333)');
+	        if( empty($hostName) ){
+		        // autodetect host port
+		        $hostName = $_SERVER['HTTP_HOST'];
+		        if( $_SERVER['SERVER_PORT']!=80 ){
+			        $hostName.= ':'.$_SERVER['SERVER_PORT'];
+		        }
+		        $this->configManager->setRuntimeValue('hostPort', $hostName);
+	        }
+	        if( empty($hostName) ){
+	            throw new RuntimeException('wrong hostname: ['.$hostName.'] - hostPort in config is missing and "hostname"-command returns not an host name with ".", and autodetection faileds $_SERVER[HTTP_HOST], so can not perform remote operation, please set "hostPort" in config or hostname on host to a reachable value (FQH: ric.example.com:3333)');
+	        }
         }
         return $hostName;
     }
