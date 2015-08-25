@@ -41,6 +41,6 @@ function check($condition, $description=''){
  */
 function unJson($response){
 	$result = json_decode($response, true);
-	check(is_array($result), 'failed!');
+	check(is_array($result), 'failed! response:'.$response);
 	return $result;
 }
