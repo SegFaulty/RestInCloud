@@ -95,51 +95,55 @@ class Ric_Server_Server {
         return $result;
     }
 
-    /**
-     * handle PUT
-     * @param string $tmpFilePath
-     * @param string $fileName
-     * @param string $retention @see Ric_Server_Definition::RETENTION__*
-     * @param int $timestamp
-     * @param boolean $noSync
-     * @return Ric_Server_Response
-     * @throws RuntimeException
-     */
-    public function saveFileInCloud($tmpFilePath, $fileName, $retention, $timestamp, $noSync){
-        $result = 'OK';
+	/**
+	 * handle PUT
+	 * @param string $tmpFilePath
+	 * @param string $fileName
+	 * @param string $retention @see Ric_Server_Definition::RETENTION__*
+	 * @param int $timestamp
+	 * @param boolean $noSync
+	 * @return Ric_Server_Response
+	 * @throws RuntimeException
+	 */
+	public function saveFileInCloud($tmpFilePath, $fileName, $retention, $timestamp, $noSync){
+		$result = 'OK';
 
-        $version = $this->fileManager->storeFile($fileName, $tmpFilePath);
+		$version = $this->fileManager->storeFile($fileName, $tmpFilePath);
 
-        // check quota
-        if( $this->configManager->getValue('quota')>0 ){
-            if( $this->fileManager->getDirectorySize()>$this->configManager->getValue('quota')*1024*1024 ){
-                $filePath = $this->fileManager->getFilePath($fileName, $version);
-                unlink($filePath);
-                throw new RuntimeException('Quota exceeded!', 507);
-            }
-        }
+		// check quota
+		if( $this->configManager->getValue('quota')>0 ){
+			if( $this->fileManager->getDirectorySize()>$this->configManager->getValue('quota') * 1024 * 1024 ){
+				$filePath = $this->fileManager->getFilePath($fileName, $version);
+				unlink($filePath);
+				throw new RuntimeException('Quota exceeded!', 507);
+			}
+		}
 
-        // replicate
-        $filePath = $this->fileManager->getFilePath($fileName, $version);
-        $this->fileManager->updateTimestamp($fileName, $version, $timestamp);
-        $syncResult = $this->clusterManager->syncFile($fileName, $version, $filePath, $timestamp, $retention, $noSync);
-        if( $syncResult!='' ){
-            $result = 'WARNING'.' :'.$syncResult;
-        }
+		// replicate
+		$filePath = $this->fileManager->getFilePath($fileName, $version);
+		$this->fileManager->updateTimestamp($fileName, $version, $timestamp);
+		if( !$noSync ){
+			$syncResult = $this->clusterManager->syncFile($fileName, $version, $filePath, $timestamp, $retention);
+			if( $syncResult!='' ){
+				$result = 'WARNING'.' :'.$syncResult;
+			}
+		}
 
-        $this->executeRetention($fileName, $retention);
+		$this->executeRetention($fileName, $retention);
 
-        // todo differentiate between error and stdout
-        // TODO kein 201 liefern wenn $syncResult!='' , da dann mindestens ein server nicht erreicht wurde, muss das hier komplett failen
+		// todo differentiate between error and stdout
+		// TODO kein 201 liefern wenn $syncResult!='' , da dann mindestens ein server nicht erreicht wurde, muss das hier komplett failen
 //        header('HTTP/1.1 201 Created', true, 201);
-        $response = new Ric_Server_Response();
-        $response->addHeader('HTTP/1.1 201 Created', 201);
-        $response->setOutput($result.PHP_EOL);
-        return $response;
-    }
+		$response = new Ric_Server_Response();
+		$response->addHeader('HTTP/1.1 201 Created', 201);
+		$response->setOutput($result.PHP_EOL);
+		return $response;
+	}
 
-    /**
-     * check and refresh a with a post request
+	/**
+     * check and refresh a file with a post request
+	 * returns 1 if file is update in the whole cluster
+	 * return 0 if not
      * @param string $fileName
      * @param string $version
      * @param string $retention
@@ -147,36 +151,46 @@ class Ric_Server_Server {
      * @param boolean $noSync
      * @return Ric_Server_Response
      */
-    public function refreshFile($fileName, $version, $retention, $timestamp, $noSync){
-        $result = '0';
+	public function refreshFile($fileName, $version, $retention, $timestamp, $noSync){
+		$result = '0';
 
-        $filePath = $this->fileManager->getFilePath($fileName, $version);
-        if( file_exists($filePath) ){
-            $this->fileManager->updateTimestamp($fileName, $version, $timestamp);
-            $syncResult = $this->clusterManager->syncFile($fileName, $version, $filePath, $timestamp, $retention, $noSync);
-            $this->executeRetention($fileName, $retention);
-            if( $syncResult=='' ){
-                $result = '1';
-            }
-        }else{
-            // file not found
-            $result = '0';
-        }
-        $response = new Ric_Server_Response();
-        $response->setOutput($result.PHP_EOL);
-        return $response;
-    }
+		$filePath = $this->fileManager->getFilePath($fileName, $version);
+		if( file_exists($filePath) ){
+			$this->fileManager->updateTimestamp($fileName, $version, $timestamp);
+			if( !$noSync ){
+				$syncResult = $this->clusterManager->syncFile($fileName, $version, $filePath, $timestamp, $retention);
+				if( $syncResult=='' ){
+					$result = '1';
+				}
+			}
+			$this->executeRetention($fileName, $retention);
+		} else {
+			// file not found
+			$result = '0';
+		}
+		$response = new Ric_Server_Response();
+		$response->setOutput($result.PHP_EOL);
+		return $response;
+	}
 
-    /**
-     * mark one or all versions of the File as deleted
-     * @param string $fileName
-     * @param string $version
-     * @return Ric_Server_Response
-     */
-    public function deleteFile($fileName, $version){
-        $filesDeleted = $this->fileManager->deleteFile($fileName, $version);
+	/**
+	 * mark one or all versions of the File as deleted
+	 * @param string $fileName
+	 * @param string $version
+	 * @param bool $noSync
+	 * @throws RuntimeException
+	 * @return Ric_Server_Response
+	 */
+    public function deleteFile($fileName, $version, $noSync=false){
+	    $deleteCount = $this->fileManager->deleteFile($fileName, $version);
+	    if( !$noSync ){
+		    $deleteCount+= $this->clusterManager->deleteFile($fileName, $version, $error);
+		    if( $error ){
+			    throw new RuntimeException('delete file from cluster failed: '.$error.' files deleted: '.$deleteCount, 500);
+		    }
+	    }
         $response = new Ric_Server_Response();
-        $response->setResult(['filesDeleted' => $filesDeleted]);
+        $response->setResult(['filesDeleted' => $deleteCount]);
         return $response;
     }
 

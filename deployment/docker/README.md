@@ -1,13 +1,15 @@
 ## INSTALL
-* login to your docker host
+	login to your docker host
 
-    git clone https://github.com/SegFaulty/RestInCloud.git
-    cd RestInCloud/deployment/docker
-    cp example-config.json config.json
-    # create volumeDir
-	mkdir -p /var/ric3777
+	git clone https://github.com/SegFaulty/RestInCloud.git
+	cd RestInCloud/deployment/docker
+	cp example-config.json config.json
+
+# create volumeDir
+
+	sudo mkdir -p /var/ric3777
 	sudo chmod 777 /var/ric3777
-    # change hostPort and tokens
+    # change hostPort and tokens, empty hostPort means autoDetection at the first request
     vi config.json
     sh docker.sh
 
