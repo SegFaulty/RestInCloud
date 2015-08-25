@@ -29,13 +29,20 @@ class Ric_Server_Cluster_Manager{
     public function addServer($server){
         $response = Ric_Rest_Client::get('http://' . $server . '/', ['info' => 1, 'token' => $this->configManager->getValue('readerToken')]);
         $info = json_decode($response, true);
-        if( $info AND H::getIKS($info, 'serverTimestamp') ){
-            $servers = $this->configManager->getValue('servers');
-            $servers[] = $server;
-            $this->configManager->setRuntimeValue('servers', $this->configManager->getValue('servers'));
-        }else{
+        if( !H::getIKS($info, 'serverTimestamp') ){
             throw new RuntimeException('server is not responding properly', 400);
         }
+	    $remoteServerId = H::getIKS($info, 'serverId');
+        if( $remoteServerId=='' ){
+            throw new RuntimeException('server ('.$server.')has no serverId', 400);
+        }
+	    $myServerId = $this->configManager->getValue('serverId');
+        if( $remoteServerId==$myServerId ){
+            throw new RuntimeException('whoaa, the server you want to add ('.$server.') is the same as me('.$this->getOwnHostPort().') because we boot have the same serverId ('.$myServerId.')', 400);
+        }
+        $servers = $this->configManager->getValue('servers');
+        $servers[] = $server;
+        $this->configManager->setRuntimeValue('servers', $servers);
     }
 
     /**
