@@ -11,7 +11,7 @@
 	sudo chmod 777 /var/ric3777
     # change hostPort and tokens, empty hostPort means autoDetection at the first request
     vi config.json
-    sh docker.sh
+    ./docker.sh
 
 ## UPDATE to new version, with same config
 
@@ -27,3 +27,4 @@
 * browse to: http://serverIp:3070/?info
 * then: http://serverIp:3070/?info&token=admin (use your adminToken)
 * help: http://serverIp:3070
+

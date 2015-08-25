@@ -105,7 +105,7 @@ class Ric_Server_Api {
 		} elseif( $action=='' ) {
 			$this->actionSendFile();
 		} else {
-			throw new RuntimeException('unknown action', 400);
+			throw new RuntimeException('unknown [GET] action ', 400);
 		}
 	}
 
@@ -128,7 +128,7 @@ class Ric_Server_Api {
 			} elseif( $action=='removeFromCluster' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ) {
 				$this->actionRemoveFromCluster();
 			} else {
-				throw new RuntimeException('unknown action or no file given [Post]', 400);
+				throw new RuntimeException('unknown [POST] action or no file given', 400);
 			}
 		} else {
 			// not "/" .. this is a file, refresh action
