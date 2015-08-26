@@ -27,12 +27,34 @@ function sh($command, $ignoreFailed=false){
 /**
  * @param bool $condition
  * @param string $description
+ * @param string $occuredAt
  */
-function check($condition, $description=''){
+function check($condition, $description='', $occuredAt=''){
+	if( $occuredAt=='' ){
+		$backTrace = debug_backtrace();
+#print_r($backTrace);
+		$occuredAt = basename($backTrace[0]['file']).' line: '.$backTrace[0]['line'];
+	}
 	if( !$condition ){
-		ln($description);
+		ln('CHECK FAILED: '.$description.' @ '.$occuredAt);
 		exit;
 	}
+}
+
+/**
+ * check if look like ok, if SLND-468 is fixed, check only for Status->OK
+ * @param string | array $responseOrResult
+ * @param string $description
+ * @param string $occuredAt
+ * @internal param bool $condition
+ */
+function checkOk($responseOrResult, $description='Status Ok expected but got {$response}', $occuredAt=''){
+	if( $occuredAt=='' ){
+		$backTrace = debug_backtrace();
+		$occuredAt = basename($backTrace[0]['file']).' line: '.$backTrace[0]['line'];
+	}
+	$description = str_replace('{$response}', var_export($responseOrResult, true), $description);
+	check(trim($responseOrResult)==='OK' OR trim($responseOrResult)==='["Status"=>"OK"]' OR $responseOrResult = ['Status'=>'OK'], $description, $occuredAt);
 }
 
 /**
