@@ -41,6 +41,7 @@ login to your docker host and then
 ## update, after code changes
 
 	docker stop ric-server-3777 ric-server-3778 ric-server-3779 ric-server-3780
+	docker rm ric-server-3777 ric-server-3778 ric-server-3779 ric-server-3780
 	cd ../.. && git pull && cd deployment/docker && ./docker.sh
 	docker run -d -p 3778:80 -v /var/ric3778:/var/ric/ --name ric-server-3778 ric-server
 	docker run -d -p 3779:80 -v /var/ric3779:/var/ric/ --name ric-server-3779 ric-server
