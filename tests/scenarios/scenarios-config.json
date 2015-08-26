@@ -1,0 +1,9 @@
+{
+	"COMMENT": "this the test scenarios config file, do not use it in production !!!!",
+	"hostPort": "",
+	"storeDir": "/var/ric/",
+	"quota": 10000,
+	"adminToken": "admin",
+	"writerToken": "writer",
+	"readerToken": "reader"
+}
