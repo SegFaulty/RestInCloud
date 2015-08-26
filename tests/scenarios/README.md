@@ -24,9 +24,9 @@ login to your docker host and then
     ./docker.sh
 
 	# start other servers
-	docker run -d -p 3778:80 -v /var/ric3778:/var/ric/ ric-server
-	docker run -d -p 3779:80 -v /var/ric3779:/var/ric/ ric-server
-	docker run -d -p 3780:80 -v /var/ric3780:/var/ric/ ric-server
+	docker run -d -p 3778:80 -v /var/ric3778:/var/ric/ --name ric-server-3778 ric-server
+	docker run -d -p 3779:80 -v /var/ric3779:/var/ric/ --name ric-server-3779 ric-server
+	docker run -d -p 3780:80 -v /var/ric3780:/var/ric/ --name ric-server-3780 ric-server
 
 	# done
 	# from your remote server fire the hostPort initializing first requests
@@ -40,8 +40,9 @@ login to your docker host and then
 
 ## update, after code changes
 
-	cd ../.. && git pull && cd deployment/docker && docker.sh
-	docker run -d -p 3778:80 -v /var/ric3778:/var/ric/ ric-server
-	docker run -d -p 3779:80 -v /var/ric3779:/var/ric/ ric-server
-	docker run -d -p 3780:80 -v /var/ric3780:/var/ric/ ric-server
+	docker stop ric-server-3777 ric-server-3778 ric-server-3779 ric-server-3780
+	cd ../.. && git pull && cd deployment/docker && ./docker.sh
+	docker run -d -p 3778:80 -v /var/ric3778:/var/ric/ --name ric-server-3778 ric-server
+	docker run -d -p 3779:80 -v /var/ric3779:/var/ric/ --name ric-server-3779 ric-server
+	docker run -d -p 3780:80 -v /var/ric3780:/var/ric/ --name ric-server-3780 ric-server
 
