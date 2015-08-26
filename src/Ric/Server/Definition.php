@@ -2,7 +2,7 @@
 
 class Ric_Server_Definition
 {
-    const MAGIC_DELETION_TIMESTAMP = 1422222222;
+    const MAGIC_DELETION_TIMESTAMP = 1422222222; // 2015-01-25 22:43:42
 
     const RETENTION__ALL = '';
     const RETENTION__OFF = '1l';

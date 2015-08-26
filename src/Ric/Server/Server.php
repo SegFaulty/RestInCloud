@@ -43,63 +43,6 @@ class Ric_Server_Server {
 		}
 	}
 
-
-//    /**
-//     * execute cli command
-//     * @param array $argv
-//     * @throws RuntimeException
-//     */
-//    static public function cliPurge($argv){
-//        $storeDir = $argv[2];
-//        $maxTimestamp = $argv[3];
-//        if( $maxTimestamp<=1 OR $maxTimestamp>time()+86400 ){
-//            throw new RuntimeException('invalid timestamp (now:'.time().')');
-//        }
-//        $ricServer = new Ric_Server_Server($storeDir);
-//        echo H::json($ricServer->purge($maxTimestamp));
-//    }
-
-    /**
-     * todo move that thing
-     * physically delete files marked for deletion
-     *
-     * @param $maxTimestamp
-     * @throws RuntimeException
-     * @return array
-     */
-    public function purge($maxTimestamp){
-        $result = [];
-        $result['status'] = 'OK';
-        $result['msg'] = '';
-        $result['checkedFiles'] = 0;
-        $result['deletedFiles'] = 0;
-        $result['deletedBytes'] = 0;
-        $result['runTime'] = microtime(true);
-        $dirIterator = new RecursiveDirectoryIterator($this->configManager->getValue('storeDir'));
-        $iterator = new RecursiveIteratorIterator($dirIterator, RecursiveIteratorIterator::SELF_FIRST);
-        foreach( $iterator as $splFileInfo ){ /** @var SplFileInfo $splFileInfo */
-            if( $splFileInfo->isFile() ){
-                if( !strstr($splFileInfo->getFilename(), '___') ){
-                    throw new RuntimeException('unexpected file found (), for safty reason i quite here!');
-                }
-                $result['checkedFiles']++;
-                $fileTimestamp = filemtime($splFileInfo->getRealPath());
-                if( $fileTimestamp<=$maxTimestamp AND $fileTimestamp==Ric_Server_Definition::MAGIC_DELETION_TIMESTAMP ){
-                    $fileSize = filesize($splFileInfo->getRealPath());
-                    if( unlink($splFileInfo->getRealPath()) ){
-                        $result['deletedFiles']++;
-                        $result['deletedBytes']+= $fileSize;
-                    }else{
-                        $result['status'] = 'WARNING';
-                        $result['msg'] = 'unlink failed';
-                    }
-                }
-            }
-        }
-        $result['runTime'] = round(microtime(true)-$result['runTime'],3);
-        return $result;
-    }
-
 	/**
 	 * handle PUT
 	 * @param string $tmpFilePath
@@ -633,7 +576,7 @@ class Ric_Server_Server {
 	        if( $version==$currentVersion ){
 		        throw new RuntimeException('whoa we will delete the newest version this must be really really wrong! retention:'.$retention );
 	        }
-            $this->fileManager->markFileAsDeleted($fileName, $version);
+            $this->fileManager->deleteFile($fileName, $version);
         }
         $response = new Ric_Server_Response();
         $response->setResult(['Status' => 'OK']);

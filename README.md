@@ -34,8 +34,8 @@ if your ric-servers are running, you can use the smart "ric" cli tool to backup 
    - use &noSync to suppress syncronisation to replication servers (used for internal sync)
    - if &noSync is not set, refresh is also performed on the replication servers (with &noSync)
 
- * POST http://ric1.server/error.log  ?action=delete  - delete a file !! Attention if version is omitted, ALL Versions will be deleted (Files are marked for deletion, purge will delete them)
- * DELETE http://ric1.server/error.log   - delete a file !! Attention if version is omitted, ALL Versions will be deleted (Files are marked for deletion, purge will delete them)
+ * POST http://ric1.server/error.log  ?action=delete  - delete a file !! Attention if version is omitted, ALL Versions will be deleted
+ * DELETE http://ric1.server/error.log   - delete a file !! Attention if version is omitted, ALL Versions will be deleted
 
 
  * GET http://ric1.server/error.log - download a file (etag and lastmodified supported)
@@ -50,8 +50,6 @@ if your ric-servers are running, you can use the smart "ric" cli tool to backup 
     - (4) min 2 replicas (3 files) [default:max(1,count(servers)-1)]
     - (5) sha1, (if sha give, the size is irrelevant)
     - returns json result with status: OK/WARNING/CRITICAL, a msg and fileInfo
-
- * check php Server.php for commandline (purge)
 
  admin Commands:
  Post: with parameters: [action: addServer, addServer: s1.cs.io:3723]
