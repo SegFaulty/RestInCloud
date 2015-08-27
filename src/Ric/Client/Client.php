@@ -489,6 +489,15 @@ class Ric_Client_Client{
 		return $response;
 	}
 
+	/**
+	 * @param string $targetServerHostPort
+	 * @return string
+	 */
+	public function copyServer($targetServerHostPort){
+		$response = 'copy server to '.$targetServerHostPort;
+		return $response;
+	}
+
 	##### TMP File handling ########
 	protected $tmpFilePaths = [];
 	protected $tmpFileDir = ''; // use system default
