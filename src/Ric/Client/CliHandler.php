@@ -238,6 +238,8 @@ class Ric_Client_CliHandler{
 			$msg = $client->leaveCluster();
 		}elseif( $adminCommand=='removeFromCluster' ){
 			$msg = $client->removeFromCluster($cli->arguments[1]);
+		}elseif( $adminCommand=='copyServer' ){
+			$msg = $client->copyServer($cli->arguments[1]);
 		}else{
 			throw new RuntimeException('unknown admin command');
 		}

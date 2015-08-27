@@ -137,6 +137,7 @@ procedure:
 * removeFromCluster - remove given server from all clusterNodes
 * addServer - add a replication client
 * removeServer - remove a replication client
+* copyServer - connected server to targetServer
 
 a cluster is a bunch of servers, where all of them are added (addServer) to all servers, every server is a replicant of every server .. u got it
 
@@ -149,6 +150,7 @@ a cluster is a bunch of servers, where all of them are added (addServer) to all 
     ric admin removeFromCluster {server}
     ric admin addServer {server}
     ric admin removeServer {server}
+    ric admin copyServer {targetServer}
 
 ## Sic integration
 
