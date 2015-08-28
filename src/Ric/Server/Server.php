@@ -205,51 +205,12 @@ class Ric_Server_Server {
      * @param string $pattern
      * @param int $start
      * @param int $limit
-     * @param boolean $showDeleted
      * @return Ric_Server_Response
      */
-    public function listFileNames($pattern, $start, $limit, $showDeleted=false){
-        $fileInfos = $this->fileManager->getFileInfosForPattern($pattern, $showDeleted, $start, $limit);
-        $lines = [];
-        foreach( $fileInfos as $fileInfo ){/** @var Ric_Server_File_FileInfo $fileInfo */
-            $fileName = $fileInfo->getName();
-            if( !in_array($fileName, $lines) ){
-                $lines[] = $fileName;
-            }
-        }
-
+    public function listFileNames($pattern, $start, $limit){
+        $fileNames = $this->fileManager->getFileNamesForPattern($pattern, $start, $limit);
         $response = new Ric_Server_Response();
-        $response->setResult($lines);
-        return $response;
-    }
-
-    /**
-     * list files
-     * @param string $pattern
-     * @param int $start
-     * @param int $limit
-     * @param boolean $showDeleted
-     * @return Ric_Server_Response
-     */
-    public function listFileInfos($pattern, $start, $limit, $showDeleted=false){
-        $fileInfos = $this->fileManager->getFileInfosForPattern($pattern, $showDeleted, $start, $limit);
-        $lines = [];
-        $index = $start;
-        foreach( $fileInfos as $fileInfo ){/** @var Ric_Server_File_FileInfo $fileInfo */
-            $lines[] = [
-                'index' => $index,
-                'name' => $fileInfo->getName(),
-                'version' => $fileInfo->getVersion(),
-                'sha1' => $fileInfo->getSha1(),
-                'dateTime' => $fileInfo->getDateTime(),
-                'timestamp' => $fileInfo->getTimestamp(),
-                'size' => $fileInfo->getSize(),
-            ];
-            $index++;
-        }
-
-        $response = new Ric_Server_Response();
-        $response->setResult($lines);
+        $response->setResult($fileNames);
         return $response;
     }
 
@@ -257,13 +218,12 @@ class Ric_Server_Server {
      * list versions of file
      * @param string $fileName
      * @param int $limit
-     * @param bool $showDeleted
      * @return Ric_Server_Response
      */
-    public function listVersions($fileName, $limit, $showDeleted=false){
+    public function listVersions($fileName, $limit){
         $lines = [];
         $index = -1;
-        foreach( $this->fileManager->getAllVersions($fileName, $showDeleted) as $version=>$timeStamp ){
+        foreach( $this->fileManager->getAllVersions($fileName) as $version=>$timeStamp ){
             $index++;
             if( $limit<=$index ){
                 break;
@@ -303,19 +263,19 @@ class Ric_Server_Server {
      */
     protected function buildInfo($isAdmin=false){
         $info['serverId'] = $this->configManager->getValue('serverId');
-        $info['serverTimestamp'] = time();
         $info['serverVersion'] = self::VERSION;
-        $directorySize = $this->fileManager->getDirectorySize();
-        $directorySizeMb = ceil($directorySize /1024/1024); // IN MB
-        $info['usageByte'] = $directorySize;
-        $info['usage'] = $directorySizeMb;
-        $info['quota'] = $this->configManager->getValue('quota');
-        if( $this->configManager->getValue('quota')>0 ){
-            $info['quotaLevel'] = ceil($directorySizeMb/$this->configManager->getValue('quota')*100);
-            $info['quotaFreeLevel'] = max(0,min(100,100-ceil($directorySizeMb/$this->configManager->getValue('quota')*100)));
-            $info['quotaFree'] = max(0, intval($this->configManager->getValue('quota')-$directorySizeMb));
-        }
+        $info['serverTimestamp'] = time();
         if( $isAdmin ){ // only for admins
+            $directorySize = $this->fileManager->getDirectorySize();
+            $directorySizeMb = ceil($directorySize /1024/1024); // IN MB
+            $info['usageByte'] = $directorySize;
+            $info['usage'] = $directorySizeMb;
+            $info['quota'] = $this->configManager->getValue('quota');
+            if( $this->configManager->getValue('quota')>0 ){
+                $info['quotaLevel'] = ceil($directorySizeMb/$this->configManager->getValue('quota')*100);
+                $info['quotaFreeLevel'] = max(0,min(100,100-ceil($directorySizeMb/$this->configManager->getValue('quota')*100)));
+                $info['quotaFree'] = max(0, intval($this->configManager->getValue('quota')-$directorySizeMb));
+            }
             $info['config'] = $this->configManager->getConfig();
             $info['runtimeConfig'] = false;
             if( file_exists($this->configManager->getValue('storeDir').'intern/config.json') ){

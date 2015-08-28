@@ -69,33 +69,29 @@ class Ric_Server_Api {
 		}
 		if( $_SERVER['REQUEST_URI']=='/' ){ // homepage
 			$this->actionHelp();
-		} elseif( parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)=='/' ) { // no file
-			if( $action=='list' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
-				$this->actionList();
-			} elseif( $action=='listDetails' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ) {
-				$this->actionList(true);
-			} elseif( $action=='help' ) {
+		}elseif( parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)=='/' ){ // no file
+			if( $action=='list' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN, true) ){
+				$this->actionListFileNames();
+			}elseif( $action=='help' ){
 				$this->actionHelp();
-			} elseif( $action=='info' ) {
+			}elseif( $action=='info' ){
 				$this->actionInfo();
-			} elseif( $action=='health' ) {
+			}elseif( $action=='health' ){
 				$this->actionHealth();
-			} elseif( $action=='phpInfo' ) {
+			}elseif( $action=='phpInfo' ){
 				phpinfo();
-			} else {
+			}else{
 				throw new RuntimeException('unknown action', 400);
 			}
-		} elseif( $action=='size' ) {
+		}elseif( $action=='size' ){
 			$this->actionGetFileSize();
-		} elseif( $action=='check' ) {
+		}elseif( $action=='check' ){
 			$this->actionCheck();
-		} elseif( $action=='list' ) {
+		}elseif( $action=='list' ){
 			$this->actionListVersions();
-		} elseif( $action=='help' ) {
-			$this->actionHelp();
-		} elseif( $action=='' ) {
+		}elseif( $action=='' ){
 			$this->actionSendFile();
-		} else {
+		}else{
 			throw new RuntimeException('unknown [GET] action ', 400);
 		}
 	}
@@ -288,25 +284,15 @@ class Ric_Server_Api {
 	 * list files
 	 * @throws RuntimeException
 	 */
-	protected function actionList($details = false){
+	protected function actionListFileNames(){
 		$pattern = H::getRP('pattern', null);
 		if( $pattern!==null AND !Ric_Server_Helper_RegexValidator::isValid($pattern, $errorMessage) ){
 			throw new RuntimeException('not a valid regex: ' . $errorMessage, 400);
 		}
-		$showDeleted = H::getRP('showDeleted', false);
-		if( $showDeleted==='true' OR $showDeleted==='1' ){
-			$showDeleted = true;
-		} else {
-			$showDeleted = false;
-		}
 		$start = H::getRP('start', 0);
 		$limit = min(1000, H::getRP('limit', 100));
 
-		if( $details ){
-			$response = $this->server->listFileInfos($pattern, $start, $limit, $showDeleted);
-		} else {
-			$response = $this->server->listFileNames($pattern, $start, $limit, $showDeleted);
-		}
+		$response = $this->server->listFileNames($pattern, $start, $limit);
 		$this->sendResponse($response);
 	}
 
@@ -314,11 +300,10 @@ class Ric_Server_Api {
 	 * list versions of file
 	 */
 	protected function actionListVersions(){
-		$showDeleted = H::getRP('showDeleted');
 		$limit = min(1000, H::getRP('limit', 100));
 		$fileName = $this->extractFileNameFromRequest();
 
-		$response = $this->server->listVersions($fileName, $limit, $showDeleted);
+		$response = $this->server->listVersions($fileName, $limit);
 		$this->sendResponse($response);
 	}
 
