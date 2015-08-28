@@ -46,7 +46,6 @@ function check($condition, $description='', $occuredAt=''){
  * @param string | array $responseOrResult
  * @param string $description
  * @param string $occuredAt
- * @internal param bool $condition
  */
 function checkOk($responseOrResult, $description='Status Ok expected but got {$response}', $occuredAt=''){
 	if( $occuredAt=='' ){
@@ -54,7 +53,10 @@ function checkOk($responseOrResult, $description='Status Ok expected but got {$r
 		$occuredAt = basename($backTrace[0]['file']).' line: '.$backTrace[0]['line'];
 	}
 	$description = str_replace('{$response}', var_export($responseOrResult, true), $description);
-	check(trim($responseOrResult)==='OK' OR trim($responseOrResult)==='["status"=>"OK"]' OR $responseOrResult = ['status'=>'OK'], $description, $occuredAt);
+	if( is_string($responseOrResult) ){
+		$responseOrResult = unJson($responseOrResult);
+	}
+	check(isset($responseOrResult['status']) AND $responseOrResult['status']=='OK', $description, $occuredAt);
 }
 
 /**
