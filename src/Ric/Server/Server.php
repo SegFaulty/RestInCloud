@@ -436,7 +436,7 @@ class Ric_Server_Server {
     public function addServer($server){
         $this->clusterManager->addServer($server);
         $response = new Ric_Server_Response();
-        $response->setResult(['Status' => 'OK']);
+        $response->setResult(['status' => 'OK']);
         return $response;
     }
 
@@ -449,7 +449,7 @@ class Ric_Server_Server {
         $this->clusterManager->removeServer($server);
 
         $response = new Ric_Server_Response();
-        $response->setResult(['Status' => 'OK']);
+        $response->setResult(['status' => 'OK']);
         return $response;
     }
 
@@ -465,7 +465,7 @@ class Ric_Server_Server {
         $this->clusterManager->joinCluster($server);
 
         $response = new Ric_Server_Response();
-        $response->setResult(['Status' => 'OK']);
+        $response->setResult(['status' => 'OK']);
         return $response;
     }
 
@@ -479,7 +479,7 @@ class Ric_Server_Server {
         $this->clusterManager->leaveCluster();
 
         $response = new Ric_Server_Response();
-        $response->setResult(['Status' => 'OK']);
+        $response->setResult(['status' => 'OK']);
         return $response;
     }
 
@@ -494,7 +494,7 @@ class Ric_Server_Server {
         $this->clusterManager->removeFromCluster($server);
 
         $response = new Ric_Server_Response();
-        $response->setResult(['Status' => 'OK']);
+        $response->setResult(['status' => 'OK']);
         return $response;
     }
 
@@ -525,7 +525,7 @@ class Ric_Server_Server {
             $this->fileManager->deleteFile($fileName, $version);
         }
         $response = new Ric_Server_Response();
-        $response->setResult(['Status' => 'OK']);
+        $response->setResult(['status' => 'OK']);
         return $response;
     }
 

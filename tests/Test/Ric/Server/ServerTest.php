@@ -172,7 +172,7 @@ class Test_Ric_Server_ServerTest extends \PHPUnit_Framework_TestCase {
 
 		$server = $this->getServer();
 		$response = $server->removeServer($serverHostPort);
-		self::assertEquals(['Status' => 'OK'], $response->getResult());
+		self::assertEquals(['status' => 'OK'], $response->getResult());
 		self::assertEquals([], $this->configManager->getFromRuntimeConfig('servers'));
 	}
 

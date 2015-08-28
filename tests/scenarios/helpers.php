@@ -54,7 +54,7 @@ function checkOk($responseOrResult, $description='Status Ok expected but got {$r
 		$occuredAt = basename($backTrace[0]['file']).' line: '.$backTrace[0]['line'];
 	}
 	$description = str_replace('{$response}', var_export($responseOrResult, true), $description);
-	check(trim($responseOrResult)==='OK' OR trim($responseOrResult)==='["Status"=>"OK"]' OR $responseOrResult = ['Status'=>'OK'], $description, $occuredAt);
+	check(trim($responseOrResult)==='OK' OR trim($responseOrResult)==='["status"=>"OK"]' OR $responseOrResult = ['status'=>'OK'], $description, $occuredAt);
 }
 
 /**

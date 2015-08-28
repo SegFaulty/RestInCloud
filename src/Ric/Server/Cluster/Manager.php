@@ -63,7 +63,7 @@ class Ric_Server_Cluster_Manager{
             foreach( $servers as $clusterServer ){
                 $response = Ric_Rest_Client::post('http://' . $clusterServer . '/', ['action' => 'addServer', 'addServer' => $ownServer, 'token' => $this->configManager->getValue('adminToken')]);
                 $result = json_decode($response, true);
-                if( H::getIKS($result, 'Status')!='OK' ){
+                if( H::getIKS($result, 'status')!='OK' ){
                     throw new RuntimeException('join cluster failed! addServer to '.$clusterServer.' failed! ['.$response.'] Inconsitent cluster state! I\'m added to this servers (please remove me): '.join('; ', $joinedServers), 400);
                 }
                 $joinedServers[] = $clusterServer;
@@ -127,7 +127,7 @@ class Ric_Server_Cluster_Manager{
         foreach( $this->configManager->getValue('servers') as $clusterServer ){
             $response = Ric_Rest_Client::post('http://' . $clusterServer . '/', ['action' => 'removeServer', 'removeServer' => $server, 'token' => $this->configManager->getValue('adminToken')]);
             $result = json_decode($response, true);
-            if( H::getIKS($result, 'Status')!='OK' ){
+            if( H::getIKS($result, 'status')!='OK' ){
                 $errorMsg.= 'removeServer failed from '.$clusterServer.' failed! ['.$response.']';
             }else{
                 $leftServers[] = $clusterServer;

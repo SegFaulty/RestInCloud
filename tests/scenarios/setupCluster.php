@@ -25,7 +25,7 @@ ln('server checks passed');
 ln('build cluster');
 // join server 1 to 0
 $result = unJson(Ric_Rest_Client::post($servers[1].'?',['action'=>'joinCluster','joinCluster'=>$servers[0],'token'=>'admin']));
-check($result['Status']=='OK', 'joinServer failed for server '.$servers[1]);
+check($result['status']=='OK', 'joinServer failed for server '.$servers[1]);
 // check config server 1
 $result = unJson(Ric_Rest_Client::get($servers[1].'?info',['token'=>'admin']));
 check(count($result['config']['servers'])===1, 'joinCluster failed for server[1] expected server[0] but is: '.join(',', $result['config']['servers']));
@@ -35,7 +35,7 @@ check(count($result['config']['servers'])===1, 'joinCluster failed servers of se
 
 // join server 2 to 0
 $result = unJson(Ric_Rest_Client::post($servers[2].'?',['action'=>'joinCluster','joinCluster'=>$servers[0],'token'=>'admin']));
-check($result['Status']=='OK', 'joinServer failed for server '.$servers[1]);
+check($result['status']=='OK', 'joinServer failed for server '.$servers[1]);
 // check config server 2
 $result = unJson(Ric_Rest_Client::get($servers[2].'?info',['token'=>'admin']));
 check(count($result['config']['servers'])===2, 'joinCluster failed for server[2] expected server[0,1] but is: '.join(',', $result['config']['servers']));
@@ -46,8 +46,8 @@ check(count($result['config']['servers'])===2, 'joinCluster failed servers of se
 ln('cluster is up and running');
 
 #$result = unJson(Ric_Rest_Client::post($servers[2].'?',['action'=>'joinCluster','joinCluster'=>$servers[0],'token'=>'admin']));
-#check($result['Status']=='OK', 'joinServer failed for server '.$servers[2]);
+#check($result['status']=='OK', 'joinServer failed for server '.$servers[2]);
 #$result = unJson(Ric_Rest_Client::post($servers[3].'?',['action'=>'joinCluster','joinCluster'=>$servers[0],'token'=>'admin']));
-#check($result['Status']=='OK', 'joinServer failed for server '.$servers[3]);
+#check($result['status']=='OK', 'joinServer failed for server '.$servers[3]);
 
 
