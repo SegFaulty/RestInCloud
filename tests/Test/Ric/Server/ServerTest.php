@@ -50,7 +50,7 @@ class Test_Ric_Server_ServerTest extends \PHPUnit_Framework_TestCase {
 		$response = $server->saveFileInCloud($testFile, $fileName, Ric_Server_Definition::RETENTION__LAST7, $timestamp, false);
 
 		// check response
-		self::assertEquals(['OK' . PHP_EOL], $response->getOutput());
+		self::assertEquals('OK', $response->getResult()['status']);
 		$headers = $response->getHeaders();
 		self::assertEquals(1, count($headers));
 		$header = reset($headers);
@@ -92,8 +92,8 @@ class Test_Ric_Server_ServerTest extends \PHPUnit_Framework_TestCase {
 		$sha1 = $this->createTestFile($fileName);
 		$server = $this->getServer();
 		$timestamp = time()-rand(1000, 9999);
-		$response = $server->refreshFile($fileName, $sha1, Ric_Server_Definition::RETENTION__LAST3, $timestamp, true);
-		self::assertEquals(['1' . PHP_EOL], $response->getOutput());
+		$response = $server->refreshFile($fileName, $sha1, $timestamp, true);
+		self::assertEquals('OK', $response->getResult()['status']);
 	}
 
 	public function testDeleteFile(){
@@ -111,11 +111,8 @@ class Test_Ric_Server_ServerTest extends \PHPUnit_Framework_TestCase {
 		$response = $server->deleteFile($fileName, $sha1);
 		self::assertEquals(['filesDeleted' => 1], $response->getResult());
 		$filePath = $this->findSingleFile($this->storageDir);
-		self::assertNotEmpty($filePath);
+		self::assertEmpty($filePath);
 
-		$response = $server->sendFile($fileName, $sha1);
-		self::assertEmpty($response->getOutput());
-		self::assertNotEmpty($response->getOutputFilePath());
 	}
 
 	public function testListAllVersions(){

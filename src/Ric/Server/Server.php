@@ -90,34 +90,31 @@ class Ric_Server_Server{
 
 	/**
 	 * check and refresh a file with a post request
-	 * returns 1 if file is update in the whole cluster
-	 * return 0 if not
+	 * returns status OK if file is update in the whole cluster
+	 * return status not found if not found on local server, failed if sync to other servers failed
+	 *
 	 * @param string $fileName
 	 * @param string $version
-	 * @param string $retention
 	 * @param int $timestamp
 	 * @param boolean $noSync
 	 * @return Ric_Server_Response
 	 */
-	public function refreshFile($fileName, $version, $retention, $timestamp, $noSync){
-		$result = '0';
+	public function refreshFile($fileName, $version, $timestamp, $noSync){
+		$result = ['status' => 'not found'];
 
 		$filePath = $this->fileManager->getFilePath($fileName, $version);
 		if( file_exists($filePath) ){
 			$this->fileManager->updateTimestamp($fileName, $version, $timestamp);
 			if( !$noSync ){
-				$syncResult = $this->clusterManager->syncFile($fileName, $filePath, $timestamp, $retention);
-				if( $syncResult=='' ){
-					$result = '1';
+				$syncResult = $this->clusterManager->syncFile($fileName, $filePath, $timestamp, $retention=Ric_Server_Definition::RETENTION__ALL);
+				if( $syncResult!='' ){
+					throw new RuntimeException('sync file failed: '.$syncResult);
 				}
 			}
-			$this->executeRetention($fileName, $retention);
-		}else{
-			// file not found
-			$result = '0';
+			$result['status'] = 'OK';
 		}
 		$response = new Ric_Server_Response();
-		$response->setOutput($result.PHP_EOL);
+		$response->setResult($result);
 		return $response;
 	}
 
@@ -399,9 +396,13 @@ class Ric_Server_Server{
 	 * @throws RuntimeException
 	 */
 	public function sendFile($fileName, $fileVersion){
-		$response = new Ric_Server_Response();
 		$fileInfo = $this->fileManager->getFileInfo($fileName, $fileVersion);
+		if( !$fileInfo ){
+			throw new RuntimeException('File not found! '.$fileName.' ['.$fileVersion.']', 404);
+		}
 
+
+		$response = new Ric_Server_Response();
 		$lastModified = gmdate('D, d M Y H:i:s \G\M\T', $fileInfo->getTimestamp());
 		$eTag = $fileInfo->getSha1();
 
@@ -411,15 +412,12 @@ class Ric_Server_Server{
 		if( ($ifMod || $ifTag) && ($ifMod!==false && $ifTag!==false) ){
 			$response->addHeader('HTTP/1.0 304 Not Modified');
 		}else{
-			$filePath = $this->fileManager->getFilePath($fileName, $fileVersion);
-			if( !file_exists($filePath) ){
-				throw new RuntimeException('File not found! '.$filePath, 404);
-			}
 			$response->addHeader('Content-Type: application/octet-stream');
 			$response->addHeader('Content-Disposition: attachment; filename="'.$fileName.'"');
 			$response->addHeader('Content-Length: '.$fileInfo->getSize());
 			$response->addHeader('Last-Modified:'.$lastModified);
 			$response->addHeader('ETag: '.$eTag);
+			$filePath = $this->fileManager->getFilePath($fileName, $fileVersion);
 			$response->setOutputFilePath($filePath);
 		}
 		return $response;

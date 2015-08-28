@@ -189,7 +189,7 @@ class Ric_Server_Cluster_Manager{
             try{
                 $serverUrl = 'http://'.$server.'/';
                 // try to refresh file
-                $url = $serverUrl.$fileName.'?sha1='.$sha1.'&timestamp='.$timestamp.'&retention='.$retention.'&noSync=1&token='.$this->configManager->getValue('writerToken');
+                $url = $serverUrl.$fileName.'?sha1='.$sha1.'&timestamp='.$timestamp.'&noSync=1&token='.$this->configManager->getValue('writerToken');
                 $response = Ric_Rest_Client::post($url);
                 if( trim($response)!='1' ){
                     // refresh failed, upload

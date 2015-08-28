@@ -167,15 +167,17 @@ class Ric_Server_Api {
 	 */
 	protected function actionPostRefresh(){
 		$version = H::getRP('sha1');
-		$retention = H::getRP('retention', '');
 		$timestamp = H::getRP('timestamp', time());
 		$noSync = (bool)H::getRP('noSync');
 
+		if( H::getRP('retention')!==null ){
+			throw new RuntimeException('parameter retention is not allowed on post action', 400);
+		}
 		if( $version=='' ){
 			throw new RuntimeException('?sha1=1342.. is required', 400);
 		}
 		$fileName = $this->extractFileNameFromRequest();
-		$response = $this->server->refreshFile($fileName, $version, $retention, $timestamp, $noSync);
+		$response = $this->server->refreshFile($fileName, $version, $timestamp, $noSync);
 		$this->sendResponse($response);
 	}
 
