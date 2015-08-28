@@ -1,19 +1,35 @@
-## INSTALL
+# INSTALL
 	login to your docker host
+
+## create volume 
+create a dir on docker host as the file storage
+
+	sudo mkdir -p /var/ric3777
+	sudo chmod 777 /var/ric3777
+
+## install RestInCloud
 
 	git clone https://github.com/SegFaulty/RestInCloud.git
 	cd RestInCloud/deployment/docker
 	cp example-config.json config.json
 
-# create volumeDir
+## change config
+change hostPort and tokens, empty hostPort means autoDetection at the first request
 
-	sudo mkdir -p /var/ric3777
-	sudo chmod 777 /var/ric3777
-    # change hostPort and tokens, empty hostPort means autoDetection at the first request
     vi config.json
+
+## build docker image and start it
+
     ./docker.sh
 
-## UPDATE to new version, with same config
+## set hostPort by first request
+if host is empty in your configuration, ric-server will determine the hostname (and port) by the first request it will receive
+so call it from a different server with the public hostname
+
+    curl -L "host2.ric-cluster.com:3778/?health&token=_admin_"
+
+
+# UPDATE to new version, with same config
 
 	cd RestInCloud/
 	git pull
