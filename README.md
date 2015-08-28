@@ -12,6 +12,38 @@ if your ric-servers are running, you can use the smart "ric" cli tool to backup 
 
 ## Help
 
+### Api Overview
+
+
+#### Show Help 
+
+    GET /
+    GET /?help
+
+#### File:
+    
+    PUT  /filename              # backup/upload a file
+    POST /filename              # refresh file if exists
+    GET  /filename              # restore/download a file
+    GET  /filename?check        # check exists, replicas, freshness, size of the file
+    GET  /filename?list         # list all versions of the file
+    DELETE /filename            # delete a selected or all version of the file
+    
+#### Server Management
+ 
+    GET  /?list                 # list all files on this server
+    GET  /?info                 # show server info
+    GET  /?health               # show cluster health
+    
+    POST /?addServer            # add a remote server to server (internal for cluster management)
+    POST /?removeServer         # remove a server from connected server (internal for cluster management)
+    POST /?joinCluster          # add the server to existing cluster 
+    POST /?leaveCluster         # leave a cluster
+    POST /?removeFromCluster    # drop a other server out of cluster
+    
+    
+### Api Details
+
  * GET http://ric1.server/?help - show this help
  * GET http://ric1.server/?list - list all files ... &pattern=~regEx~i&limit=100&start=100&showDeleted=1 (ordered by random!)
  * GET http://ric1.server/?listDetails -  list all files with details - parameters like ?list
@@ -76,7 +108,7 @@ encryption password: fooSecret
 ricServer: ric1.server.de
 ricWriterToke: barSecret
 
-####store the passwords
+#### store the passwords
 
 	echo "fooSecret" > /home/www/ricPassFile.txt
 	chmod 600 /home/www/ricPassFile.txt

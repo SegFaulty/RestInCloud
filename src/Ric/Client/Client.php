@@ -10,7 +10,7 @@
  */
 class Ric_Client_Client{
 
-	const MIN_SERVER_VERSION = '0.4.0'; // server needs to be on this or a higher version, BUT on the same MAJOR version  ok: 0.4.0 < 0.8.3  but fail:  0.4.0 < 2.3.0  because client is to old
+	const MIN_SERVER_VERSION = '0.6.0'; // server needs to be on this or a higher version, BUT on the same MAJOR version  ok: 1.4.0 < 1.8.3  but fail:  1.4.0 < 2.3.0  because client is to old
 
 	protected $server = '';
 	protected $auth = '';

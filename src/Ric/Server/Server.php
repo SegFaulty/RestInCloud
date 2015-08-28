@@ -5,7 +5,7 @@
  */
 class Ric_Server_Server{
 
-	const VERSION = '0.5.0'; // dont forget to change the client(s) version | if you break api backward compatibility inc the major version | all clients will until they updated
+	const VERSION = '0.6.0'; // dont forget to change the client(s) version | if you break api backward compatibility inc the major version | all clients will fail until they updated
 
 	/**
 	 * @var Ric_Server_ConfigManager

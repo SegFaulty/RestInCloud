@@ -8,7 +8,7 @@
 exit(RC_CliHandler::handleExecute($argv, $_ENV)); // command line status
 
 
-// build: 2015-08-21 22:58:24
+// build: 2015-08-28 23:59:07
 
 
 # CliHandler.php
@@ -252,6 +252,8 @@ class RC_CliHandler{
 			$msg = $client->leaveCluster();
 		}elseif( $adminCommand=='removeFromCluster' ){
 			$msg = $client->removeFromCluster($cli->arguments[1]);
+		}elseif( $adminCommand=='copyServer' ){
+			$msg = $client->copyServer($cli->arguments[1]);
 		}else{
 			throw new RuntimeException('unknown admin command');
 		}
@@ -301,7 +303,7 @@ class RC_CliHandler{
  */
 class RC_Client{
 
-	const MIN_SERVER_VERSION = '0.4.0'; // server needs to be on this or a higher version, BUT on the same MAJOR version  ok: 0.4.0 < 0.8.3  but fail:  0.4.0 < 2.3.0  because client is to old
+	const MIN_SERVER_VERSION = '0.6.0'; // server needs to be on this or a higher version, BUT on the same MAJOR version  ok: 1.4.0 < 1.8.3  but fail:  1.4.0 < 2.3.0  because client is to old
 
 	protected $server = '';
 	protected $auth = '';
@@ -377,17 +379,17 @@ class RC_Client{
 	/**
 	 * @param string $response
 	 * @param array $headers
-	 * @param string $responseFilePAth
+	 * @param string $responseFilePath
 	 * @throws RuntimeException
 	 */
-	protected function checkServerResponse($response, $headers, $responseFilePAth=''){
+	protected function checkServerResponse($response, $headers, $responseFilePath=''){
 		if( !isset($headers['Http-Code']) ){
 			throw new RuntimeException('no api response code');
 		}
 		if( $headers['Http-Code']>=400 ){
 			$msg = 'Failed: with code: '.$headers['Http-Code'];
-			if( $response=='' AND $responseFilePAth!='' AND file_exists($responseFilePAth) AND filesize($responseFilePAth)<100000 ){
-				$response = file_get_contents($responseFilePAth);
+			if( $response=='' AND $responseFilePath!='' AND file_exists($responseFilePath) AND filesize($responseFilePath)<100000 ){
+				$response = file_get_contents($responseFilePath);
 			}
 			$result = json_decode($response, true);
 			if( !empty($result['error']) ){
@@ -398,6 +400,20 @@ class RC_Client{
 			throw new RuntimeException($msg);
 		}
 	}
+
+	/**
+	 * check result (array) or response (json) for 'status'=>'OK'
+	 *
+	 * @param $responseOrResult
+	 * @return bool
+	 */
+	protected function isResponseStatusOk($responseOrResult){
+		if( !is_array($responseOrResult) ){
+			$responseOrResult = json_decode($responseOrResult, true);
+		}
+		return H::getIKS($responseOrResult, 'status')==='OK';
+	}
+
 
 	/**
 	 * @param string $filePath
@@ -419,9 +435,9 @@ class RC_Client{
 		if( $noSync ){
 			$params['noSync'] = 1;
 		}
-		$result = RR_Client::putFile($this->buildUrl($name, '', $params), $filePath, $headers);
-		$this->checkServerResponse($result, $headers);
-		return $result;
+		$response = RR_Client::putFile($this->buildUrl($name, '', $params), $filePath, $headers);
+		$this->checkServerResponse($response, $headers);
+		return $response;
 	}
 
 	/**
@@ -450,24 +466,25 @@ class RC_Client{
 			throw new RuntimeException('required min file size('.$minSize.') not reached (was '.filesize($rawFilePath).')');
 		}
 
-		$filePath = $this->getEncryptedFilePath($rawFilePath, $password, substr(md5($targetFileName),0,8)); // we have to provide the same salt for the same filename to get a file with the same sha1, but it should be not the same for all files, so we take the $targetFileName itself ;-)
+		$filePath = $this->getEncryptedFilePath($rawFilePath, $password, substr(md5($targetFileName), 0, 8)); // we have to provide the same salt for the same filename to get a file with the same sha1, but it should be not the same for all files, so we take the $targetFileName itself ;-)
 
 		$sha1 = sha1_file($filePath);
 		$params = [];
 		$params['sha1'] = $sha1;
 		$params['timestamp'] = $timestamp;
-		if( $retention ){
-			$params['retention'] = $retention;
-		}
 		$fileUrl = $this->buildUrl($targetFileName, '', $params);
 		// Post
 		$this->logDebug('POST refresh to: '.$fileUrl.' with timestamp: '.$timestamp.'('.date('Y-m-d H:i:s', $timestamp).')');
 		$headers = [];
-		$response = trim(RR_Client::post($fileUrl, [], $headers));
+		$response = RR_Client::post($fileUrl, [], $headers);
 		$this->checkServerResponse($response, $headers);
-		if( $response!=='1' ){
+		if( !$this->isResponseStatusOk($response) ){
 			// Put
 			$this->logDebug('POST refresh failed, file has to be sent via PUT');
+			if( $retention ){
+				$params['retention'] = $retention;
+			}
+			$fileUrl = $this->buildUrl($targetFileName, '', $params);
 			$headers = [];
 			$response = RR_Client::putFile($fileUrl, $filePath, $headers);
 			$this->checkServerResponse($response, $headers);
@@ -504,11 +521,10 @@ class RC_Client{
 			$params['minTimestamp'] = $minTimestamp;
 		}
 		$fileUrl = $this->buildUrl($targetFileName, 'check', $params);
-		$response = trim(RR_Client::get($fileUrl, [], $headers));
+		$response = RR_Client::get($fileUrl, [], $headers);
 		$this->checkServerResponse($response, $headers);
 		$this->logDebug('Check ('.$fileUrl.') result: '.$response);
-		$result = json_decode($response, true);
-		if( !isset($result['status']) OR $result['status']!='OK' ){
+		if( !$this->isResponseStatusOk($response) ){
 			throw new RuntimeException('check failed: '.$response);
 		}
 		return true;
@@ -725,7 +741,7 @@ class RC_Client{
 	public function health(){
 		$response = RR_Client::get($this->buildUrl('', 'health'), [], $headers);
 		$this->checkServerResponse($response, $headers);
-		if( substr($response,0,2)!='OK' ){
+		if( !$this->isResponseStatusOk($response) ){
 			throw new RuntimeException('health check critical: '.$response);
 		}
 		return $response;
@@ -777,6 +793,15 @@ class RC_Client{
 	public function removeFromCluster($serverHostPort){
 		$response = RR_Client::post($this->buildUrl('', '', ['action'=>'removeFromCluster', 'removeFromCluster'=>$serverHostPort]), [], $headers);
 		$this->checkServerResponse($response, $headers);
+		return $response;
+	}
+
+	/**
+	 * @param string $targetServerHostPort
+	 * @return string
+	 */
+	public function copyServer($targetServerHostPort){
+		$response = 'copy server to '.$targetServerHostPort;
 		return $response;
 	}
 
@@ -1045,8 +1070,7 @@ class RR_Client {
 			// then same as GET so fall through
 			case 'GET':
 				if( $data!='' ){
-					// todo check if url contains a ? then use &
-					$url.= '?'.$data;
+					$url.= ( strstr($url,'?') ? '&' : '?' ).$data; // ?data or &data if ? already in use
 				}
 				break;
 			case 'POST':
@@ -1206,7 +1230,7 @@ the configuration order is
 
 backups the config dir (as tar.gz) with last7 versions
 procedure:
-* detect resource type (file, dir, mysql, redis ..) and make a file of it
+* detect resource type (file, dir, STDIN, (mysql, redis) ..) and make a file of it
 * encrypt the file with salt(based on targetFileName) and (optionally) password
 * (optionaly check minSize)
 * refresh this file with post request
@@ -1287,6 +1311,7 @@ procedure:
 * removeFromCluster - remove given server from all clusterNodes
 * addServer - add a replication client
 * removeServer - remove a replication client
+* copyServer - connected server to targetServer
 
 a cluster is a bunch of servers, where all of them are added (addServer) to all servers, every server is a replicant of every server .. u got it
 
@@ -1299,6 +1324,7 @@ a cluster is a bunch of servers, where all of them are added (addServer) to all 
     ric admin removeFromCluster {server}
     ric admin addServer {server}
     ric admin removeServer {server}
+    ric admin copyServer {targetServer}
 
 ## Sic integration
 

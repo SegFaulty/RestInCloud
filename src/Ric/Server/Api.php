@@ -362,6 +362,9 @@ class Ric_Server_Api {
 			if( preg_replace('~\..*~', '', $minServerVersion)!==preg_replace('~\..*~', '', Ric_Server_Server::VERSION) ){
 				throw new RuntimeException('client ['.preg_replace('~[^\d\.]~','',$minServerVersion).'] matches not the server major version ['.Ric_Server_Server::VERSION.']', 500);
 			}
+			if( version_compare('1.0.0', Ric_Server_Server::VERSION, '>') AND  preg_replace('~^0.(\d+).*~', '\\1', $minServerVersion)!==preg_replace('~^0.(\d+).*~', '\\1', Ric_Server_Server::VERSION) ){
+				throw new RuntimeException('client ['.$minServerVersion.'] matches not the server minor version (<1.0.0) version ['.Ric_Server_Server::VERSION.']', 500);
+			}
 		}
 	}
 
