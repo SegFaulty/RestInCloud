@@ -392,19 +392,6 @@ class Ric_Server_Server {
     }
 
     /**
-     * outputs the file size
-     * @param string $fileName
-     * @param string $version
-     * @return Ric_Server_Response
-     */
-    public function showFileSize($fileName, $version){
-        $response = new Ric_Server_Response();
-        $filePath = $this->fileManager->getFilePath($fileName, $version);
-        $response->addOutput(filesize($filePath));
-        return $response;
-    }
-
-    /**
      * send an existing file
      * @param string $fileName
      * @param string $fileVersion
