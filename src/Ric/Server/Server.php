@@ -356,11 +356,14 @@ class Ric_Server_Server{
 		// ok servers:
 		$msg .= 'servers ok: '.(count($this->configManager->getValue('servers')) + 1 - count($serversFailures)).PHP_EOL;
 
-		$response = new Ric_Server_Response();
-		$response->addOutput($status.PHP_EOL);
+		$result = [
+			'status' => $status,
+		];
 		if( $isAdmin ){
-			$response->addOutput($msg.PHP_EOL);
+			$result['message'] = $msg;
 		}
+		$response = new Ric_Server_Response();
+		$response->setResult($result);
 		return $response;
 	}
 

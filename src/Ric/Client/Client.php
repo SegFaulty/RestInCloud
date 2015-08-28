@@ -86,17 +86,17 @@ class Ric_Client_Client{
 	/**
 	 * @param string $response
 	 * @param array $headers
-	 * @param string $responseFilePAth
+	 * @param string $responseFilePath
 	 * @throws RuntimeException
 	 */
-	protected function checkServerResponse($response, $headers, $responseFilePAth=''){
+	protected function checkServerResponse($response, $headers, $responseFilePath=''){
 		if( !isset($headers['Http-Code']) ){
 			throw new RuntimeException('no api response code');
 		}
 		if( $headers['Http-Code']>=400 ){
 			$msg = 'Failed: with code: '.$headers['Http-Code'];
-			if( $response=='' AND $responseFilePAth!='' AND file_exists($responseFilePAth) AND filesize($responseFilePAth)<100000 ){
-				$response = file_get_contents($responseFilePAth);
+			if( $response=='' AND $responseFilePath!='' AND file_exists($responseFilePath) AND filesize($responseFilePath)<100000 ){
+				$response = file_get_contents($responseFilePath);
 			}
 			$result = json_decode($response, true);
 			if( !empty($result['error']) ){
@@ -107,6 +107,20 @@ class Ric_Client_Client{
 			throw new RuntimeException($msg);
 		}
 	}
+
+	/**
+	 * check result (array) or response (json) for 'status'=>'OK'
+	 *
+	 * @param $responseOrResult
+	 * @return bool
+	 */
+	protected function isResponseStatusOk($responseOrResult){
+		if( !is_array($responseOrResult) ){
+			$responseOrResult = json_decode($responseOrResult, true);
+		}
+		return H::getIKS($responseOrResult, 'status')==='OK';
+	}
+
 
 	/**
 	 * @param string $filePath
@@ -128,9 +142,9 @@ class Ric_Client_Client{
 		if( $noSync ){
 			$params['noSync'] = 1;
 		}
-		$result = Ric_Rest_Client::putFile($this->buildUrl($name, '', $params), $filePath, $headers);
-		$this->checkServerResponse($result, $headers);
-		return $result;
+		$response = Ric_Rest_Client::putFile($this->buildUrl($name, '', $params), $filePath, $headers);
+		$this->checkServerResponse($response, $headers);
+		return $response;
 	}
 
 	/**
@@ -174,7 +188,7 @@ class Ric_Client_Client{
 		$headers = [];
 		$response = trim(Ric_Rest_Client::post($fileUrl, [], $headers));
 		$this->checkServerResponse($response, $headers);
-		if( $response!=='1' ){
+		if( !$this->isResponseStatusOk($response) ){
 			// Put
 			$this->logDebug('POST refresh failed, file has to be sent via PUT');
 			$headers = [];
@@ -213,11 +227,10 @@ class Ric_Client_Client{
 			$params['minTimestamp'] = $minTimestamp;
 		}
 		$fileUrl = $this->buildUrl($targetFileName, 'check', $params);
-		$response = trim(Ric_Rest_Client::get($fileUrl, [], $headers));
+		$response = Ric_Rest_Client::get($fileUrl, [], $headers);
 		$this->checkServerResponse($response, $headers);
 		$this->logDebug('Check ('.$fileUrl.') result: '.$response);
-		$result = json_decode($response, true);
-		if( !isset($result['status']) OR $result['status']!='OK' ){
+		if( !$this->isResponseStatusOk($response) ){
 			throw new RuntimeException('check failed: '.$response);
 		}
 		return true;
@@ -434,7 +447,7 @@ class Ric_Client_Client{
 	public function health(){
 		$response = Ric_Rest_Client::get($this->buildUrl('', 'health'), [], $headers);
 		$this->checkServerResponse($response, $headers);
-		if( substr($response,0,2)!='OK' ){
+		if( !$this->isResponseStatusOk($response) ){
 			throw new RuntimeException('health check critical: '.$response);
 		}
 		return $response;
