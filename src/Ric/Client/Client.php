@@ -173,24 +173,25 @@ class Ric_Client_Client{
 			throw new RuntimeException('required min file size('.$minSize.') not reached (was '.filesize($rawFilePath).')');
 		}
 
-		$filePath = $this->getEncryptedFilePath($rawFilePath, $password, substr(md5($targetFileName),0,8)); // we have to provide the same salt for the same filename to get a file with the same sha1, but it should be not the same for all files, so we take the $targetFileName itself ;-)
+		$filePath = $this->getEncryptedFilePath($rawFilePath, $password, substr(md5($targetFileName), 0, 8)); // we have to provide the same salt for the same filename to get a file with the same sha1, but it should be not the same for all files, so we take the $targetFileName itself ;-)
 
 		$sha1 = sha1_file($filePath);
 		$params = [];
 		$params['sha1'] = $sha1;
 		$params['timestamp'] = $timestamp;
-		if( $retention ){
-			$params['retention'] = $retention;
-		}
 		$fileUrl = $this->buildUrl($targetFileName, '', $params);
 		// Post
 		$this->logDebug('POST refresh to: '.$fileUrl.' with timestamp: '.$timestamp.'('.date('Y-m-d H:i:s', $timestamp).')');
 		$headers = [];
-		$response = trim(Ric_Rest_Client::post($fileUrl, [], $headers));
+		$response = Ric_Rest_Client::post($fileUrl, [], $headers);
 		$this->checkServerResponse($response, $headers);
 		if( !$this->isResponseStatusOk($response) ){
 			// Put
 			$this->logDebug('POST refresh failed, file has to be sent via PUT');
+			if( $retention ){
+				$params['retention'] = $retention;
+			}
+			$fileUrl = $this->buildUrl($targetFileName, '', $params);
 			$headers = [];
 			$response = Ric_Rest_Client::putFile($fileUrl, $filePath, $headers);
 			$this->checkServerResponse($response, $headers);
