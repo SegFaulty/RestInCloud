@@ -110,19 +110,16 @@ class Ric_Server_File_Manager{
 	/**
 	 * returns [version3=>ts3, version2=>ts2, version1... ]
 	 * @param string $fileName
-	 * @param bool $includeDeleted
 	 * @return array|int
 	 */
-	public function getAllVersions($fileName, $includeDeleted = false){
+	public function getAllVersions($fileName){
 		$versions = [];
 		$fileDir = $this->storageDir.$this->getSplitDirectoryFilePath($fileName);
 		foreach( glob($fileDir.$fileName.'___*') as $entryFileName ){
 			/** @noinspection PhpUnusedLocalVariableInspection */
 			list($fileName, $version) = $this->extractVersionFromFullFileName($entryFileName);
 			$fileTimestamp = filemtime($entryFileName);
-			if( $includeDeleted OR $fileTimestamp!=Ric_Server_Definition::MAGIC_DELETION_TIMESTAMP ){
-				$versions[$version] = $fileTimestamp;
-			}
+			$versions[$version] = $fileTimestamp;
 		}
 		arsort($versions); // order by newest version
 		return $versions;
@@ -130,13 +127,12 @@ class Ric_Server_File_Manager{
 
 	/**
 	 * @param string $pattern
-	 * @param bool|false $showDeleted
 	 * @param int $start
 	 * @param int $limit
 	 * @return Ric_Server_File_FileInfo[]
 	 */
-	public function getFileInfosForPattern($pattern = '', $showDeleted = false, $start = 0, $limit = 100){
-		$result = [];
+	public function getFileNamesForPattern($pattern = '', $start = 0, $limit = 100){
+		$fileNames = [];
 		$dirIterator = new RecursiveDirectoryIterator($this->storageDir);
 		$iterator = new RecursiveIteratorIterator($dirIterator, RecursiveIteratorIterator::SELF_FIRST);
 		$index = -1;
@@ -151,20 +147,18 @@ class Ric_Server_File_Manager{
 				if( $pattern!=null AND !preg_match($pattern, $fileName) ){
 					continue;
 				}
-				if( $splFileInfo->getMTime()==Ric_Server_Definition::MAGIC_DELETION_TIMESTAMP AND !$showDeleted ){
-					continue;
-				}
 				$index++;
 				if( $index<$start ){
 					continue;
 				}
-				$result[] = $this->getFileInfo($fileName, $version);
-				if( count($result)>=$limit ){
+				$fileNames[$fileName] = $fileName;
+				if( count($fileNames)>=$limit ){
 					break;
 				}
 			}
 		}
-		return $result;
+		$fileNames = array_values($fileNames);
+		return $fileNames;
 	}
 
 	/**
