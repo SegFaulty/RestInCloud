@@ -62,8 +62,7 @@ class Ric_Server_Cluster_Manager{
             $servers[] = $server;
             foreach( $servers as $clusterServer ){
                 $response = Ric_Rest_Client::post('http://' . $clusterServer . '/', ['action' => 'addServer', 'addServer' => $ownServer, 'token' => $this->configManager->getValue('adminToken')]);
-                $result = json_decode($response, true);
-                if( H::getIKS($result, 'status')!='OK' ){
+                if( !$this->isResponseStatusOk($response) ){
                     throw new RuntimeException('join cluster failed! addServer to '.$clusterServer.' failed! ['.$response.'] Inconsitent cluster state! I\'m added to this servers (please remove me): '.join('; ', $joinedServers), 400);
                 }
                 $joinedServers[] = $clusterServer;
@@ -126,8 +125,7 @@ class Ric_Server_Cluster_Manager{
         $errorMsg = '';
         foreach( $this->configManager->getValue('servers') as $clusterServer ){
             $response = Ric_Rest_Client::post('http://' . $clusterServer . '/', ['action' => 'removeServer', 'removeServer' => $server, 'token' => $this->configManager->getValue('adminToken')]);
-            $result = json_decode($response, true);
-            if( H::getIKS($result, 'status')!='OK' ){
+            if( !$this->isResponseStatusOk($response) ){
                 $errorMsg.= 'removeServer failed from '.$clusterServer.' failed! ['.$response.']';
             }else{
                 $leftServers[] = $clusterServer;
@@ -163,8 +161,8 @@ class Ric_Server_Cluster_Manager{
                 $serverUrl = 'http://'.$server.'/';
                 // check file
                 $url = $serverUrl.$fileName.'?check&version='.$version.'&sha1='.$sha1.'&minReplicas=0&token='.$this->configManager->getValue('readerToken'); // &minReplicas=0  otherwise loopOfDeath
-                $response = json_decode(Ric_Rest_Client::get($url), true);
-                if( H::getIKS($response, 'status')=='OK' ){
+                $response = Ric_Rest_Client::get($url);
+                if( $this->isResponseStatusOk($response) ){
                     $replicas++;
                 }
             }catch(Exception $e){
@@ -179,13 +177,12 @@ class Ric_Server_Cluster_Manager{
      * upload (put) if necessary
      * returns empty string if all is fine
      * @param $fileName
-     * @param $version
      * @param string $filePath
      * @param int $timestamp
      * @param string $retention
      * @return array|string
      */
-    public function syncFile($fileName, $version, $filePath, $timestamp, $retention){
+    public function syncFile($fileName, $filePath, $timestamp, $retention){
         $result = '';
         $sha1 = sha1_file($filePath);
         foreach( $this->configManager->getValue('servers') as $server ){
@@ -198,7 +195,7 @@ class Ric_Server_Cluster_Manager{
                     // refresh failed, upload
                     $url = $serverUrl.$fileName.'?timestamp='.$timestamp.'&retention='.$retention.'&noSync=1&token='.$this->configManager->getValue('writerToken');
                     $response = Ric_Rest_Client::putFile($url, $filePath);
-                    if( trim($response)!='OK' ){
+                    if( !$this->isResponseStatusOk($response) ){
                         $result = trim($result."\n".'failed to upload to '.$server.' :'.$response);
                     }
                 }
@@ -261,5 +258,18 @@ class Ric_Server_Cluster_Manager{
 	        }
         }
         return $hostName;
+    }
+
+    /**
+     * check result (array) or response (json) for 'status'=>'OK'
+     *
+     * @param $responseOrResult
+     * @return bool
+     */
+    protected function isResponseStatusOk($responseOrResult){
+        if( !is_array($responseOrResult) ){
+            $responseOrResult = json_decode($responseOrResult, true);
+        }
+        return H::getIKS($responseOrResult, 'status')==='OK';
     }
 }
