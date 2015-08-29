@@ -2,11 +2,10 @@
 
 ## install
 
-	cd /downloads
-    wget https://raw.githubusercontent.com/SegFaulty/RestInCloud/master/src/Ric/Client/ric
-    chmod 755 ric
 	cd /usr/local/sbin/
-	ln -s /downloads/ric
+    wget https://raw.githubusercontent.com/SegFaulty/RestInCloud/master/src/Ric/Client/phar/ric.phar
+    chmod 755 ric.phar
+	ln -s ric.phar ric
 	ric help
 
 ## Help global
@@ -151,10 +150,6 @@ a cluster is a bunch of servers, where all of them are added (addServer) to all 
     ric admin addServer {server}
     ric admin removeServer {server}
     ric admin copyServer {targetServer}
-
-## Sic integration
-
-use the shell capabilities, wobei das, kein failed sendet, vielleicht gibts da noch was besseres, pipen oder so
 
 
 
