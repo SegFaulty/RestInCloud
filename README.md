@@ -120,14 +120,13 @@ ricWriterToke: barSecret
     */5 * * * * /usr/local/sbin/ric backup /home/www/configs/ myServer-configs.tar.bz2 --retention=last7 --passFile=/home/www/ricPassFile.txt --prefix=myServer- --authFile=/home/www/ricWriterFile.txt --server=ric1.server.de 2>&1 >/dev/null | /usr/local/sbin/sic /myServer/ric-backup --STDINasCRITICAL
     */2 * * * * /usr/local/sbin/ric check myServer-configs.tar.bz2 --prefix=myServer- --authFile=/home/www/ricWriterFile.txt --server=ric1.server.de --minTimestamp=-300  2>&1 >/dev/null | /usr/local/sbin/sic /myServer/ric-backup/check --STDINasCRITICAL
 
-#### manual actions
+## Server Manifest
 
-show versions
-
-    ric list myServer-configs.tar.bz2 --prefix=myServer- --authFile=/home/www/ricWriterFile.txt --server=ric1.server.de
-
-    ric check myServer-configs.tar.bz2 --prefix=myServer- --authFile=/home/www/ricWriterFile.txt --server=ric1.server.de --verbose
-
+* no daemon type, only react on request, no long running requests
+* all response is json, except download and errors
+* the base is a normal filesystem, files in a hashed directory, with original filenames extended by it's sha1
+* no other persistent storage for attributes no database
+* it's seen as critical, if a file has no replicas
 
 
 ## License
