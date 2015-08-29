@@ -98,7 +98,7 @@ if your ric-servers are running, you can use the smart "ric" cli tool to backup 
  serverVersion
  * use &minServerVersion=1.4.0 to require a minimal ServerVersion - it also acts reverse - if the client major version not matches the server major version - the request is rejected - to protect old clients from doing  mad things
 
-## Usecase
+## Usecases
 
 ### Backup a Dir
 
