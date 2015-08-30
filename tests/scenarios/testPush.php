@@ -47,8 +47,8 @@ check($result[1]['timestamp']==$timestamp1, 'not the expected timestamp on secon
 
 // delete remaining
 $result = unJson(Ric_Rest_Client::delete($servers[0].'/testfile.txt?token=admin',__FILE__));
+checkOk($result);
 check($result['filesDeleted']=='8', 'delete failed for rest testfiles, expected 8 response:'.print_r($result, true));
-print_r($result);
 
 ln('push test passed');
 
