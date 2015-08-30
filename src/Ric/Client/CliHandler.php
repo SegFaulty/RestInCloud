@@ -229,16 +229,31 @@ class Ric_Client_CliHandler{
 		}elseif( $adminCommand=='health' ){
 			$msg = $client->health();
 		}elseif( $adminCommand=='addServer' ){
+			if( count($cli->arguments)!=2 ){
+				throw new RuntimeException('needs one arg (targetServer)');
+			}
 			$msg = $client->addServer($cli->arguments[1]);
 		}elseif( $adminCommand=='removeServer' ){
+			if( count($cli->arguments)!=2 ){
+				throw new RuntimeException('needs one arg (targetServer)');
+			}
 			$msg = $client->removeServer($cli->arguments[1]);
 		}elseif( $adminCommand=='joinCluster' ){
+			if( count($cli->arguments)!=2 ){
+				throw new RuntimeException('needs one arg (clusterServer)');
+			}
 			$msg = $client->joinCluster($cli->arguments[1]);
 		}elseif( $adminCommand=='leaveCluster' ){
 			$msg = $client->leaveCluster();
 		}elseif( $adminCommand=='removeFromCluster' ){
+			if( count($cli->arguments)!=2 ){
+				throw new RuntimeException('needs one arg (targetServer)');
+			}
 			$msg = $client->removeFromCluster($cli->arguments[1]);
 		}elseif( $adminCommand=='copyServer' ){
+			if( count($cli->arguments)!=2 ){
+				throw new RuntimeException('needs one arg (targetServer)');
+			}
 			$msg = $client->copyServer($cli->arguments[1]);
 		}else{
 			throw new RuntimeException('unknown admin command');
