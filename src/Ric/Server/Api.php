@@ -193,7 +193,7 @@ class Ric_Server_Api {
 		$server = H::getRP('server');
 		$version = H::getRP('version');
 		if( $version=='' ){
-			throw new RuntimeException('?sha1=1342.. is required', 400);
+			throw new RuntimeException('parameter version=1342.. is required', 400);
 		}
 		$fileName = $this->extractFileNameFromRequest();
 		$response = $this->server->pushFileToServer($server, $fileName, $version);

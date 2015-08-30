@@ -3,6 +3,10 @@
 require_once __DIR__.'/init.php';
 
 ln('tear down cluster');
+// server 4
+$response = Ric_Rest_Client::post($servers[3].'?',['action'=>'leaveCluster','token'=>'admin']);
+checkOk($response, 'leaveCluster failed for server '.$servers[0]);
+
 $response = Ric_Rest_Client::post($servers[0].'?',['action'=>'leaveCluster','token'=>'admin']);
 checkOk($response, 'leaveCluster failed for server '.$servers[0]);
 $response = Ric_Rest_Client::post($servers[1].'?',['action'=>'leaveCluster','token'=>'admin']);

@@ -2,7 +2,7 @@
 
 include __DIR__.'/setupCluster.php';
 
-ln('start backup delete');
+ln('start backup test');
 
 ln('upload a file, to the cluster');
 // upload a file
