@@ -119,6 +119,27 @@ class Ric_Server_Server{
 	}
 
 	/**
+	 * @param string $server
+	 * @param string $fileName
+	 * @param string $version
+	 * @return Ric_Server_Response
+	 */
+	public function pushFileToServer($server, $fileName, $version){
+		if( $version=='' ){
+			throw new RuntimeException('version missed (you have to select a specific version for push)', 400);
+		}
+		$filePath = $this->fileManager->getFilePath($fileName, $version);
+		$syncResult = $this->clusterManager->pushFileToServer($server, $fileName, $filePath, Ric_Server_Definition::RETENTION__ALL);
+		if( $syncResult!='' ){
+			throw new RuntimeException('pushFileToServer failed: '.$syncResult);
+		}
+		$result['status'] = 'OK';
+		$response = new Ric_Server_Response();
+		$response->setResult($result);
+		return $response;
+	}
+
+	/**
 	 * mark one or all versions of the File as deleted
 	 * @param string $fileName
 	 * @param string $version

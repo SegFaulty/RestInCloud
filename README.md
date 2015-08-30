@@ -40,6 +40,7 @@ if your ric-servers are running, you can use the smart "ric" cli tool to backup 
     POST /?joinCluster          # add the server to existing cluster 
     POST /?leaveCluster         # leave a cluster
     POST /?removeFromCluster    # drop a other server out of cluster
+    POST /filename push=>server # push file to server
     
     
 ### Api Details

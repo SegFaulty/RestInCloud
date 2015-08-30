@@ -116,8 +116,12 @@ class Ric_Server_Api {
 				throw new RuntimeException('unknown [POST] action or no file given', 400);
 			}
 		} else {
-			// not "/" .. this is a file, refresh action
-			$this->actionPostRefresh();
+			if( $action=='push' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
+				$this->actionPushFileToServer();
+			}else{
+				// not "/" .. this is a file, refresh action
+				$this->actionPostRefresh();
+			}
 		}
 	}
 
@@ -178,6 +182,21 @@ class Ric_Server_Api {
 		}
 		$fileName = $this->extractFileNameFromRequest();
 		$response = $this->server->refreshFile($fileName, $version, $timestamp, $noSync);
+		$this->sendResponse($response);
+	}
+
+	/**
+	 * check and refresh a with a post request
+	 * @throws RuntimeException
+	 */
+	protected function actionPushFileToServer(){
+		$server = H::getRP('server');
+		$version = H::getRP('version');
+		if( $version=='' ){
+			throw new RuntimeException('?sha1=1342.. is required', 400);
+		}
+		$fileName = $this->extractFileNameFromRequest();
+		$response = $this->server->pushFileToServer($server, $fileName, $version);
 		$this->sendResponse($response);
 	}
 
