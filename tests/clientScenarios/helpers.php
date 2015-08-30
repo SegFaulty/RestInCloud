@@ -72,17 +72,35 @@ function checkOk($responseOrResult, $description='Status Ok expected but got {$r
 	if( is_string($responseOrResult) ){
 		$responseOrResult = unJson($responseOrResult);
 	}
-	check(isset($responseOrResult['status']) AND $responseOrResult['status']=='OK', $description, $occuredAt);
+	check( isset($responseOrResult['status']) AND $responseOrResult['status']=='OK', $description, $occuredAt);
+}
+
+/**
+ * check if response is "OK"
+ * @param string $response
+ * @param string $description
+ * @param string $occuredAt
+ */
+function checkOks($response, $description='Status Ok expected but got {$response}', $occuredAt=''){
+	if( $occuredAt=='' ){
+		$backTrace = debug_backtrace();
+		$occuredAt = basename($backTrace[0]['file']).' line: '.$backTrace[0]['line'];
+	}
+	$description = str_replace('{$response}', var_export($response, true), $description);
+	check( substr($response, 0, 3)==='OK'.PHP_EOL, $description, $occuredAt);
 }
 
 /**
  * @param string $response
+ * @param string $occuredAt
  * @return array
  */
-function unJson($response){
+function unJson($response, $occuredAt=''){
+	if( $occuredAt=='' ){
+		$backTrace = debug_backtrace();
+		$occuredAt = basename($backTrace[0]['file']).' line: '.$backTrace[0]['line'];
+	}
 	$result = json_decode($response, true);
-	$backTrace = debug_backtrace();
-	$occuredAt = basename($backTrace[0]['file']).' line: '.$backTrace[0]['line'];
 	check(is_array($result), 'failed! response:'.$response, $occuredAt);
 	return $result;
 }
