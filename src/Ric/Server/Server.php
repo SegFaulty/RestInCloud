@@ -74,7 +74,7 @@ class Ric_Server_Server{
 		$result['timestamp'] = $timestamp;
 		// replicate
 		if( !$noSync ){
-			$syncResult = $this->clusterManager->syncFile($fileName, $filePath, $timestamp, $retention);
+			$syncResult = $this->clusterManager->syncFile($fileName, $filePath, $retention);
 			if( $syncResult!='' ){
 				throw new RuntimeException('sync uploaded file failed: '.$syncResult. ' (file is locally saved!)');
 			}
@@ -106,7 +106,7 @@ class Ric_Server_Server{
 		if( file_exists($filePath) ){
 			$this->fileManager->updateTimestamp($fileName, $version, $timestamp);
 			if( !$noSync ){
-				$syncResult = $this->clusterManager->syncFile($fileName, $filePath, $timestamp, $retention=Ric_Server_Definition::RETENTION__ALL);
+				$syncResult = $this->clusterManager->syncFile($fileName, $filePath, $retention=Ric_Server_Definition::RETENTION__ALL);
 				if( $syncResult!='' ){
 					throw new RuntimeException('sync file failed: '.$syncResult);
 				}

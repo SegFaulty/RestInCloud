@@ -135,7 +135,7 @@ class Ric_Server_Cluster_Manager{
         return [$leftServers, $errorMsg];
     }
 
-    /**
+	/**
      * todo check if parameter value all is wanted
      * @param $server
      */
@@ -148,7 +148,7 @@ class Ric_Server_Cluster_Manager{
         $this->configManager->setRuntimeValue('servers', $servers);
     }
 
-    /**
+	/**
      * @param string $fileName
      * @param string $version
      * @param string $sha1
@@ -172,39 +172,57 @@ class Ric_Server_Cluster_Manager{
         return $replicas;
     }
 
-    /**
+	/**
      * sync file to other servers
      * upload (put) if necessary
      * returns empty string if all is fine
      * @param $fileName
      * @param string $filePath
-     * @param int $timestamp
      * @param string $retention
      * @return array|string
      */
-    public function syncFile($fileName, $filePath, $timestamp, $retention){
+    public function syncFile($fileName, $filePath, $retention){
         $result = '';
         $sha1 = sha1_file($filePath);
         foreach( $this->configManager->getValue('servers') as $server ){
             try{
-                $serverUrl = 'http://'.$server.'/';
-                // try to refresh file
-                $url = $serverUrl.$fileName.'?sha1='.$sha1.'&timestamp='.$timestamp.'&noSync=1&token='.$this->configManager->getValue('writerToken');
-                $response = Ric_Rest_Client::post($url);
-                if( trim($response)!='1' ){
-                    // refresh failed, upload
-                    $url = $serverUrl.$fileName.'?timestamp='.$timestamp.'&retention='.$retention.'&noSync=1&token='.$this->configManager->getValue('writerToken');
-                    $response = Ric_Rest_Client::putFile($url, $filePath);
-                    if( !$this->isResponseStatusOk($response) ){
-                        $result = trim($result."\n".'failed to upload to '.$server.' :'.$response);
-                    }
-                }
+                $result.= $this->pushFileToServer($server, $fileName, $filePath, $retention, $sha1);
             }catch(Exception $e){
-                $result = trim($result."\n".'failed to upload to '.$server);
+                $result.= 'failed to upload to '.$server.PHP_EOL;
             }
         }
-        return $result;
+        return trim($result);
     }
+
+	/**
+	 * returns empty string on success
+	 * @param string $server
+	 * @param $fileName
+	 * @param $filePath
+	 * @param $retention
+	 * @param $sha1
+	 * @return string
+	 */
+	protected function pushFileToServer($server, $fileName, $filePath, $retention, $sha1=''){
+		$result = '';
+		if( $sha1!='' ){
+			$sha1 = sha1_file($filePath);
+		}
+		$timestamp = filemtime($filePath);
+		$serverUrl = 'http://'.$server.'/';
+		// try to refresh file
+		$url = $serverUrl.$fileName.'?sha1='.$sha1.'&timestamp='.$timestamp.'&noSync=1&token='.$this->configManager->getValue('writerToken');
+		$response = Ric_Rest_Client::post($url);
+		if( trim($response)!='1' ){
+			// refresh failed, upload
+			$url = $serverUrl.$fileName.'?timestamp='.$timestamp.'&retention='.$retention.'&noSync=1&token='.$this->configManager->getValue('writerToken');
+			$response = Ric_Rest_Client::putFile($url, $filePath);
+			if( !$this->isResponseStatusOk($response) ){
+				$result = 'failed to upload to '.$server.' :'.$response.PHP_EOL;
+			}
+		}
+		return $result;
+	}
 
 	/**
 	 * delete file from other servers
@@ -272,4 +290,5 @@ class Ric_Server_Cluster_Manager{
         }
         return H::getIKS($responseOrResult, 'status')==='OK';
     }
+
 }
