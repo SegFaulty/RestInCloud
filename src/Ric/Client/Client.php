@@ -385,7 +385,7 @@ class Ric_Client_Client{
 	}
 
 	/**
-	 * delete on backupClster
+	 * delete on backupCluster
 	 * @param string $targetFileName
 	 * @param string|null $version
 	 * @return string
