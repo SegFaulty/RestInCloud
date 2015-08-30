@@ -49,7 +49,7 @@ class Ric_Server_Auth_Manager {
 		}
 
 		if( !$isAuth AND $isRequired ){
-			throw new RuntimeException('login needed', 403);
+			throw new RuntimeException('valid login needed', 403);
 		}
 
 		return $isAuth;
