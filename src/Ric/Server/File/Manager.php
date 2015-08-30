@@ -171,8 +171,13 @@ class Ric_Server_File_Manager{
 		$filePath = $this->getFilePath($fileName, $version);
 		if( file_exists($filePath) ){
 			list($fileName, $version) = $this->extractVersionFromFullFileName($filePath);
-			$fileTimestamp = filemtime($filePath);
-			$info = new Ric_Server_File_FileInfo($fileName, $version, sha1_file($filePath), filesize($filePath), $fileTimestamp);
+			$info = new Ric_Server_File_FileInfo(
+					$fileName,
+					$version,
+					sha1_file($filePath),
+					filesize($filePath),
+					filemtime($filePath)
+			);
 		}
 		return $info;
 	}
