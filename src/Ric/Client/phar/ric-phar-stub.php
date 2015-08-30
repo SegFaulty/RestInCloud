@@ -6,6 +6,7 @@ require_once 'phar://ric.phar/Cli.php';
 require_once 'phar://ric.phar/CliHandler.php';
 require_once 'phar://ric.phar/Client.php';
 require_once 'phar://ric.phar/RestClient.php';
+require_once 'phar://ric.phar/SyntacticSugar.php';
 
 exit(Ric_Client_CliHandler::handleExecute($argv, $_ENV)); // command line status
 
