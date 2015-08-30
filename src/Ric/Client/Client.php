@@ -8,7 +8,7 @@
  *
  * Class Ric_Client_Client
  */
-class Ric_Client_Client{
+class Ric_Client_Client {
 
 	const MIN_SERVER_VERSION = '0.6.0'; // server needs to be on this or a higher version, BUT on the same MAJOR version  ok: 1.4.0 < 1.8.3  but fail:  1.4.0 < 2.3.0  because client is to old
 
@@ -45,7 +45,7 @@ class Ric_Client_Client{
 	 * @param string $msg
 	 */
 	protected function log($msg){
-		$this->log.= $msg.PHP_EOL;
+		$this->log .= $msg.PHP_EOL;
 	}
 
 	/**
@@ -53,7 +53,7 @@ class Ric_Client_Client{
 	 */
 	protected function logDebug($msg){
 		if( $this->debug ){
-			$this->log.= date('Y-m-d H:i:s').' '.$msg.PHP_EOL;
+			$this->log .= date('Y-m-d H:i:s').' '.$msg.PHP_EOL;
 		}
 	}
 
@@ -65,21 +65,21 @@ class Ric_Client_Client{
 	 * @throws RuntimeException
 	 * @return string
 	 */
-	protected function buildUrl($fileName, $command='', $parameters=[], $checkVersion=true){
+	protected function buildUrl($fileName, $command = '', $parameters = [], $checkVersion = true){
 		if( $this->server=='' ){
 			throw new RuntimeException('no server given');
 		}
 		$url = 'http://'.$this->server.'/';
-		$url.= $fileName;
+		$url .= $fileName;
 		if( $this->auth!='' ){
-			$parameters+= ['token'=>$this->auth];  // add token
+			$parameters += ['token' => $this->auth];  // add token
 		}
 		if( $checkVersion ){
 			$parameters += ['minServerVersion' => self::MIN_SERVER_VERSION];
 		}
-		$url.= '?'.$command;
+		$url .= '?'.$command;
 		if( !empty($parameters) ){
-			$url.= '&'.http_build_query($parameters);
+			$url .= '&'.http_build_query($parameters);
 		}
 		$this->logDebug(__METHOD__.' url:'.$url);
 		return $url;
@@ -91,7 +91,7 @@ class Ric_Client_Client{
 	 * @param string $responseFilePath
 	 * @throws RuntimeException
 	 */
-	protected function checkServerResponse($response, $headers, $responseFilePath=''){
+	protected function checkServerResponse($response, $headers, $responseFilePath = ''){
 		if( !isset($headers['Http-Code']) ){
 			throw new RuntimeException('no api response code');
 		}
@@ -102,9 +102,9 @@ class Ric_Client_Client{
 			}
 			$result = json_decode($response, true);
 			if( !empty($result['error']) ){
-				$msg.= ' Error: '.$result['error'];
+				$msg .= ' Error: '.$result['error'];
 			}else{
-				$msg.= $response;
+				$msg .= $response;
 			}
 			throw new RuntimeException($msg);
 		}
@@ -123,7 +123,6 @@ class Ric_Client_Client{
 		return H::getIKS($responseOrResult, 'status')==='OK';
 	}
 
-
 	/**
 	 * @param string $filePath
 	 * @param string $name
@@ -133,7 +132,7 @@ class Ric_Client_Client{
 	 * @return array
 	 * @throws RuntimeException
 	 */
-	public function storeFile($filePath, $name='', $retention=null, $timestamp=null, $noSync=false){
+	public function storeFile($filePath, $name = '', $retention = null, $timestamp = null, $noSync = false){
 		$params = [];
 		if( $timestamp!==null ){
 			$params['timestamp'] = $timestamp;
@@ -161,7 +160,7 @@ class Ric_Client_Client{
 	 * @throws RuntimeException
 	 * @return bool
 	 */
-	public function backup($resource, $targetFileName, $password=null, $retention=null, $timestamp=null, $minReplicas=null, $minSize=1){
+	public function backup($resource, $targetFileName, $password = null, $retention = null, $timestamp = null, $minReplicas = null, $minSize = 1){
 		$rawFilePath = $this->getFilePathForResource($resource);
 
 		if( $timestamp=='file' ){
@@ -197,7 +196,7 @@ class Ric_Client_Client{
 			$headers = [];
 			$response = Ric_Rest_Client::putFile($fileUrl, $filePath, $headers);
 			$this->checkServerResponse($response, $headers);
-			$this->logDebug('PUT result:'. $response);
+			$this->logDebug('PUT result:'.$response);
 		}else{
 			$this->logDebug('POST refresh succeeded, no file transfer necessary');
 		}
@@ -215,7 +214,7 @@ class Ric_Client_Client{
 	 * @throws RuntimeException
 	 * @return bool
 	 */
-	public function check($targetFileName, $minReplicas=null, $sha1=null, $minSize=null, $minTimestamp=null){
+	public function check($targetFileName, $minReplicas = null, $sha1 = null, $minSize = null, $minTimestamp = null){
 		$params = [];
 		if( $minReplicas!==null ){
 			$params['minReplicas'] = $minReplicas;
@@ -248,7 +247,7 @@ class Ric_Client_Client{
 	 * @param bool $overwrite
 	 * @return bool
 	 */
-	public function restore($targetFileName, $resource, $password=null, $version=null, $overwrite=true){
+	public function restore($targetFileName, $resource, $password = null, $version = null, $overwrite = true){
 		$tmpFilePath = $this->getTmpFilePath();
 		$params = [];
 		if( $version ){
@@ -272,8 +271,8 @@ class Ric_Client_Client{
 	 * @throws RuntimeException
 	 * @internal param string $filePath
 	 */
-	protected function restoreResourceFromFile($encryptedFilePath, $resource, $password, $overwrite=true){
-		$this->logDebug('downloaded as tmpFile: '.$encryptedFilePath. '['.filesize($encryptedFilePath).']');
+	protected function restoreResourceFromFile($encryptedFilePath, $resource, $password, $overwrite = true){
+		$this->logDebug('downloaded as tmpFile: '.$encryptedFilePath.'['.filesize($encryptedFilePath).']');
 		$filePath = $this->getDecryptedFilePath($encryptedFilePath, $password);
 		if( preg_match('~^mysql://~', $resource) ){
 			throw new RuntimeException('resource type mysql not implemented');
@@ -315,12 +314,12 @@ class Ric_Client_Client{
 			if( $status!=0 ){
 				throw new RuntimeException('tar dir failed: '.$command.' with: '.print_r($output, true), 500);
 			}
-			touch($tmpTarFile, filemtime(rtrim($resource,'/').'/.')); // get the dir mod-date and set it to created tar
+			touch($tmpTarFile, filemtime(rtrim($resource, '/').'/.')); // get the dir mod-date and set it to created tar
 			$this->logDebug('set modification time of tar to '.date('Y-m-d H:i:s', filemtime($tmpTarFile)));
 			$filePath = $tmpTarFile;
 		}elseif( $resource=='STDIN' ){
 			$filePath = $this->getTmpFilePath();
-			while( !feof(STDIN) ) {
+			while( !feof(STDIN) ){
 				$data = fread(STDIN, 1000000);
 				file_put_contents($filePath, $data, FILE_APPEND);
 			}
@@ -346,14 +345,14 @@ class Ric_Client_Client{
 	 * @throws RuntimeException
 	 * @return string
 	 */
-	protected function getEncryptedFilePath($filePath, $password, $salt='_sdffHGetdsga'){
+	protected function getEncryptedFilePath($filePath, $password, $salt = '_sdffHGetdsga'){
 		if( !is_file($filePath) ){
 			throw new RuntimeException('file not found or not a regular file: '.$filePath);
 		}
 
 		$encryptedFilePath = $this->getTmpFilePath('.ricenc');
 
-		$command = 'openssl enc -aes-256-cbc -S '.bin2hex(substr($salt,0,8)).' -in '.$filePath.' -out '.$encryptedFilePath.' -k '.escapeshellarg((string) $password);
+		$command = 'openssl enc -aes-256-cbc -S '.bin2hex(substr($salt, 0, 8)).' -in '.$filePath.' -out '.$encryptedFilePath.' -k '.escapeshellarg((string) $password);
 		exec($command, $output, $status);
 		if( $status!=0 ){
 			throw new RuntimeException('encryption failed: '.$command.' with: '.print_r($output, true), 500);
@@ -390,7 +389,7 @@ class Ric_Client_Client{
 	 * @param string|null $version
 	 * @return string
 	 */
-	public function delete($targetFileName, $version=null){
+	public function delete($targetFileName, $version = null){
 		$params = [];
 		if( $version!==null AND $version!='all' ){
 			$params['version'] = $version;
@@ -461,7 +460,7 @@ class Ric_Client_Client{
 	 * @return string
 	 */
 	public function addServer($serverHostPort){
-		$response = Ric_Rest_Client::post($this->buildUrl('', '', ['action'=>'addServer', 'addServer'=>$serverHostPort]), [], $headers);
+		$response = Ric_Rest_Client::post($this->buildUrl('', '', ['action' => 'addServer', 'addServer' => $serverHostPort]), [], $headers);
 		$this->checkServerResponse($response, $headers);
 		return $response;
 	}
@@ -471,7 +470,7 @@ class Ric_Client_Client{
 	 * @return string
 	 */
 	public function removeServer($serverHostPort){
-		$response = Ric_Rest_Client::post($this->buildUrl('', '', ['action'=>'removeServer', 'removeServer'=>$serverHostPort]), [], $headers);
+		$response = Ric_Rest_Client::post($this->buildUrl('', '', ['action' => 'removeServer', 'removeServer' => $serverHostPort]), [], $headers);
 		$this->checkServerResponse($response, $headers);
 		return $response;
 	}
@@ -481,7 +480,7 @@ class Ric_Client_Client{
 	 * @return string
 	 */
 	public function joinCluster($serverHostPort){
-		$response = Ric_Rest_Client::post($this->buildUrl('', '', ['action'=>'joinCluster', 'joinCluster'=>$serverHostPort]), [], $headers);
+		$response = Ric_Rest_Client::post($this->buildUrl('', '', ['action' => 'joinCluster', 'joinCluster' => $serverHostPort]), [], $headers);
 		$this->checkServerResponse($response, $headers);
 		return $response;
 	}
@@ -490,7 +489,7 @@ class Ric_Client_Client{
 	 * @return string
 	 */
 	public function leaveCluster(){
-		$response = Ric_Rest_Client::post($this->buildUrl('', '', ['action'=>'leaveCluster']), [], $headers);
+		$response = Ric_Rest_Client::post($this->buildUrl('', '', ['action' => 'leaveCluster']), [], $headers);
 		$this->checkServerResponse($response, $headers);
 		return $response;
 	}
@@ -500,7 +499,7 @@ class Ric_Client_Client{
 	 * @return string
 	 */
 	public function removeFromCluster($serverHostPort){
-		$response = Ric_Rest_Client::post($this->buildUrl('', '', ['action'=>'removeFromCluster', 'removeFromCluster'=>$serverHostPort]), [], $headers);
+		$response = Ric_Rest_Client::post($this->buildUrl('', '', ['action' => 'removeFromCluster', 'removeFromCluster' => $serverHostPort]), [], $headers);
 		$this->checkServerResponse($response, $headers);
 		return $response;
 	}
@@ -525,6 +524,7 @@ class Ric_Client_Client{
 	public function setTmpDir($dir){
 		$this->tmpFileDir = $dir;
 	}
+
 	/**
 	 * return filePath
 	 * file will be delete on script termination (via register_shutdown_function deleteTmpFiles)
@@ -534,12 +534,12 @@ class Ric_Client_Client{
 	 * @param string $extension
 	 * @return string
 	 */
-	public function getTmpFilePath($extension=''){
+	public function getTmpFilePath($extension = ''){
 		$tmpFile = $this->tmpFileDir;
 		if( $tmpFile=='' ){
 			$tmpFile = sys_get_temp_dir();
 		}
-		$tmpFile.= '/_'.__CLASS__.'_'.uniqid('', true).$extension;
+		$tmpFile .= '/_'.__CLASS__.'_'.uniqid('', true).$extension;
 		$this->tmpFilePaths[] = $tmpFile;
 		return $tmpFile;
 	}

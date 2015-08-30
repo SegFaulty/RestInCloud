@@ -26,31 +26,31 @@ class Ric_Server_Api {
 	 */
 	public function handleRequest(){
 		try{
-			$this->checkServerVersion(H::getRP('minServerVersion',''));
+			$this->checkServerVersion(H::getRP('minServerVersion', ''));
 			$this->auth(Ric_Server_Auth_Definition::ROLE__READER, true);
 			if( $_SERVER['REQUEST_METHOD']=='PUT' ){
 				$this->handlePutRequest();
-			} elseif( $_SERVER['REQUEST_METHOD']=='POST' OR H::getRP('method')=='post' ) {
+			}elseif( $_SERVER['REQUEST_METHOD']=='POST' OR H::getRP('method')=='post' ){
 				$this->handlePostRequest();
-			} elseif( $_SERVER['REQUEST_METHOD']=='GET' ) {
+			}elseif( $_SERVER['REQUEST_METHOD']=='GET' ){
 				$this->handleGetRequest();
-			} elseif( $_SERVER['REQUEST_METHOD']=='DELETE' OR H::getRP('method')=='delete' ) {
+			}elseif( $_SERVER['REQUEST_METHOD']=='DELETE' OR H::getRP('method')=='delete' ){
 				if( $this->auth(Ric_Server_Auth_Definition::ROLE__WRITER) ){
 					$this->actionDelete();
 				}
-			} else {
+			}else{
 				throw new RuntimeException('unsupported http-method', 400);
 			}
-		} catch(Exception $e){
+		}catch(Exception $e){
 			if( $e->getCode()===400 ){
 				header('HTTP/1.1 400 Bad Request', true, 400);
-			} elseif( $e->getCode()===403 ) {
+			}elseif( $e->getCode()===403 ){
 				header('HTTP/1.1 403 Forbidden', true, 403);
-			} elseif( $e->getCode()===404 ) {
+			}elseif( $e->getCode()===404 ){
 				header('HTTP/1.1 404 Not found', true, 404);
-			} elseif( $e->getCode()===507 ) {
+			}elseif( $e->getCode()===507 ){
 				header('HTTP/1.1 507 Insufficient Storage', true, 507);
-			} else {
+			}else{
 				header('HTTP/1.1 500 Internal Server Error', true, 500);
 			}
 			header('Content-Type: application/json');
@@ -104,18 +104,18 @@ class Ric_Server_Api {
 			// post actions
 			if( $action=='addServer' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
 				$this->actionAddServer();
-			} elseif( $action=='removeServer' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ) {
+			}elseif( $action=='removeServer' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
 				$this->actionRemoveServer();
-			} elseif( $action=='joinCluster' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ) {
+			}elseif( $action=='joinCluster' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
 				$this->actionJoinCluster();
-			} elseif( $action=='leaveCluster' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ) {
+			}elseif( $action=='leaveCluster' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
 				$this->actionLeaveCluster();
-			} elseif( $action=='removeFromCluster' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ) {
+			}elseif( $action=='removeFromCluster' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
 				$this->actionRemoveFromCluster();
-			} else {
+			}else{
 				throw new RuntimeException('unknown [POST] action or no file given', 400);
 			}
-		} else {
+		}else{
 			if( $action=='push' AND $this->auth(Ric_Server_Auth_Definition::ROLE__ADMIN) ){
 				$this->actionPushFileToServer();
 			}else{
@@ -131,8 +131,8 @@ class Ric_Server_Api {
 	protected function handlePutRequest(){
 		$this->auth(Ric_Server_Auth_Definition::ROLE__WRITER);
 		$retention = H::getRP('retention', Ric_Server_Definition::RETENTION__LAST3);
-		$timestamp = (int)H::getRP('timestamp', time());
-		$noSync = (bool)H::getRP('noSync');
+		$timestamp = (int) H::getRP('timestamp', time());
+		$noSync = (bool) H::getRP('noSync');
 
 		$tmpFilePath = $this->readInputStreamToTempFile();
 
@@ -145,7 +145,7 @@ class Ric_Server_Api {
 	 * @return string filepath
 	 */
 	protected function readInputStreamToTempFile(){
-		$tmpFilePath = sys_get_temp_dir() . '/_' . __CLASS__ . '_' . uniqid('', true);
+		$tmpFilePath = sys_get_temp_dir().'/_'.__CLASS__.'_'.uniqid('', true);
 		$putData = fopen("php://input", "r");
 		$fp = fopen($tmpFilePath, "w");
 		stream_copy_to_stream($putData, $fp);
@@ -172,7 +172,7 @@ class Ric_Server_Api {
 	protected function actionPostRefresh(){
 		$version = H::getRP('sha1');
 		$timestamp = H::getRP('timestamp', time());
-		$noSync = (bool)H::getRP('noSync');
+		$noSync = (bool) H::getRP('noSync');
 
 		if( H::getRP('retention')!==null ){
 			throw new RuntimeException('parameter retention is not allowed on post action', 400);
@@ -276,7 +276,7 @@ class Ric_Server_Api {
 	protected function actionDelete(){
 		$fileName = $this->extractFileNameFromRequest();
 		$version = $this->extractVersionFromRequest();
-		$noSync = (bool)H::getRP('noSync');
+		$noSync = (bool) H::getRP('noSync');
 
 		$response = $this->server->deleteFile($fileName, $version, $noSync);
 		$this->sendResponse($response);
@@ -306,7 +306,7 @@ class Ric_Server_Api {
 	protected function actionListFileNames(){
 		$pattern = H::getRP('pattern', null);
 		if( $pattern!==null AND !Ric_Server_Helper_RegexValidator::isValid($pattern, $errorMessage) ){
-			throw new RuntimeException('not a valid regex: ' . $errorMessage, 400);
+			throw new RuntimeException('not a valid regex: '.$errorMessage, 400);
 		}
 		$start = H::getRP('start', 0);
 		$limit = min(1000, H::getRP('limit', 100));
@@ -342,8 +342,8 @@ class Ric_Server_Api {
 		}
 		$allowedChars = '1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
 		$allowedChars .= '-_.';
-		if( preg_match('~[^' . preg_quote($allowedChars, '~') . ']~', $fileName) ){
-			throw new RuntimeException('filename must only use these chars: ' . $allowedChars, 400);
+		if( preg_match('~[^'.preg_quote($allowedChars, '~').']~', $fileName) ){
+			throw new RuntimeException('filename must only use these chars: '.$allowedChars, 400);
 		}
 		return $fileName;
 	}
@@ -379,9 +379,9 @@ class Ric_Server_Api {
 				throw new RuntimeException('server to old ['.Ric_Server_Server::VERSION.']', 500);
 			}
 			if( preg_replace('~\..*~', '', $minServerVersion)!==preg_replace('~\..*~', '', Ric_Server_Server::VERSION) ){
-				throw new RuntimeException('client ['.preg_replace('~[^\d\.]~','',$minServerVersion).'] matches not the server major version ['.Ric_Server_Server::VERSION.']', 500);
+				throw new RuntimeException('client ['.preg_replace('~[^\d\.]~', '', $minServerVersion).'] matches not the server major version ['.Ric_Server_Server::VERSION.']', 500);
 			}
-			if( version_compare('1.0.0', Ric_Server_Server::VERSION, '>') AND  preg_replace('~^0.(\d+).*~', '\\1', $minServerVersion)!==preg_replace('~^0.(\d+).*~', '\\1', Ric_Server_Server::VERSION) ){
+			if( version_compare('1.0.0', Ric_Server_Server::VERSION, '>') AND preg_replace('~^0.(\d+).*~', '\\1', $minServerVersion)!==preg_replace('~^0.(\d+).*~', '\\1', Ric_Server_Server::VERSION) ){
 				throw new RuntimeException('client ['.$minServerVersion.'] matches not the server minor version (<1.0.0) version ['.Ric_Server_Server::VERSION.']', 500);
 			}
 		}
@@ -394,7 +394,7 @@ class Ric_Server_Api {
 		foreach( $response->getHeaders() as $header ){
 			if( isset($header['code']) AND $header['code']>0 ){
 				header($header['text'], $header['code']);
-			} else {
+			}else{
 				header($header['text']);
 			}
 		}
@@ -402,10 +402,10 @@ class Ric_Server_Api {
 		$outputFilePath = $response->getOutputFilePath();
 		if( $outputFilePath!='' ){
 			readfile($outputFilePath);
-		}elseif( $result !== null ){
+		}elseif( $result!==null ){
 			header('Content-Type: application/json');
 			echo H::json($result);
-		} else {
+		}else{
 			foreach( $response->getOutput() as $output ){
 				echo $output;
 			}

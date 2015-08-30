@@ -15,7 +15,6 @@ class Ric_Server_Auth_Manager {
 		$this->adminToken = $config['adminToken'];
 	}
 
-
 	/**
 	 * user admin>writer>reader
 	 * @param string $user
@@ -42,9 +41,9 @@ class Ric_Server_Auth_Manager {
 
 		if( $user=='admin' AND $userRole=='admin' ){
 			$isAuth = true;
-		} elseif( $user=='writer' AND in_array($userRole, ['writer', 'admin']) ) {
+		}elseif( $user=='writer' AND in_array($userRole, ['writer', 'admin']) ){
 			$isAuth = true;
-		} elseif( $user=='reader' AND in_array($userRole, ['reader', 'writer', 'admin']) ) {
+		}elseif( $user=='reader' AND in_array($userRole, ['reader', 'writer', 'admin']) ){
 			$isAuth = true;
 		}
 

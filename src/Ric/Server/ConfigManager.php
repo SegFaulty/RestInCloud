@@ -3,15 +3,15 @@
 class Ric_Server_ConfigManager {
 
 	protected $defaultConfig = [
-			'hostPort' => '', // if empty use autoDetectSource host with default port
-			'storeDir' => '/nonExistingDir/ric/',
-			'quota' => 0,
-			'servers' => [],
-			'adminToken' => 'admin',
+			'hostPort'    => '', // if empty use autoDetectSource host with default port
+			'storeDir'    => '/nonExistingDir/ric/',
+			'quota'       => 0,
+			'servers'     => [],
+			'adminToken'  => 'admin',
 			'writerToken' => 'writer',
 			'readerToken' => '',
 			'defaultRetention' => Ric_Server_Definition::RETENTION__LAST3,
-			'serverId' => '',
+			'serverId'    => '',
 	];
 	protected $config = [];
 
@@ -45,19 +45,19 @@ class Ric_Server_ConfigManager {
 	protected function loadConfig($configFilePath){
 
 		if( !file_exists($configFilePath) ){
-			throw new RuntimeException('config file not found: ' . $configFilePath);
+			throw new RuntimeException('config file not found: '.$configFilePath);
 		}
 		$localConfig = json_decode(file_get_contents($configFilePath), true);
 		if( !is_array($localConfig) ){
-			throw new RuntimeException('config file is invalid: ' . $configFilePath);
+			throw new RuntimeException('config file is invalid: '.$configFilePath);
 		}
-		$this->config = $localConfig+$this->config;
+		$this->config = $localConfig + $this->config;
 
-		$this->config = $this->config+$this->defaultConfig;
+		$this->config = $this->config + $this->defaultConfig;
 
-		$this->config['storeDir'] = rtrim($this->config['storeDir'], DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR; // make sure of trailing slash
-		if( file_exists($this->config['storeDir'] . '/intern/config.json') ){
-			$this->config = json_decode(file_get_contents($this->config['storeDir'] . '/intern/config.json'), true)+$this->config;
+		$this->config['storeDir'] = rtrim($this->config['storeDir'], DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR; // make sure of trailing slash
+		if( file_exists($this->config['storeDir'].'/intern/config.json') ){
+			$this->config = json_decode(file_get_contents($this->config['storeDir'].'/intern/config.json'), true) + $this->config;
 		}
 		return $this->config;
 	}
@@ -69,7 +69,7 @@ class Ric_Server_ConfigManager {
 	 */
 	public function getValue($key){
 		if( !isset($this->config[$key]) ){
-			throw new RuntimeException('Config not found: ' . $key);
+			throw new RuntimeException('Config not found: '.$key);
 		}
 		return $this->config[$key];
 	}
@@ -81,20 +81,20 @@ class Ric_Server_ConfigManager {
 	 */
 	public function setRuntimeValue($key, $value){
 		$runtimeConfig = [];
-		if( file_exists($this->config['storeDir'] . '/intern/config.json') ){
-			$runtimeConfig = json_decode(file_get_contents($this->config['storeDir'] . '/intern/config.json'), true);
+		if( file_exists($this->config['storeDir'].'/intern/config.json') ){
+			$runtimeConfig = json_decode(file_get_contents($this->config['storeDir'].'/intern/config.json'), true);
 		}
 		if( $value===null ){
 			if( isset($runtimeConfig[$key]) ){
 				unset($runtimeConfig[$key]);
 			}
-		} else {
+		}else{
 			$runtimeConfig[$key] = $value;
 			$this->config[$key] = $value;
 		}
-		if( !is_dir($this->config['storeDir'] . '/intern/') ){
-			mkdir($this->config['storeDir'] . '/intern/');
+		if( !is_dir($this->config['storeDir'].'/intern/') ){
+			mkdir($this->config['storeDir'].'/intern/');
 		}
-		file_put_contents($this->config['storeDir'] . '/intern/config.json', H::json($runtimeConfig));
+		file_put_contents($this->config['storeDir'].'/intern/config.json', H::json($runtimeConfig));
 	}
 }

@@ -1,6 +1,6 @@
 <?php
 
-class Ric_Server_File_Manager{
+class Ric_Server_File_Manager {
 	protected $storageDir;
 
 	/**

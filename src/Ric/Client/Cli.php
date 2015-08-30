@@ -14,27 +14,27 @@ class Ric_Client_Cli {
 	 * @param string $envPrefix
 	 * @param string $configFilePath
 	 */
-	public function __construct($argv, $env, $envPrefix='ric', $configFilePath=''){
+	public function __construct($argv, $env, $envPrefix = 'ric', $configFilePath = ''){
 		$this->scriptName = array_shift($argv);
 		while( ($arg = array_shift($argv))!==null ){
 			if( substr($arg, 0, 2)==='--' ){// Is it a option? (prefixed with --)
 				$option = substr($arg, 2);
 				if( strpos($option, '=')!==false ){// is it the syntax '--option=argument'?
-					list($key,$value) = explode('=', $option, 2);
+					list($key, $value) = explode('=', $option, 2);
 					$this->options[$key] = $value;
 				}else{
 					$this->options[$option] = true;
 				}
 			}elseif( substr($arg, 0, 1)==='-' ){ // Is it a flag or a serial of flags? (prefixed with -)
-				for($i = 1; isset($arg[$i]); $i++){
-					$this->options[ $arg[$i]] = true;
+				for( $i = 1; isset($arg[$i]); $i++ ){
+					$this->options[$arg[$i]] = true;
 				}
 			}else{
 				$this->arguments[] = $arg;// finally, it is not option, nor flag
 			}
 		}
 		// env
-		foreach( $env as $key=>$value ){
+		foreach( $env as $key => $value ){
 			if( preg_match('~^'.$envPrefix.'([A-Z].+)$~', $key, $matches) ){
 				$this->env[lcfirst($matches[1])] = $value;
 			}
@@ -51,13 +51,13 @@ class Ric_Client_Cli {
 			if( !file_exists($configFilePath) ){
 				throw new RuntimeException('config file not found: '.$configFilePath);
 			}
-			foreach( file($configFilePath) as $index=>$configLine ){
+			foreach( file($configFilePath) as $index => $configLine ){
 				$configLine = trim($configLine);
-				if( $configLine=='' OR substr($configLine,0,1)=='#' OR substr($configLine,0,1)=='//' ){
+				if( $configLine=='' OR substr($configLine, 0, 1)=='#' OR substr($configLine, 0, 1)=='//' ){
 					continue;
 				}
 				if( !preg_match('~^(\w+):\s*(.*)~', $configLine, $matches) ){
-					throw new RuntimeException('invalid config at line: '.($index+1).' "'.$configLine.'"');
+					throw new RuntimeException('invalid config at line: '.($index + 1).' "'.$configLine.'"');
 				}
 				$this->configFileOptions[$matches[1]] = $matches[2];
 			}
@@ -69,8 +69,8 @@ class Ric_Client_Cli {
 	 * @param string|null $default
 	 * @return null
 	 */
-	public function getArgument($argumentPosition=1, $default=null){
-		$argsIndex = $argumentPosition-1;
+	public function getArgument($argumentPosition = 1, $default = null){
+		$argsIndex = $argumentPosition - 1;
 		return isset($this->arguments[$argsIndex]) ? $this->arguments[$argsIndex] : $default;
 	}
 
@@ -80,7 +80,7 @@ class Ric_Client_Cli {
 	 * @param string $default
 	 * @return string
 	 */
-	public function getOption($name, $default=null){
+	public function getOption($name, $default = null){
 		$return = $default;
 		if( array_key_exists($name, $this->options) ){
 			$return = $this->options[$name];

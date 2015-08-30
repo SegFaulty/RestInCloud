@@ -3,7 +3,7 @@
 /**
  * Class Ric_Server_Server
  */
-class Ric_Server_Server{
+class Ric_Server_Server {
 
 	const VERSION = '0.6.0'; // dont forget to change the client(s) version | if you break api backward compatibility inc the major version | all clients will fail until they updated
 
@@ -76,7 +76,7 @@ class Ric_Server_Server{
 		if( !$noSync ){
 			$syncResult = $this->clusterManager->syncFile($fileName, $filePath, $retention);
 			if( $syncResult!='' ){
-				throw new RuntimeException('sync uploaded file failed: '.$syncResult. ' (file is locally saved!)');
+				throw new RuntimeException('sync uploaded file failed: '.$syncResult.' (file is locally saved!)');
 			}
 		}
 		# delete outimed version
@@ -106,7 +106,7 @@ class Ric_Server_Server{
 		if( file_exists($filePath) ){
 			$this->fileManager->updateTimestamp($fileName, $version, $timestamp);
 			if( !$noSync ){
-				$syncResult = $this->clusterManager->syncFile($fileName, $filePath, $retention=Ric_Server_Definition::RETENTION__ALL);
+				$syncResult = $this->clusterManager->syncFile($fileName, $filePath, $retention = Ric_Server_Definition::RETENTION__ALL);
 				if( $syncResult!='' ){
 					throw new RuntimeException('sync file failed: '.$syncResult);
 				}
@@ -157,8 +157,8 @@ class Ric_Server_Server{
 		}
 		$response = new Ric_Server_Response();
 		$result = [
-			'status' => 'OK',
-			'filesDeleted' => $deleteCount,
+				'status'       => 'OK',
+				'filesDeleted' => $deleteCount,
 		];
 		$response->setResult($result);
 		return $response;
@@ -198,19 +198,19 @@ class Ric_Server_Server{
 		}
 		if( $sha1!='' AND $infos['sha1']!=$sha1 ){
 			$result['status'] = 'CRITICAL';
-			$result['msg'].= 'unmatched sha1'.PHP_EOL;
+			$result['msg'] .= 'unmatched sha1'.PHP_EOL;
 		}
 		if( $infos['version']!=$infos['sha1'] ){
 			$result['status'] = 'CRITICAL';
-			$result['msg'].= 'unmatching version and sha1 file corrupt'.PHP_EOL;
+			$result['msg'] .= 'unmatching version and sha1 file corrupt'.PHP_EOL;
 		}
 		if( $infos['size']<$minSize ){
 			$result['status'] = 'CRITICAL';
-			$result['msg'].= 'size less then expected ('.$infos['size'].'/'.$minSize.')'.PHP_EOL;
+			$result['msg'] .= 'size less then expected ('.$infos['size'].'/'.$minSize.')'.PHP_EOL;
 		}
 		if( $minTimestamp>0 AND $infos['timestamp']<$minTimestamp ){
 			$result['status'] = 'CRITICAL';
-			$result['msg'].= 'file is outdated ('.$infos['timestamp'].'/'.$minTimestamp.')'.PHP_EOL;
+			$result['msg'] .= 'file is outdated ('.$infos['timestamp'].'/'.$minTimestamp.')'.PHP_EOL;
 		}
 		if( $minReplicas>0 AND $infos['replicas']<$minReplicas ){
 			$result['status'] = 'CRITICAL';
@@ -218,7 +218,7 @@ class Ric_Server_Server{
 			if( $infos['replicas']>0 AND $infos['replicas']>=$minReplicas - 1 ){
 				$result['status'] = 'WARNING';
 			}
-			$result['msg'].= 'not enough replicas ('.$infos['replicas'].'/'.$minReplicas.')'.PHP_EOL;
+			$result['msg'] .= 'not enough replicas ('.$infos['replicas'].'/'.$minReplicas.')'.PHP_EOL;
 		}
 		$result['msg'] = trim($result['msg']);
 		$result['fileInfo'] = $infos;
@@ -386,7 +386,7 @@ class Ric_Server_Server{
 		$msg .= 'servers ok: '.(count($this->configManager->getValue('servers')) + 1 - count($serversFailures)).PHP_EOL;
 
 		$result = [
-			'status' => $status,
+				'status' => $status,
 		];
 		if( $isAdmin ){
 			$result['message'] = $msg;
@@ -432,7 +432,6 @@ class Ric_Server_Server{
 		if( !$fileInfo ){
 			throw new RuntimeException('File not found! '.$fileName.' ['.$fileVersion.']', 404);
 		}
-
 
 		$response = new Ric_Server_Response();
 		$lastModified = gmdate('D, d M Y H:i:s \G\M\T', $fileInfo->getTimestamp());

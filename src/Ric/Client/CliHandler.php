@@ -4,7 +4,7 @@
  * todo check for to many arguments, helperFunction ?
  * Class Ric_Client_CliHandler
  */
-class Ric_Client_CliHandler{
+class Ric_Client_CliHandler {
 
 	/**
 	 * @param array $argv
@@ -90,7 +90,7 @@ class Ric_Client_CliHandler{
 	 * @param string $command
 	 * @return string
 	 */
-	static protected function getHelp($command='global'){
+	static protected function getHelp($command = 'global'){
 		$helpString = '';
 		// extract from README-md
 		$readMePath = __DIR__.'/README.md';
@@ -103,7 +103,7 @@ class Ric_Client_CliHandler{
 				$helpString = $matches[1];
 			}
 		}
-		if($command and preg_match('~\n## Help '.preg_quote($command, '~').'(.*?)(\n## |$)~s', $helpString, $matches) ){
+		if( $command and preg_match('~\n## Help '.preg_quote($command, '~').'(.*?)(\n## |$)~s', $helpString, $matches) ){
 			$helpString = $matches[1];
 		}
 		return $helpString;
@@ -128,7 +128,7 @@ class Ric_Client_CliHandler{
 		}else{
 			$targetFileName = $cli->getArgument(2);
 		}
-		$targetFileName = $cli->getOption('prefix','').$targetFileName;
+		$targetFileName = $cli->getOption('prefix', '').$targetFileName;
 		$password = $cli->getOption('pass', self::resolveSecretFile($cli->getOption('passFile')));
 		$client->backup($resource, $targetFileName, $password, $cli->getOption('retention'), $cli->getOption('timestamp'), $cli->getOption('minReplicas'), $cli->getOption('minSize'));
 		return 'OK'.PHP_EOL.$targetFileName;
@@ -142,10 +142,10 @@ class Ric_Client_CliHandler{
 	 */
 	static protected function commandCheck($client, $cli){
 		$targetFileName = $cli->getArgument(1);
-		$targetFileName = $cli->getOption('prefix','').$targetFileName;
+		$targetFileName = $cli->getOption('prefix', '').$targetFileName;
 		$minTimestamp = $cli->getOption('minTimestamp');
 		if( $minTimestamp<0 ){
-			$minTimestamp = time()+intval($minTimestamp); // add because $minTimestamp is negative
+			$minTimestamp = time() + intval($minTimestamp); // add because $minTimestamp is negative
 		}
 		$client->check($targetFileName, $cli->getOption('minReplicas'), $cli->getOption('sha1'), $cli->getOption('minSize'), $minTimestamp);
 		return 'OK';
@@ -160,18 +160,18 @@ class Ric_Client_CliHandler{
 	static protected function commandList($client, $cli){
 		$msg = '';
 		$targetFileName = $cli->arguments[0];
-		$targetFileName = $cli->getOption('prefix','').$targetFileName;
+		$targetFileName = $cli->getOption('prefix', '').$targetFileName;
 		$versions = $client->versions($targetFileName);
-		$msg.= $targetFileName.PHP_EOL;
-		$msg.= 'Date       Time     Version (sha1)                           Size'.PHP_EOL;
-		$msg.= '----------|--------|----------------------------------------|--------------'.PHP_EOL;
+		$msg .= $targetFileName.PHP_EOL;
+		$msg .= 'Date       Time     Version (sha1)                           Size'.PHP_EOL;
+		$msg .= '----------|--------|----------------------------------------|--------------'.PHP_EOL;
 		$size = 0;
 		foreach( $versions as $fileVersion ){
-			$msg.= date('Y-m-d H:i:s', $fileVersion['timestamp']).' '.$fileVersion['version'].' '.sprintf('%14d', $fileVersion['size']).PHP_EOL;
-			$size+=  $fileVersion['size'];
+			$msg .= date('Y-m-d H:i:s', $fileVersion['timestamp']).' '.$fileVersion['version'].' '.sprintf('%14d', $fileVersion['size']).PHP_EOL;
+			$size += $fileVersion['size'];
 		}
-		$msg.= '------------------------------------------------------------|--------------'.PHP_EOL;
-		$msg.= sprintf('versions: %-4d ', count($versions)).'                                              '.sprintf('%14d', $size).PHP_EOL;
+		$msg .= '------------------------------------------------------------|--------------'.PHP_EOL;
+		$msg .= sprintf('versions: %-4d ', count($versions)).'                                              '.sprintf('%14d', $size).PHP_EOL;
 		return $msg;
 	}
 
@@ -188,7 +188,7 @@ class Ric_Client_CliHandler{
 		}else{
 			$resource = $cli->arguments[1];
 		}
-		$targetFileName = $cli->getOption('prefix','').$targetFileName;
+		$targetFileName = $cli->getOption('prefix', '').$targetFileName;
 		$client->restore($targetFileName, $resource, $cli->getOption('pass'), $cli->getOption('version'), (true AND $cli->getOption('overwrite')));
 		return 'OK';
 	}
@@ -205,7 +205,7 @@ class Ric_Client_CliHandler{
 		if( $targetFileName===null OR $version===null ){
 			throw new RuntimeException('name and version needed, use "all" for all version');
 		}
-		$targetFileName = $cli->getOption('prefix','').$targetFileName;
+		$targetFileName = $cli->getOption('prefix', '').$targetFileName;
 		return $client->delete($targetFileName, $version);
 	}
 
@@ -266,25 +266,25 @@ class Ric_Client_CliHandler{
 	 * @param Ric_Client_Cli $cli
 	 */
 	protected static function dumpParameters($command, $cli){
-		echo 'command: ' . $command . PHP_EOL;
+		echo 'command: '.$command.PHP_EOL;
 		echo 'arguments: ';
 		foreach( $cli->arguments as $value ){
-			echo '"' . $value . '", ';
+			echo '"'.$value.'", ';
 		}
 		echo PHP_EOL;
 		echo 'options: ';
 		foreach( $cli->options as $key => $value ){
-			echo $key . ': "' . $value . '", ';
+			echo $key.': "'.$value.'", ';
 		}
 		echo PHP_EOL;
 		echo 'configFileOptions: ';
 		foreach( $cli->configFileOptions as $key => $value ){
-			echo $key . ': "' . $value . '", ';
+			echo $key.': "'.$value.'", ';
 		}
 		echo PHP_EOL;
 		echo 'environment: ';
 		foreach( $cli->env as $key => $value ){
-			echo $key . ': "' . $value . '", ';
+			echo $key.': "'.$value.'", ';
 		}
 		echo PHP_EOL;
 	}

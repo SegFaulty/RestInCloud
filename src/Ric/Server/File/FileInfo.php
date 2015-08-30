@@ -23,7 +23,6 @@ class Ric_Server_File_FileInfo {
 		$this->timestamp = $timestamp;
 	}
 
-
 	/**
 	 * @return string
 	 */
@@ -65,6 +64,5 @@ class Ric_Server_File_FileInfo {
 	public function getDateTime(){
 		return date('Y-m-d H:i:s', $this->timestamp);
 	}
-
 
 }
