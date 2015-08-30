@@ -156,12 +156,15 @@ class Ric_Server_Server{
 			}
 		}
 		$response = new Ric_Server_Response();
-		$response->setResult(['filesDeleted' => $deleteCount]);
+		$result = [
+			'status' => 'OK',
+			'filesDeleted' => $deleteCount,
+		];
+		$response->setResult($result);
 		return $response;
 	}
 
 	/**
-	 * todo check if $fileInfo->getVersion()==$fileInfo->getSha1()
 	 * list files or version of file
 	 * @param string $fileName
 	 * @param string $fileVersion
@@ -195,15 +198,19 @@ class Ric_Server_Server{
 		}
 		if( $sha1!='' AND $infos['sha1']!=$sha1 ){
 			$result['status'] = 'CRITICAL';
-			$result['msg'] = trim($result['msg'].PHP_EOL.'unmatched sha1');
+			$result['msg'].= 'unmatched sha1'.PHP_EOL;
+		}
+		if( $infos['version']!=$infos['sha1'] ){
+			$result['status'] = 'CRITICAL';
+			$result['msg'].= 'unmatching version and sha1 file corrupt'.PHP_EOL;
 		}
 		if( $infos['size']<$minSize ){
 			$result['status'] = 'CRITICAL';
-			$result['msg'] = trim($result['msg'].PHP_EOL.'size less then expected ('.$infos['size'].'/'.$minSize.')');
+			$result['msg'].= 'size less then expected ('.$infos['size'].'/'.$minSize.')'.PHP_EOL;
 		}
 		if( $minTimestamp>0 AND $infos['timestamp']<$minTimestamp ){
 			$result['status'] = 'CRITICAL';
-			$result['msg'] = trim($result['msg'].PHP_EOL.'file is outdated ('.$infos['timestamp'].'/'.$minTimestamp.')');
+			$result['msg'].= 'file is outdated ('.$infos['timestamp'].'/'.$minTimestamp.')'.PHP_EOL;
 		}
 		if( $minReplicas>0 AND $infos['replicas']<$minReplicas ){
 			$result['status'] = 'CRITICAL';
@@ -211,8 +218,9 @@ class Ric_Server_Server{
 			if( $infos['replicas']>0 AND $infos['replicas']>=$minReplicas - 1 ){
 				$result['status'] = 'WARNING';
 			}
-			$result['msg'] = trim($result['msg'].PHP_EOL.'not enough replicas ('.$infos['replicas'].'/'.$minReplicas.')');
+			$result['msg'].= 'not enough replicas ('.$infos['replicas'].'/'.$minReplicas.')'.PHP_EOL;
 		}
+		$result['msg'] = trim($result['msg']);
 		$result['fileInfo'] = $infos;
 		$response = new Ric_Server_Response();
 		$response->setResult($result);
