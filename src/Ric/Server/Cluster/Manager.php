@@ -203,14 +203,14 @@ class Ric_Server_Cluster_Manager{
 	 * @param $sha1
 	 * @return string
 	 */
-	protected function pushFileToServer($server, $fileName, $filePath, $retention, $sha1=''){
+	public function pushFileToServer($server, $fileName, $filePath, $retention, $sha1=''){
 		$result = '';
 		if( $sha1!='' ){
 			$sha1 = sha1_file($filePath);
 		}
 		$timestamp = filemtime($filePath);
 		$serverUrl = 'http://'.$server.'/';
-		// try to refresh file
+		// try to refresh file, no retention allowed
 		$url = $serverUrl.$fileName.'?sha1='.$sha1.'&timestamp='.$timestamp.'&noSync=1&token='.$this->configManager->getValue('writerToken');
 		$response = Ric_Rest_Client::post($url);
 		if( trim($response)!='1' ){
