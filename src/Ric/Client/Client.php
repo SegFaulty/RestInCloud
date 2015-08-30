@@ -65,7 +65,7 @@ class Ric_Client_Client{
 	 * @throws RuntimeException
 	 * @return string
 	 */
-	protected function buildUrl($fileName, $command='', $parameters=[]){
+	protected function buildUrl($fileName, $command='', $parameters=[], $checkVersion=true){
 		if( $this->server=='' ){
 			throw new RuntimeException('no server given');
 		}
@@ -74,7 +74,9 @@ class Ric_Client_Client{
 		if( $this->auth!='' ){
 			$parameters+= ['token'=>$this->auth];  // add token
 		}
-		$parameters+= ['minServerVersion'=>self::MIN_SERVER_VERSION];
+		if( $checkVersion ){
+			$parameters += ['minServerVersion' => self::MIN_SERVER_VERSION];
+		}
 		$url.= '?'.$command;
 		if( !empty($parameters) ){
 			$url.= '&'.http_build_query($parameters);
@@ -415,7 +417,7 @@ class Ric_Client_Client{
 	 * @return array
 	 */
 	public function info(){
-		$response = Ric_Rest_Client::get($this->buildUrl('', 'info'), [], $headers);
+		$response = Ric_Rest_Client::get($this->buildUrl('', 'info', [], false), [], $headers);
 		$this->checkServerResponse($response, $headers);
 		return json_decode($response, true);
 	}
