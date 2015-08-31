@@ -62,6 +62,7 @@ class Ric_Client_Client {
 	 * @param string $fileName
 	 * @param string $command
 	 * @param array $parameters
+	 * @param bool $checkVersion
 	 * @throws RuntimeException
 	 * @return string
 	 */
