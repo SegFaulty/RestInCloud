@@ -33,7 +33,7 @@ use ric help {command} for command details
 
 you can define every option as environment variable with prefix "ric" (server -> ricServer)
 
-* --config configFilePath (you can define all options in this config file, one per line "option: value" ...
+* --configFile configFilePath (you can define all options in this config file, one per line "option: value" ...
 * --verbose show debug details default: false
 * --quite don't print anything except failures default: false
 * --auth {token}  default: ENV ricAuth -> ''

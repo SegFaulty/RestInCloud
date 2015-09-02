@@ -15,7 +15,7 @@ class Ric_Client_CliHandler {
 		$status = true;
 		$msg = '';
 		$cli = new Ric_Client_Cli($argv, $env);
-		$cli->loadConfigFile($cli->getArgument('configFile')); // load cofig file if present
+		$cli->loadConfigFile($cli->getOption('configFile')); // load cofig file if present
 		$command = array_shift($cli->arguments);
 		if( $cli->getOption('verbose') ){
 			self::dumpParameters($command, $cli);
