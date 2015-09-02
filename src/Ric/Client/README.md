@@ -40,6 +40,7 @@ you can define every option as environment variable with prefix "ric" (server ->
 * --authFile {tokenFilePath} read auth from file default: ENV ricAuthFile -> ''
 * --server RicServer default: ENV ricServer -> ''
 * --prefix prefix all target names default: ENV ricPrefix -> ''
+* --ignoreVersion ignore no matching server version errors
 
 the configuration order is
 * use commandline option if present,

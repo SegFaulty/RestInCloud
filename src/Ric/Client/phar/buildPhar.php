@@ -23,3 +23,6 @@ $phar->setStub($stub);
 $phar->compressFiles(Phar::GZ);
 $phar->stopBuffering();
 unset($phar);
+
+echo 'done... test with:'.PHP_EOL;
+echo './ric.phar help --verbose'.PHP_EOL;
