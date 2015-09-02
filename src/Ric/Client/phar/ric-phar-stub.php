@@ -1,6 +1,11 @@
 #!/usr/bin/php -d variables_order=EGPCS
 <?php
 
+# make sure errors go to stderr
+ini_set('log_errors', 1);
+ini_set('error_log', 'syslog');
+ini_set('display_errors', 'stderr' );
+
 Phar::mapPhar("ric.phar");
 require_once 'phar://ric.phar/Cli.php';
 require_once 'phar://ric.phar/CliHandler.php';
