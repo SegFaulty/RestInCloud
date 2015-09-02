@@ -16,6 +16,7 @@ class Ric_Client_Client {
 	protected $auth = '';
 	protected $log = '';
 	protected $debug = false;
+	protected $checkVersion = true;
 
 	/**
 	 * @param string $serverHostPort
@@ -49,6 +50,20 @@ class Ric_Client_Client {
 	}
 
 	/**
+	 * enable/disable versionCheck  check client vs server version
+	 * (if true, every request to a ric-server will contains a minVersion=MIN_SERVER_VERSION parameter  and will fail if they not match)
+	 * returns old value
+	 *
+	 * @param bool $bool
+	 * @return bool
+	 */
+	public function setCheckVersion($bool){
+		$old = $this->checkVersion;
+		$this->checkVersion = $bool;
+		return $old;
+	}
+
+	/**
 	 * @param string $msg
 	 */
 	protected function logDebug($msg){
@@ -62,11 +77,10 @@ class Ric_Client_Client {
 	 * @param string $fileName
 	 * @param string $command
 	 * @param array $parameters
-	 * @param bool $checkVersion
 	 * @throws RuntimeException
 	 * @return string
 	 */
-	protected function buildUrl($fileName, $command = '', $parameters = [], $checkVersion = true){
+	protected function buildUrl($fileName, $command = '', $parameters = []){
 		if( $this->server=='' ){
 			throw new RuntimeException('no server given');
 		}
@@ -75,7 +89,7 @@ class Ric_Client_Client {
 		if( $this->auth!='' ){
 			$parameters += ['token' => $this->auth];  // add token
 		}
-		if( $checkVersion ){
+		if( $this->checkVersion ){
 			$parameters += ['minServerVersion' => self::MIN_SERVER_VERSION];
 		}
 		$url .= '?'.$command;
@@ -417,7 +431,9 @@ class Ric_Client_Client {
 	 * @return array
 	 */
 	public function info(){
-		$response = Ric_Rest_Client::get($this->buildUrl('', 'info', [], false), [], $headers);
+		$oldCheckVersion = $this->setCheckVersion(false);
+		$response = Ric_Rest_Client::get($this->buildUrl('', 'info', []), [], $headers);
+		$this->setCheckVersion($oldCheckVersion);
 		$this->checkServerResponse($response, $headers);
 		return json_decode($response, true);
 	}
