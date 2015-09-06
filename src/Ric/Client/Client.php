@@ -449,16 +449,6 @@ class Ric_Client_Client {
 	}
 
 	/**
-	 * list files with details
-	 * @return array
-	 */
-	public function listFileDetails(){
-		$response = Ric_Rest_Client::get($this->buildUrl('', 'listDetails'), [], $headers);
-		$this->checkServerResponse($response, $headers);
-		return json_decode($response, true);
-	}
-
-	/**
 	 * check cluster health
 	 * @throws RuntimeException
 	 * @return string
@@ -527,6 +517,7 @@ class Ric_Client_Client {
 	 */
 	public function copyServer($targetServerHostPort){
 		$response = 'copy server to '.$targetServerHostPort;
+		throw new RuntimeException('not implemented!');
 		return $response;
 	}
 
