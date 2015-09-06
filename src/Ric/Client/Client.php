@@ -516,8 +516,23 @@ class Ric_Client_Client {
 	 * @return string
 	 */
 	public function copyServer($targetServerHostPort){
-		$response = 'copy server to '.$targetServerHostPort;
-		throw new RuntimeException('not implemented!');
+		$filesCopied = 0;
+		$headers = [];
+		$response = Ric_Rest_Client::get($this->buildUrl('', 'list'), [], $headers);
+		$this->checkServerResponse($response, $headers);
+		$fileNames = json_decode($response, true);
+		foreach( $fileNames as $fileName ){
+			$versionInfos = $this->versions($fileName);
+			foreach( $versionInfos as $versionInfo ){
+				$version = $versionInfo['version'];
+				$url = $this->buildUrl($fileName, '', ['action' => 'push', 'server' => $targetServerHostPort, 'version' => $version]);
+				$headers = [];
+				$response = Ric_Rest_Client::post($url, [], $headers);
+				$this->checkServerResponse($response, $headers);
+				$filesCopied++;
+			}
+		}
+		$response = json_encode(['status' => 'OK', 'filesCopied' => $filesCopied]);
 		return $response;
 	}
 
