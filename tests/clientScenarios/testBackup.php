@@ -2,11 +2,10 @@
 
 include __DIR__.'/setupCluster.php';
 
-ln('start backup delete');
+ln('start backup test');
 
 ln('upload a file, to the cluster');
 // upload a file
-$tesFileContent = 'version100';
 checkOks(ric('backup '.__FILE__.' testFile.txt', $servers[0], 'writer'));
 
 ln('check file');
