@@ -68,6 +68,7 @@ if your ric-servers are running, you can use the smart "ric" cli tool to backup 
    - if &noSync is not set, refresh is also performed on the replication servers (with &noSync)
 
  * POST http://ric1.server/error.log  ?action=delete  - delete a file !! Attention if version is omitted, ALL Versions will be deleted
+ * POST http://ric1.server/error.log  ?action=push&targetServer=ricx.example.com  - push file to other server (with admin pw)
  * DELETE http://ric1.server/error.log   - delete a file !! Attention if version is omitted, ALL Versions will be deleted
 
 

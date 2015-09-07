@@ -225,8 +225,6 @@ class Ric_Client_CliHandler {
 			$msg = json_encode($client->info(), JSON_PRETTY_PRINT);
 		}elseif( $adminCommand=='list' ){
 			$msg = join(PHP_EOL, $client->listFiles());
-		}elseif( $adminCommand=='listDetails' ){
-			$msg = print_r($client->listFileDetails(), true);
 		}elseif( $adminCommand=='health' ){
 			$msg = $client->health();
 		}elseif( $adminCommand=='addServer' ){
