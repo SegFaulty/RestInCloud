@@ -12,6 +12,7 @@
 # todo cli ric check --verifySha1=randFactor   (1=every request, 2=50% ...) default: 10
 # todo sha1 vorkommen prüfen und die gesamte version/sha1 thematik ueberblicken
 # todo sha1 und version glatt ziehen, sha1 nur das wo wirklich die hash ermittelt oder geprüft wird
+# todo default retention von der größe abhänging machen <10MB = 3l7d4w12m <1GB 3l4w default 3l
 
 # other
 # todo think about configstorage also download immer der neusten version, sollte ja einfach gehen (mit 304er)
