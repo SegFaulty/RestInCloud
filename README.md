@@ -2,7 +2,7 @@
 
 simple restfully dockerized distributed open source cloud backup server ;-)
 
-## Install
+## Install Server
 
 to install the ric-server check [deployment dir](deployment/) for different enviroments ([docker](deployment/docker), [apache](deployment/apache), [nginx](deployment/nginx))
 
