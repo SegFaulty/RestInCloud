@@ -8,10 +8,11 @@ class Ric_Client_CliHandler {
 
 	/**
 	 * @param array $argv
-	 * @param $env
+	 * @param array $env
+	 * @param string $helpString
 	 * @return int
 	 */
-	static public function handleExecute($argv, $env){
+	static public function handleExecute($argv, $env, $helpString){
 		$status = true;
 		$msg = '';
 		$cli = new Ric_Client_Cli($argv, $env);
@@ -46,10 +47,10 @@ class Ric_Client_CliHandler {
 					$msg = self::commandAdmin($client, $cli);
 					break;
 				case 'help':
-					$msg = self::getHelp(reset($cli->arguments));
+					$msg = self::getHelp(reset($cli->arguments), $helpString);
 					break;
 				default:
-					throw new RuntimeException('command expected'.PHP_EOL.self::getHelp());
+					throw new RuntimeException('command expected'.PHP_EOL.self::getHelp('', $helpString));
 
 			}
 			if( $cli->getOption('verbose') ){
@@ -89,21 +90,10 @@ class Ric_Client_CliHandler {
 
 	/**
 	 * @param string $command
+	 * @param string $helpString
 	 * @return string
 	 */
-	static protected function getHelp($command = 'global'){
-		$helpString = '';
-		// extract from README-md
-		$readMePath = __DIR__.'/README.md';
-		if( file_exists($readMePath) ){
-			$helpString = file_get_contents($readMePath);
-		}else{
-			// ric command line single file README.md hack
-			$thisFileContent = file_get_contents(__FILE__);
-			if( preg_match('~^####### README.md #######$(.*?)^####### README.md #######$~sm', $thisFileContent, $matches) ){
-				$helpString = $matches[1];
-			}
-		}
+	static protected function getHelp($command = 'global', $helpString){
 		if( $command and preg_match('~\n## Help '.preg_quote($command, '~').'(.*?)(\n## |$)~s', $helpString, $matches) ){
 			$helpString = $matches[1];
 		}
@@ -219,7 +209,7 @@ class Ric_Client_CliHandler {
 	 */
 	static protected function commandAdmin($client, $cli){
 		if( count($cli->arguments)==0 ){
-			throw new RuntimeException('admin command expected'.PHP_EOL.self::getHelp('admin'));
+			throw new RuntimeException('admin command expected, see help');
 		}
 		$adminCommand = $cli->arguments[0];
 		if( $adminCommand=='info' ){

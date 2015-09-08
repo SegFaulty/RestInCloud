@@ -18,6 +18,7 @@ $phar->addFile('../CliHandler.php', 'CliHandler.php');
 $phar->addFile('../Client.php', 'Client.php');
 $phar->addFile('../../Rest/Client.php', 'RestClient.php');
 $phar->addFile('../../Server/Helper/SyntacticSugar.php', 'SyntacticSugar.php');
+$phar->addFile('../README.md', 'README.md');
 $stub = file_get_contents(__DIR__.'/ric-phar-stub.php');
 $phar->setStub($stub);
 $phar->compressFiles(Phar::GZ);

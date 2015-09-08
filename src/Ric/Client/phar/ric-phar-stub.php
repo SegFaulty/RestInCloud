@@ -13,6 +13,6 @@ require_once 'phar://ric.phar/Client.php';
 require_once 'phar://ric.phar/RestClient.php';
 require_once 'phar://ric.phar/SyntacticSugar.php';
 
-exit(Ric_Client_CliHandler::handleExecute($argv, $_ENV)); // command line status
+exit(Ric_Client_CliHandler::handleExecute($argv, $_ENV, file_get_contents('phar://ric.phar/README.md'))); // command line status
 
 __HALT_COMPILER();

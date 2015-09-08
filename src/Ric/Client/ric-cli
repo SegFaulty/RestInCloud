@@ -12,6 +12,6 @@ require_once __DIR__.'/Cli.php';
 require_once __DIR__.'/../Rest/Client.php';
 require_once __DIR__.'/../Server/Helper/SyntacticSugar.php';
 
-exit(Ric_Client_CliHandler::handleExecute($argv, $_ENV)); // command line status
+exit(Ric_Client_CliHandler::handleExecute($argv, $_ENV, file_get_contents(__DIR__.'/README.md'))); // command line status
 
 
