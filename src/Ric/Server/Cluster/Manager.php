@@ -41,8 +41,12 @@ class Ric_Server_Cluster_Manager {
 			throw new RuntimeException('whoaa, the server you want to add ('.$server.') is the same as me('.$this->getOwnHostPort().') because we boot have the same serverId ('.$myServerId.')', 400);
 		}
 		$servers = $this->configManager->getValue('servers');
-		$servers[] = $server;
-		$this->configManager->setRuntimeValue('servers', $servers);
+		if( !in_array($server, $servers) ){
+			$servers[] = $server;
+			$this->configManager->setRuntimeValue('servers', $servers);
+		}else{
+			// seerver is already added, ignore silently
+		}
 	}
 
 	/**
@@ -61,6 +65,9 @@ class Ric_Server_Cluster_Manager {
 			$joinedServers = [];
 			$servers[] = $server;
 			foreach( $servers as $clusterServer ){
+				if( $ownServer==$clusterServer ){
+					continue; // thats me!! am already joined! ignore silently
+				}
 				$response = Ric_Rest_Client::post('http://'.$clusterServer.'/', ['action' => 'addServer', 'addServer' => $ownServer, 'token' => $this->configManager->getValue('adminToken')]);
 				if( !$this->isResponseStatusOk($response) ){
 					throw new RuntimeException('join cluster failed! addServer to '.$clusterServer.' failed! ['.$response.'] Inconsitent cluster state! I\'m added to this servers (please remove me): '.join('; ', $joinedServers), 400);
@@ -68,9 +75,6 @@ class Ric_Server_Cluster_Manager {
 				$joinedServers[] = $clusterServer;
 			}
 			$this->configManager->setRuntimeValue('servers', $servers);
-
-			// todo  pull a dump and restore
-
 		}else{
 			throw new RuntimeException('cluster node is not responding properly', 400);
 		}

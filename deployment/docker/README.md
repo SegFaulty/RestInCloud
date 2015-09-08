@@ -31,9 +31,12 @@ so call it from a different server with the public hostname
 
 # UPDATE to new version, with same config
 
-	cd RestInCloud/
+	cd ~/RestInCloud/
 	git pull
-	cd RestInCloud/deployment/docker
+	cd deployment/docker
+	# stop and remove old container
+	docker stop ric-server-3777
+	docker rm ric-server-3777
 	sh docker.sh
 
 
