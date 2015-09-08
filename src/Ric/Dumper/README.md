@@ -74,5 +74,5 @@ add `--pass` or `--passFile` to encrypt the file with openssl
 
 ## global options
 
-`--prefix` or `--passFile` will added to source and target files but will not add to restored resources (dir, file)
+`--prefix` will added to source and target files but will not add to restored resources (dir, file)
 
