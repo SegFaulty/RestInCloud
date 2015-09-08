@@ -107,6 +107,7 @@ class Ric_Client_CliHandler {
 		if( $command and preg_match('~\n## Help '.preg_quote($command, '~').'(.*?)(\n## |$)~s', $helpString, $matches) ){
 			$helpString = $matches[1];
 		}
+		$helpString = 'for server version: '.Ric_Client_Client::MIN_SERVER_VERSION.PHP_EOL.$helpString;
 		return $helpString;
 	}
 

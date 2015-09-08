@@ -1,6 +1,11 @@
 #!/usr/bin/php -d variables_order=EGPCS
 <?php
 
+# make sure errors go to stderr
+ini_set('log_errors', 1);
+ini_set('error_log', 'syslog');
+ini_set('display_errors', 'stderr' );
+
 
 
 
@@ -9,7 +14,7 @@
 exit(RC_CliHandler::handleExecute($argv, $_ENV)); // command line status
 
 
-// build: 2015-09-02 19:15:20
+// build: 2015-09-08 19:55:17
 
 
 # CliHandler.php
@@ -30,7 +35,7 @@ class RC_CliHandler {
 		$status = true;
 		$msg = '';
 		$cli = new RC_Cli($argv, $env);
-		$cli->loadConfigFile($cli->getArgument('configFile')); // load cofig file if present
+		$cli->loadConfigFile($cli->getOption('configFile')); // load cofig file if present
 		$command = array_shift($cli->arguments);
 		if( $cli->getOption('verbose') ){
 			self::dumpParameters($command, $cli);
@@ -122,6 +127,7 @@ class RC_CliHandler {
 		if( $command and preg_match('~\n## Help '.preg_quote($command, '~').'(.*?)(\n## |$)~s', $helpString, $matches) ){
 			$helpString = $matches[1];
 		}
+		$helpString = 'for server version: '.RC_Client::MIN_SERVER_VERSION.PHP_EOL.$helpString;
 		return $helpString;
 	}
 
@@ -240,8 +246,6 @@ class RC_CliHandler {
 			$msg = json_encode($client->info(), JSON_PRETTY_PRINT);
 		}elseif( $adminCommand=='list' ){
 			$msg = join(PHP_EOL, $client->listFiles());
-		}elseif( $adminCommand=='listDetails' ){
-			$msg = print_r($client->listFileDetails(), true);
 		}elseif( $adminCommand=='health' ){
 			$msg = $client->health();
 		}elseif( $adminCommand=='addServer' ){
@@ -759,16 +763,6 @@ class RC_Client {
 	}
 
 	/**
-	 * list files with details
-	 * @return array
-	 */
-	public function listFileDetails(){
-		$response = RR_Client::get($this->buildUrl('', 'listDetails'), [], $headers);
-		$this->checkServerResponse($response, $headers);
-		return json_decode($response, true);
-	}
-
-	/**
 	 * check cluster health
 	 * @throws RuntimeException
 	 * @return string
@@ -836,7 +830,23 @@ class RC_Client {
 	 * @return string
 	 */
 	public function copyServer($targetServerHostPort){
-		$response = 'copy server to '.$targetServerHostPort;
+		$filesCopied = 0;
+		$headers = [];
+		$response = RR_Client::get($this->buildUrl('', 'list'), [], $headers);
+		$this->checkServerResponse($response, $headers);
+		$fileNames = json_decode($response, true);
+		foreach( $fileNames as $fileName ){
+			$versionInfos = $this->versions($fileName);
+			foreach( $versionInfos as $versionInfo ){
+				$version = $versionInfo['version'];
+				$url = $this->buildUrl($fileName, '', ['action' => 'push', 'server' => $targetServerHostPort, 'version' => $version]);
+				$headers = [];
+				$response = RR_Client::post($url, [], $headers);
+				$this->checkServerResponse($response, $headers);
+				$filesCopied++;
+			}
+		}
+		$response = json_encode(['status' => 'OK', 'filesCopied' => $filesCopied]);
 		return $response;
 	}
 
@@ -1243,7 +1253,7 @@ use ric help {command} for command details
 
 you can define every option as environment variable with prefix "ric" (server -> ricServer)
 
-* --config configFilePath (you can define all options in this config file, one per line "option: value" ...
+* --configFile configFilePath (you can define all options in this config file, one per line "option: value" ...
 * --verbose show debug details default: false
 * --quite don't print anything except failures default: false
 * --auth {token}  default: ENV ricAuth -> ''
