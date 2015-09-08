@@ -61,20 +61,19 @@ class Ric_Server_Cluster_Manager {
 		$response = Ric_Rest_Client::get('http://'.$server.'/', ['info' => 1, 'token' => $this->configManager->getValue('adminToken')]);
 		$info = json_decode($response, true);
 		if( isset($info['config']['servers']) ){
-			$servers = $info['config']['servers'];
+			$serversToJoin = $info['config']['servers'];                    // get servers from cluster server
+			$serversToJoin[] = $server;                                     // add cluster server
+			$serversToJoin = array_diff($serversToJoin, [$ownServer]);      // remove me in case of an double joinCluster glitch
+			$serversToJoin = array_unique($serversToJoin);                  // make it unique
 			$joinedServers = [];
-			$servers[] = $server;
-			foreach( $servers as $clusterServer ){
-				if( $ownServer==$clusterServer ){
-					continue; // thats me!! am already joined! ignore silently
-				}
+			foreach( $serversToJoin as $clusterServer ){
 				$response = Ric_Rest_Client::post('http://'.$clusterServer.'/', ['action' => 'addServer', 'addServer' => $ownServer, 'token' => $this->configManager->getValue('adminToken')]);
 				if( !$this->isResponseStatusOk($response) ){
 					throw new RuntimeException('join cluster failed! addServer to '.$clusterServer.' failed! ['.$response.'] Inconsitent cluster state! I\'m added to this servers (please remove me): '.join('; ', $joinedServers), 400);
 				}
 				$joinedServers[] = $clusterServer;
 			}
-			$this->configManager->setRuntimeValue('servers', $servers);
+			$this->configManager->setRuntimeValue('servers', $serversToJoin);
 		}else{
 			throw new RuntimeException('cluster node is not responding properly', 400);
 		}
