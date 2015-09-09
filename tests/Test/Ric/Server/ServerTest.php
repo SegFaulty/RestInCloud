@@ -97,7 +97,6 @@ class Test_Ric_Server_ServerTest extends \PHPUnit_Framework_TestCase {
 	}
 
 	public function testDeleteFile(){
-
 		$filePath = $this->findSingleFile($this->storageDir);
 		self::assertEmpty($filePath);
 
