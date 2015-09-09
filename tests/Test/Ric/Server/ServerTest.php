@@ -109,7 +109,7 @@ class Test_Ric_Server_ServerTest extends \PHPUnit_Framework_TestCase {
 
 		$server = $this->getServer();
 		$response = $server->deleteFile($fileName, $sha1);
-		self::assertEquals(['filesDeleted' => 1], $response->getResult());
+		self::assertSame(['status' => 'OK', 'filesDeleted' => 1], $response->getResult());
 		$filePath = $this->findSingleFile($this->storageDir);
 		self::assertEmpty($filePath);
 
