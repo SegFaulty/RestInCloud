@@ -287,14 +287,14 @@ class Ric_Server_Api {
 	 */
 	protected function actionCheck(){
 		$fileName = $this->extractFileNameFromRequest();
-		$fileVersion = $this->extractVersionFromRequest();
+		$version = $this->extractVersionFromRequest();
 
 		$sha1 = H::getRP('sha1', '');
 		$minSize = H::getRP('minSize', 1);
 		$minTimestamp = H::getRP('minTimestamp', 0); // default no check
 		$minReplicas = H::getRP('minReplicas', null); // if parameter omitted, don't check replicas!!!! or deadlock
 
-		$response = $this->server->checkFile($fileName, $fileVersion, $sha1, $minSize, $minTimestamp, $minReplicas);
+		$response = $this->server->checkFile($fileName, $version, $sha1, $minSize, $minTimestamp, $minReplicas);
 		$this->sendResponse($response);
 	}
 
