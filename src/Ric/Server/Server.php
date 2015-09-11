@@ -345,7 +345,7 @@ class Ric_Server_Server {
 				}
 				$serverInfos[$server] = $result;
 			}catch(Exception $e){
-				$serversFailures[$server] = $e->getMessage();
+				$serversFailures[$server][] = $e->getMessage();
 			}
 		}
 		// check serverInfos
