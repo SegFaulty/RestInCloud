@@ -38,7 +38,7 @@ class Ric_Server_Cluster_Manager {
 		}
 		$myServerId = $this->configManager->getValue('serverId');
 		if( $remoteServerId==$myServerId ){
-			throw new RuntimeException('whoaa, the server you want to add ('.$server.') is the same as me('.$this->getOwnHostPort().') because we boot have the same serverId ('.$myServerId.')', 400);
+			throw new RuntimeException('whoaa, the server you want to add ('.$server.') is the same as me('.$this->getOwnHostPort().') because we both have the same serverId ('.$myServerId.')', 400);
 		}
 		$servers = $this->configManager->getValue('servers');
 		if( !in_array($server, $servers) ){
