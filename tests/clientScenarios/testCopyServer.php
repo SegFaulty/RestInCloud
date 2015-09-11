@@ -28,7 +28,9 @@ check($result['filesCopied']==3, 'expected 2 copied Files result: '.print_r($res
 
 $result = ric('admin list', $servers[3], 'admin');
 $files = array_filter(explode("\n", $result));
-check($files==['testFile2.txt', 'testFile.txt'], 'copy to new server failed: files found:'.print_r($files, true));
+check($files===['testFile.txt', 'testFile2.txt'], 'copy to new server failed: files found:'.print_r($files, true));
+// todo vorher war es so:
+//check($files==['testFile2.txt', 'testFile.txt'], 'copy to new server failed: files found:'.print_r($files, true));
 
 // delete remaining
 $result = unJson(ric('delete testFile.txt all', $servers[0], 'admin'));

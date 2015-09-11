@@ -112,7 +112,7 @@ procedure:
 
 ## Help list
 
-    ric check /home/www/ric/config/
+    ric list {fileName}
 
 ## Help delete
 
@@ -141,7 +141,7 @@ procedure:
 
 a cluster is a bunch of servers, where all of them are added (addServer) to all servers, every server is a replicant of every server .. u got it
 
-    ric admin list
+    ric admin list [{pattern}]
     ric admin listDetails
     ric admin info
     ric admin health
