@@ -167,14 +167,14 @@ class Ric_Server_Server {
 	/**
 	 * list files or version of file
 	 * @param string $fileName
-	 * @param string $fileVersion
+	 * @param string $version
 	 * @param string $sha1
 	 * @param int $minSize
 	 * @param int $minTimestamp
 	 * @param int $minReplicas
 	 * @return Ric_Server_Response
 	 */
-	public function checkFile($fileName, $fileVersion, $sha1, $minSize, $minTimestamp, $minReplicas = null){
+	public function checkFile($fileName, $version, $sha1, $minSize, $minTimestamp, $minReplicas = null){
 		$result = [];
 		$result['status'] = 'OK';
 		$result['msg'] = '';
@@ -183,18 +183,21 @@ class Ric_Server_Server {
 			$minReplicas = max(1, count($this->configManager->getValue('servers')) - 1); // min 1, or 1 invalid of current servers
 		}
 
-		$fileInfo = $this->fileManager->getFileInfo($fileName, $fileVersion);
+
+		$fileInfo = $this->fileManager->getFileInfo($fileName, $version);
 		$infos = [
 				'name'      => $fileInfo->getName(),
 				'version'   => $fileInfo->getVersion(),
-				'sha1'      => $fileInfo->getSha1(),
 				'dateTime'  => $fileInfo->getDateTime(),
 				'timestamp' => $fileInfo->getTimestamp(),
 				'size'      => $fileInfo->getSize(),
 		];
+		$filePath = $this->fileManager->getFilePath($fileName, $version);
+		$infos['sha1'] = sha1_file($filePath);
+
 		$infos['replicas'] = false;
 		if( $minReplicas>0 ){
-			$infos['replicas'] = $this->clusterManager->getReplicaCount($fileInfo->getName(), $fileInfo->getVersion(), $fileInfo->getSha1());
+			$infos['replicas'] = $this->clusterManager->getReplicaCount($fileName, $version, $sha1);
 		}
 		if( $sha1!='' AND $infos['sha1']!=$sha1 ){
 			$result['status'] = 'CRITICAL';
@@ -260,7 +263,6 @@ class Ric_Server_Server {
 					'index'     => $index,
 					'name'      => $fileInfo->getName(),
 					'version'   => $fileInfo->getVersion(),
-					'sha1'      => $fileInfo->getSha1(),
 					'dateTime'  => $fileInfo->getDateTime(),
 					'timestamp' => $fileInfo->getTimestamp(),
 					'size'      => $fileInfo->getSize(),
@@ -435,7 +437,7 @@ class Ric_Server_Server {
 
 		$response = new Ric_Server_Response();
 		$lastModified = gmdate('D, d M Y H:i:s \G\M\T', $fileInfo->getTimestamp());
-		$eTag = $fileInfo->getSha1();
+		$eTag = $fileInfo->getVersion();
 
 		// 304er support
 		$ifMod = isset($_SERVER['HTTP_IF_MODIFIED_SINCE']) ? $_SERVER['HTTP_IF_MODIFIED_SINCE']==$lastModified : null;

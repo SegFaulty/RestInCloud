@@ -174,7 +174,6 @@ class Ric_Server_File_Manager {
 			$info = new Ric_Server_File_FileInfo(
 					$fileName,
 					$version,
-					sha1_file($filePath),
 					filesize($filePath),
 					filemtime($filePath)
 			);

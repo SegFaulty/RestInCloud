@@ -283,8 +283,7 @@ class Ric_Server_Api {
 	}
 
 	/**
-	 * todo check if $fileInfo->getVersion()==$fileInfo->getSha1()
-	 * list files or version of file
+	 * check file
 	 */
 	protected function actionCheck(){
 		$fileName = $this->extractFileNameFromRequest();

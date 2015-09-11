@@ -3,7 +3,6 @@
 class Ric_Server_File_FileInfo {
 	protected $name = '';
 	protected $version = '';
-	protected $sha1 = '';
 	protected $size = 0;
 	protected $timestamp = 0;
 
@@ -11,14 +10,12 @@ class Ric_Server_File_FileInfo {
 	 * Ric_Server_File_FileInfo constructor.
 	 * @param string $name
 	 * @param $version
-	 * @param string $sha1
 	 * @param int $size
 	 * @param int $timestamp
 	 */
-	public function __construct($name, $version, $sha1, $size, $timestamp){
+	public function __construct($name, $version, $size, $timestamp){
 		$this->name = $name;
 		$this->version = $version;
-		$this->sha1 = $sha1;
 		$this->size = $size;
 		$this->timestamp = $timestamp;
 	}
@@ -34,14 +31,7 @@ class Ric_Server_File_FileInfo {
 	 * @return string
 	 */
 	public function getVersion(){
-		return $this->getSha1();
-	}
-
-	/**
-	 * @return string
-	 */
-	public function getSha1(){
-		return $this->sha1;
+		return $this->version;
 	}
 
 	/**
