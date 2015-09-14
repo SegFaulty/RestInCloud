@@ -15,4 +15,5 @@ docker build -t ric-server .
 # core@nginx ~/docker-nginx-base $ docker run -e HOST_HOSTNAME=`hostname` -ti nginx-base /bin/bash
 # root@fe268098920a:/# echo $HOST_HOSTNAME
 
+docker rm ric-server-3777
 docker run -d -p 3777:80 -v /var/ric3777:/var/ric/ --name ric-server-3777 ric-server
