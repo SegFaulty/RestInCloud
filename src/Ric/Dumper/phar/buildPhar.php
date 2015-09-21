@@ -13,6 +13,7 @@ if( file_exists($pharFile) ){
 $phar = new Phar($pharFile, 0, $pharFile);
 $phar->setSignatureAlgorithm(Phar::SHA1);
 $phar->startBuffering();
+$phar->addFile('../Dumper.php', 'Dumper.php');
 $phar->addFile('../../Client/Cli.php', 'Cli.php');
 $phar->addFile('../../Server/Helper/SyntacticSugar.php', 'SyntacticSugar.php');
 $phar->addFile('../README.md', 'README.md');
@@ -22,5 +23,6 @@ $phar->compressFiles(Phar::GZ);
 $phar->stopBuffering();
 unset($phar);
 
+chmod($pharFile, 0755);
 echo 'done... test with:'.PHP_EOL;
 echo './'.$pharFile.' help --verbose'.PHP_EOL;

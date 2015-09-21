@@ -24,6 +24,7 @@ $phar->setStub($stub);
 $phar->compressFiles(Phar::GZ);
 $phar->stopBuffering();
 unset($phar);
+chmod($pharFile, 0755);
 
 echo 'done... test with:'.PHP_EOL;
 echo './ric.phar help --verbose'.PHP_EOL;
