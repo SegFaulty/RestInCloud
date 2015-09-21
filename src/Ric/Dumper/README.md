@@ -66,7 +66,18 @@ default port: mysql-default port
 ## Compression
 
 default compression is bzip2 because, gzip adds a timestamp to compressed file, that's really bad for backup purposes - files with same source content will be different - ever
-add `--compressLevel=1` to `--compressLevel=9` to select the compression, default is level 1 (because its usually better then best ratio on gzip)
+### Compression Modes
+`--compress off` to disable compression
+`--compress fast` to try to compress with lzop - the currently fastest compressor
+`--compress hard` to try to compress with xz - the slowest but strongest compressor 
+
+Examples from http://catchchallenger.first-world.info//wiki/Quick_Benchmark:_Gzip_vs_Bzip2_vs_LZMA_vs_XZ_vs_LZ4_vs_LZO
+- source is 445M File
+- default:  with bzip2 (level 9) - target: 76M (16.9%) in 1m3s
+- fast: with lzop (level 1) - target: 161M (36.0%) in 1.6s 
+- hard: with xz (level 9) - target: 63M (14.0%) in 6m40s
+
+
 
 ## Encryption
 
