@@ -62,6 +62,8 @@ restore works only on database level
 
 default port: mysql-default port
 
+tableNamePattern: list of tables: t1,t2,t3 or with wildcard configTable,dataTable1,dataTable*
+
 
 ## Compression
 

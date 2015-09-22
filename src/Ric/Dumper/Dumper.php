@@ -21,7 +21,7 @@ class Ric_Dumper {
 				throw new RuntimeException(' first arguments needs to be help, dump or restore'.PHP_EOL);
 			}
 			if( $mode=='help' ){
-				$msg = self::getHelp(reset($cli->arguments), $helpString);
+				$msg = self::getHelp($cli->getArgument(1), $helpString);
 			}else{
 				switch($resourceType){
 					case 'file':
@@ -29,6 +29,13 @@ class Ric_Dumper {
 							$msg = self::dumpFile($cli);
 						}else{
 							$msg = self::restoreFile($cli);
+						}
+						break;
+					case 'mysql':
+						if( $mode=='dump' ){
+							$msg = self::dumpMysql($cli);
+						}else{
+							throw new RuntimeException('not implemeted yet');
 						}
 						break;
 					default:
@@ -86,19 +93,15 @@ class Ric_Dumper {
 	 */
 	static protected function dumpFile($cli){
 		$cli->getArgumentCount(4, 4);
-		$sourceFilePath = $cli->getArgument(3);
-		if( !is_file($sourceFilePath) ){
-			throw new RuntimeException('source file not found: '.$sourceFilePath);
+		$resourceFilePath = $cli->getArgument(3);
+		if( !is_file($resourceFilePath) ){
+			throw new RuntimeException('source file not found: '.$resourceFilePath);
 		}
-		$targetFileName = $cli->getArgument(4);
-		$targetFilePath = $cli->getOption('prefix', '').$targetFileName;
-		if( file_exists($targetFilePath) ){
-			throw new RuntimeException('target file already exists: '.$targetFilePath);
-		}
-		$command = 'cat '.$sourceFilePath;
+		$dumpFilePath = self::getDumpFilePathForDump($cli);
+		$command = 'cat '.$resourceFilePath;
 		$command .= self::getCompressionCommand($cli);
 		$command .= self::getEncryptionCommand($cli);
-		$command .= ' > '.$targetFilePath;
+		$command .= ' > '.$dumpFilePath;
 
 		return self::executeCommand($cli, $command);
 	}
@@ -110,22 +113,68 @@ class Ric_Dumper {
 	 */
 	static protected function restoreFile($cli){
 		$cli->getArgumentCount(4, 4);
-		$sourceFilePath = $cli->getArgument(3);
-		if( is_file($sourceFilePath) ){
-			throw new RuntimeException('restore file already exists: '.$sourceFilePath);
+		$resourceFilePath = $cli->getArgument(3);
+		if( is_file($resourceFilePath) AND !$cli->getOption('force') ){
+			throw new RuntimeException('restore file already exists: '.$resourceFilePath.' use --force to overwrite');
 		}
-		$targetFileName = $cli->getArgument(4);
-		$targetFilePath = $cli->getOption('prefix', '').$targetFileName;
-		if( !file_exists($targetFilePath) ){
-			throw new RuntimeException('dump file not found: '.$targetFilePath);
-		}
-		$command = 'cat '.$targetFilePath;
+		$dumpFilePath = self::getDumpFileForRestore($cli);
+		$command = 'cat '.$dumpFilePath;
 		$command .= self::getDecryptionCommand($cli);
 		$command .= self::getDecompressionCommand($cli);
-		$command .= ' > '.$sourceFilePath;
+		$command .= ' > '.$resourceFilePath;
 
 		return self::executeCommand($cli, $command);
 	}
+
+	/**
+	 * @param Ric_Client_Cli $cli
+	 * @return string
+	 * @throws RuntimeException
+	 */
+	static protected function dumpMysql($cli){
+		$cli->getArgumentCount(4, 4);
+		$resourceString = $cli->getArgument(3);
+		// [{user}:{pass}@]{server}[:{port}]/{dataBase}[/{tableNamePattern}]
+		$userPattern = '\w+'; // todo update to all valid chars
+		$tablePattern = '[\w,\*]+'; // todo update to all valid chars
+		if( !preg_match('~('.$userPattern.'):('.$userPattern.')@([\w\.]+)(?::(\d+))?/('.$userPattern.')(?:/('.$tablePattern.'))?~', $resourceString, $matches) ){
+			throw new RuntimeException('resource string not valid: '.$resourceString);
+		}
+		$user = $matches[1];
+		$pass = $matches[2];
+		$server = $matches[3];
+		$port = ($matches[4] ? $matches[4] : 3306);
+		$database = $matches[5];
+		$tablePattern = (isset($matches[6]) ? $matches[6] : '');
+		$tableList = [];
+		if( $tablePattern!='' ){
+			$tableList = explode(',', $tablePattern);
+			foreach( $tableList as $tableEntry ){
+				if( strstr($tableEntry, '*') ){
+					throw new RuntimeException('table pattern with * is not implemented yet');
+
+					// todo read tables with patterns
+				}
+			}
+			$tableList = array_unique($tableList);
+		}
+		$mysqlDumpCommand = 'mysqldump';
+		$mysqlDumpCommand .= ' -h '.$server;
+		$mysqlDumpCommand .= ' -P '.$port;
+		$mysqlDumpCommand .= ' -u '.$user;
+		$mysqlDumpCommand .= ' -p '.$pass;
+		$mysqlDumpCommand .= ' '.$database;
+		$mysqlDumpCommand .= ' '.join(' ', $tableList);
+		$command = $mysqlDumpCommand;
+		$command .= self::getCompressionCommand($cli);
+		$command .= self::getEncryptionCommand($cli);
+		$targetFilePath = self::getDumpFilePathForDump($cli);
+		$command .= ' > '.$targetFilePath;
+		return $command;
+#		return self::executeCommand($cli, $command);
+	}
+
+
 
 	/**
 	 * @param Ric_Client_Cli $cli
@@ -214,5 +263,31 @@ class Ric_Dumper {
 			$command = '| bzip2 -d';
 		}
 		return $command;
+	}
+
+	/**
+	 * @param Ric_Client_Cli $cli
+	 * @return string
+	 */
+	protected static function getDumpFilePathForDump($cli){
+		$targetFileName = $cli->getArgument(4);
+		$targetFilePath = $cli->getOption('prefix', '').$targetFileName;
+		if( file_exists($targetFilePath) AND !$cli->getOption('force') ){
+			throw new RuntimeException('target file already exists: '.$targetFilePath.' use --force to overwrite');
+		}
+		return $targetFilePath;
+	}
+
+	/**
+	 * @param $cli
+	 * @return string
+	 */
+	protected static function getDumpFileForRestore($cli){
+		$targetFileName = $cli->getArgument(4);
+		$targetFilePath = $cli->getOption('prefix', '').$targetFileName;
+		if( !file_exists($targetFilePath) ){
+			throw new RuntimeException('dump file not found: '.$targetFilePath);
+		}
+		return $targetFilePath;
 	}
 }
