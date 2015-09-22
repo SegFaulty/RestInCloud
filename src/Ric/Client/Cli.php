@@ -2,11 +2,11 @@
 
 class Ric_Client_Cli {
 
-	public $scriptName = '';
-	public $arguments = [];
-	public $options = [];
-	public $configFileOptions = [];
-	public $env = [];
+	protected $scriptName = '';
+	protected $arguments = [];
+	protected $options = [];
+	protected $configFileOptions = [];
+	protected $env = [];
 
 	/**
 	 * @param array $argv
@@ -65,6 +65,13 @@ class Ric_Client_Cli {
 	}
 
 	/**
+	 * @return string
+	 */
+	public function getScriptName(){
+		return $this->scriptName;
+	}
+
+	/**
 	 * @param int $argumentPosition // starts with 1 !!!
 	 * @param string|null $default
 	 * @return null
@@ -72,6 +79,22 @@ class Ric_Client_Cli {
 	public function getArgument($argumentPosition = 1, $default = null){
 		$argsIndex = $argumentPosition - 1;
 		return isset($this->arguments[$argsIndex]) ? $this->arguments[$argsIndex] : $default;
+	}
+
+	/**
+	 * @param null|int $min
+	 * @param null|int $max
+	 * @return int
+	 */
+	public function getArgumentCount($min = null, $max = null){
+		$count = count($this->arguments);
+		if( $min!==null AND $count<$min ){
+			throw new RuntimeException('min '.$min, ' arguments required! see help');
+		}
+		if( $max!==null AND $count>$max ){
+			throw new RuntimeException('max '.$max, ' arguments expected! see help');
+		}
+		return $count;
 	}
 
 	/**
