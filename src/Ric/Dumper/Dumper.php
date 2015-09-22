@@ -85,18 +85,12 @@ class Ric_Dumper {
 	 * @throws RuntimeException
 	 */
 	static protected function dumpFile($cli){
-		$fileName = $cli->getArgument(3);
-		if( $fileName=='' ){
-			throw new RuntimeException('source file missing');
-		}
-		$sourceFilePath = $fileName;
+		$cli->getArgumentCount(4, 4);
+		$sourceFilePath = $cli->getArgument(3);
 		if( !is_file($sourceFilePath) ){
 			throw new RuntimeException('source file not found: '.$sourceFilePath);
 		}
 		$targetFileName = $cli->getArgument(4);
-		if( $targetFileName=='' ){
-			throw new RuntimeException('target file missing');
-		}
 		$targetFilePath = $cli->getOption('prefix', '').$targetFileName;
 		if( file_exists($targetFilePath) ){
 			throw new RuntimeException('target file already exists: '.$targetFilePath);
@@ -115,18 +109,12 @@ class Ric_Dumper {
 	 * @throws RuntimeException
 	 */
 	static protected function restoreFile($cli){
-		$fileName = $cli->getArgument(3);
-		if( $fileName=='' ){
-			throw new RuntimeException('restore file missing');
-		}
-		$sourceFilePath = $fileName;
+		$cli->getArgumentCount(4, 4);
+		$sourceFilePath = $cli->getArgument(3);
 		if( is_file($sourceFilePath) ){
 			throw new RuntimeException('restore file already exists: '.$sourceFilePath);
 		}
 		$targetFileName = $cli->getArgument(4);
-		if( $targetFileName=='' ){
-			throw new RuntimeException('dump file missing');
-		}
 		$targetFilePath = $cli->getOption('prefix', '').$targetFileName;
 		if( !file_exists($targetFilePath) ){
 			throw new RuntimeException('dump file not found: '.$targetFilePath);
