@@ -96,7 +96,10 @@ add `--pass` or `--passFile` to encrypt the file with openssl
 ## global options
 
 * `--force` in dump mode - force overwrite dump file; in restore mode - force overwrite resource
-* `--prefix` will added to dump file but will not add to restored resources (dir, file)   `dump mysql.cnf mysql.cnf --prefix=server0815-` -> dump-file: `server0815-mysql.cnf`  -> `restore dump mysql.cnf mysql.cnf --prefix=server0815-`
-* `--verbose` show mor infos
+* `--prefix` will added to dump file but will not add to restored resources (dir, file)   
+	* dump: `dump mysql.cnf mysql.cnf --prefix=server0815-`
+	* dump-file: `server0815-mysql.cnf`  
+	* restore: `restore dump mysql.cnf mysql.cnf --prefix=server0815-`
+* `--verbose` show more infos
 * `--test` only show commands, don't execute 
 
