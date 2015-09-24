@@ -318,8 +318,4 @@ class Ric_Dumper_Dumper {
 		return array($user, $pass, $server, $port, $database, $tablePattern);
 	}
 
-	protected static function handleMysqlDebianCnf($mysqlDebianCnf, $user, $pass, $server){
-		parse_ini_file("sample.ini", TRUE);
-		return [$user, $pass, $server];
-	}
 }
