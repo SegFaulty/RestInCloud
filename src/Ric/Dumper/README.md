@@ -56,8 +56,7 @@ dump mysql db / tables / sql
 
 	dump mysql [{user}:{pass}@][{server}[:{port}]]/{dataBase}[/{tableNamePattern}] {targetFilePath} 
 	
-* `--useMysqlDebianCnf` - read `/etc/mysql/debian.cnf` for host, user, pass  (needs root privileges)
-* `--mysqlPassFile` - to omit the password in commandline
+* `--mysqlDefaultFile=/etc/mysql/debian.cnf` in ini style for host, user, password, database  (needs read privileges) see http://dev.mysql.com/doc/refman/5.5/en/option-files.html#option_general_defaults-file
 * default port: mysql-default port
 * default server: localhost
 
@@ -96,5 +95,8 @@ add `--pass` or `--passFile` to encrypt the file with openssl
 
 ## global options
 
+`--force` in dump mode - force overwrite dump file; in restore mode - force overwrite resource
 `--prefix` will added to source and target files but will not add to restored resources (dir, file)
+`--verbose` show mor infos
+`--test` only show commands, don't execute 
 

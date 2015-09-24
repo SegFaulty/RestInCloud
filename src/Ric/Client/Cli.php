@@ -89,10 +89,10 @@ class Ric_Client_Cli {
 	public function getArgumentCount($min = null, $max = null){
 		$count = count($this->arguments);
 		if( $min!==null AND $count<$min ){
-			throw new RuntimeException('min '.$min, ' arguments required! see help');
+			throw new RuntimeException('min '.intval($min).' arguments required! see help');
 		}
 		if( $max!==null AND $count>$max ){
-			throw new RuntimeException('max '.$max, ' arguments expected! see help');
+			throw new RuntimeException('max '.intval($max).' arguments expected! see help');
 		}
 		return $count;
 	}

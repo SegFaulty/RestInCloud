@@ -134,24 +134,35 @@ class Ric_Dumper_Dumper {
 	static protected function dumpMysql($cli){
 		$cli->getArgumentCount(4, 4);
 		$resourceString = $cli->getArgument(3);
-		list($user, $pass, $server, $port, $database, $tablePattern) = self::parseMysqlResourceString($resourceString);
+		list($user, $pass, $host, $port, $database, $tablePattern) = self::parseMysqlResourceString($resourceString);
+		$mysqlDefaultFile = $cli->getOption('mysqlDefaultFile','');
 		$tableList = [];
 		if( $tablePattern!='' ){
 			$tableList = explode(',', $tablePattern);
 			foreach( $tableList as $tableEntry ){
 				if( strstr($tableEntry, '*') ){
 					throw new RuntimeException('table pattern with * is not implemented yet');
-
 					// todo read tables with patterns
 				}
 			}
 			$tableList = array_unique($tableList);
 		}
 		$mysqlDumpCommand = 'mysqldump';
-		$mysqlDumpCommand .= ' -h '.$server;
-		$mysqlDumpCommand .= ' -P '.$port;
-		$mysqlDumpCommand .= ' -u '.$user;
-		$mysqlDumpCommand .= ' -p'.$pass;
+		if( $mysqlDefaultFile!='' ){
+			$mysqlDumpCommand .= ' --defaults-file='.$mysqlDefaultFile;
+		}
+		if( $host!='' ){
+			$mysqlDumpCommand .= ' -h '.$host;
+		}
+		if( $port!='' AND $port!=3306 ){
+			$mysqlDumpCommand .= ' -P '.$port;
+		}
+		if( $user!='' ){
+			$mysqlDumpCommand .= ' -u '.$user;
+		}
+		if( $pass!='' ){
+			$mysqlDumpCommand .= ' -p'.$pass;
+		}
 		$mysqlDumpCommand .= ' '.$database;
 		$mysqlDumpCommand .= ' '.join(' ', $tableList);
 		$command = $mysqlDumpCommand;
@@ -159,8 +170,9 @@ class Ric_Dumper_Dumper {
 		$command .= self::getEncryptionCommand($cli);
 		$targetFilePath = self::getDumpFilePathForDump($cli);
 		$command .= ' > '.$targetFilePath;
-		return $command;
-#		return self::executeCommand($cli, $command);
+
+
+		return self::executeCommand($cli, $command);
 	}
 
 
@@ -174,10 +186,14 @@ class Ric_Dumper_Dumper {
 		if( $cli->getOption('verbose') ){
 			echo $command.PHP_EOL;
 		}
-		exec($command, $output, $status);
-		$output = implode("\n", $output);
-		if( $status!=0 ){
-			throw new RuntimeException('encryption failed: '.$command.' with: '.$output, 500);
+		if( $cli->getOption('test') ){
+			$output = $command;
+		}else{
+			exec($command, $output, $status);
+			$output = implode("\n", $output);
+			if( $status!=0 ){
+				throw new RuntimeException('encryption failed: '.$command.' with: '.$output, 500);
+			}
 		}
 		return $output;
 	}
@@ -295,10 +311,15 @@ class Ric_Dumper_Dumper {
 		}
 		$user = $matches[1];
 		$pass = $matches[2];
-		$server = ($matches[3]!='' ? $matches[3] : 'localhost');
+		$server = $matches[3];
 		$port = intval(($matches[4] ? $matches[4] : 3306));
 		$database = $matches[5];
 		$tablePattern = (isset($matches[6]) ? $matches[6] : '');
 		return array($user, $pass, $server, $port, $database, $tablePattern);
+	}
+
+	protected static function handleMysqlDebianCnf($mysqlDebianCnf, $user, $pass, $server){
+		parse_ini_file("sample.ini", TRUE);
+		return [$user, $pass, $server];
 	}
 }
