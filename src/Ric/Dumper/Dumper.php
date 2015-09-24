@@ -290,13 +290,13 @@ class Ric_Dumper_Dumper {
 		$userPattern = '[^ @]+';
 		$dbPattern = '[^ /]+';
 		$tableListPattern = '.+';
-		if( !preg_match('~(?:('.$userPattern.'):('.$passPattern.')?@)(?:([\w\.]+)(?::(\d+))?)?/('.$dbPattern.')(?:/('.$tableListPattern.'))?~', $resourceString, $matches) ){
+		if( !preg_match('~(?:('.$userPattern.'):('.$passPattern.')?@)?(?:([\w\.]+)(?::(\d+))?)?/('.$dbPattern.')(?:/('.$tableListPattern.'))?~', $resourceString, $matches) ){
 			throw new RuntimeException('resource string not valid: '.$resourceString);
 		}
 		$user = $matches[1];
 		$pass = $matches[2];
-		$server = $matches[3];
-		$port = ($matches[4] ? $matches[4] : 3306);
+		$server = ($matches[3]!='' ? $matches[3] : 'localhost');
+		$port = intval(($matches[4] ? $matches[4] : 3306));
 		$database = $matches[5];
 		$tablePattern = (isset($matches[6]) ? $matches[6] : '');
 		return array($user, $pass, $server, $port, $database, $tablePattern);
