@@ -10,6 +10,6 @@ require_once __DIR__.'/../Client/Cli.php';
 require_once __DIR__.'/Dumper.php';
 require_once __DIR__.'/../Server/Helper/SyntacticSugar.php';
 
-exit(Ric_Dumper::handleExecute($argv, $_ENV, file_get_contents(__DIR__.'/README.md'))); // command line status
+exit(Ric_Dumper_Dumper::handleExecute($argv, $_ENV, file_get_contents(__DIR__.'/README.md'))); // command line status
 
 

@@ -54,13 +54,19 @@ default port: redis-default port
 ### Mysql
 dump mysql db / tables / sql
 
-	dump mysql [{user}:{pass}@]{server}[:{port}]/{dataBase}[/{tableNamePattern}] {targetFilePath}
+	dump mysql [{user}:{pass}@][{server}[:{port}]]/{dataBase}[/{tableNamePattern}] {targetFilePath} 
+	
+* `--useMysqlDebianCnf` - read `/etc/mysql/debian.cnf` for host, user, pass  (needs root privileges)
+* `--mysqlPassFile` - to omit the password in commandline
+* default port: mysql-default port
+* default server: localhost
+
 
 restore works only on database level
 
 	restore mysql [{user}:{pass}@]{server}[:{port}]/{dataBase} {sourceFilePath}
 
-default port: mysql-default port
+
 
 tableNamePattern: list of tables: t1,t2,t3 or with wildcard configTable,dataTable1,dataTable*
 

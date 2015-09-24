@@ -1,6 +1,6 @@
 <?php
 
-class Ric_Dumper {
+class Ric_Dumper_Dumper {
 
 	/**
 	 * @param array $argv
@@ -134,18 +134,7 @@ class Ric_Dumper {
 	static protected function dumpMysql($cli){
 		$cli->getArgumentCount(4, 4);
 		$resourceString = $cli->getArgument(3);
-		// [{user}:{pass}@]{server}[:{port}]/{dataBase}[/{tableNamePattern}]
-		$userPattern = '\w+'; // todo update to all valid chars
-		$tablePattern = '[\w,\*]+'; // todo update to all valid chars
-		if( !preg_match('~('.$userPattern.'):('.$userPattern.')@([\w\.]+)(?::(\d+))?/('.$userPattern.')(?:/('.$tablePattern.'))?~', $resourceString, $matches) ){
-			throw new RuntimeException('resource string not valid: '.$resourceString);
-		}
-		$user = $matches[1];
-		$pass = $matches[2];
-		$server = $matches[3];
-		$port = ($matches[4] ? $matches[4] : 3306);
-		$database = $matches[5];
-		$tablePattern = (isset($matches[6]) ? $matches[6] : '');
+		list($user, $pass, $server, $port, $database, $tablePattern) = self::parseMysqlResourceString($resourceString);
 		$tableList = [];
 		if( $tablePattern!='' ){
 			$tableList = explode(',', $tablePattern);
@@ -289,5 +278,27 @@ class Ric_Dumper {
 			throw new RuntimeException('dump file not found: '.$targetFilePath);
 		}
 		return $targetFilePath;
+	}
+
+	/**
+	 * // [{user}:{pass}@][{server}[:{port}]]/{dataBase}[/{tableNamePattern}]
+	 * @param $resourceString
+	 * @return array
+	 */
+	protected static function parseMysqlResourceString($resourceString){
+		$passPattern = '[^ :]+';
+		$userPattern = '[^ @]+';
+		$dbPattern = '[^ /]+';
+		$tableListPattern = '.+';
+		if( !preg_match('~(?:('.$userPattern.'):('.$passPattern.')?@)(?:([\w\.]+)(?::(\d+))?)?/('.$dbPattern.')(?:/('.$tableListPattern.'))?~', $resourceString, $matches) ){
+			throw new RuntimeException('resource string not valid: '.$resourceString);
+		}
+		$user = $matches[1];
+		$pass = $matches[2];
+		$server = $matches[3];
+		$port = ($matches[4] ? $matches[4] : 3306);
+		$database = $matches[5];
+		$tablePattern = (isset($matches[6]) ? $matches[6] : '');
+		return array($user, $pass, $server, $port, $database, $tablePattern);
 	}
 }
