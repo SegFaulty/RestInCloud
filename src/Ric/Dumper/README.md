@@ -95,8 +95,8 @@ add `--pass` or `--passFile` to encrypt the file with openssl
 
 ## global options
 
-`--force` in dump mode - force overwrite dump file; in restore mode - force overwrite resource
-`--prefix` will added to source and target files but will not add to restored resources (dir, file)
-`--verbose` show mor infos
-`--test` only show commands, don't execute 
+* `--force` in dump mode - force overwrite dump file; in restore mode - force overwrite resource
+* `--prefix` will added to source and target files but will not add to restored resources (dir, file)
+* `--verbose` show mor infos
+* `--test` only show commands, don't execute 
 
