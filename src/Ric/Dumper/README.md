@@ -12,7 +12,7 @@ restore
 
 	dumper restore {resource} {sourceFilePath}
 
-if targetFilePath is omitted, the content is piped to stdout
+if targetFilePath is omitted or `STDOUT`, the content is piped to stdout
 
 ## Resource
 

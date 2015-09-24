@@ -92,16 +92,15 @@ class Ric_Dumper_Dumper {
 	 * @throws RuntimeException
 	 */
 	static protected function dumpFile($cli){
-		$cli->getArgumentCount(4, 4);
+		$cli->getArgumentCount(3, 4);
 		$resourceFilePath = $cli->getArgument(3);
 		if( !is_file($resourceFilePath) ){
 			throw new RuntimeException('source file not found: '.$resourceFilePath);
 		}
-		$dumpFilePath = self::getDumpFilePathForDump($cli);
 		$command = 'cat '.$resourceFilePath;
 		$command .= self::getCompressionCommand($cli);
 		$command .= self::getEncryptionCommand($cli);
-		$command .= ' > '.$dumpFilePath;
+		$command .= self::getDumpFileForDumpCommand($cli);
 
 		return self::executeCommand($cli, $command);
 	}
@@ -132,7 +131,7 @@ class Ric_Dumper_Dumper {
 	 * @throws RuntimeException
 	 */
 	static protected function dumpMysql($cli){
-		$cli->getArgumentCount(4, 4);
+		$cli->getArgumentCount(3, 4);
 		$resourceString = $cli->getArgument(3);
 		list($user, $pass, $host, $port, $database, $tablePattern) = self::parseMysqlResourceString($resourceString);
 		$mysqlDefaultFile = $cli->getOption('mysqlDefaultFile','');
@@ -168,9 +167,7 @@ class Ric_Dumper_Dumper {
 		$command = $mysqlDumpCommand;
 		$command .= self::getCompressionCommand($cli);
 		$command .= self::getEncryptionCommand($cli);
-		$targetFilePath = self::getDumpFilePathForDump($cli);
-		$command .= ' > '.$targetFilePath;
-
+		$command .= self::getDumpFileForDumpCommand($cli);
 
 		return self::executeCommand($cli, $command);
 	}
@@ -274,13 +271,18 @@ class Ric_Dumper_Dumper {
 	 * @param Ric_Client_Cli $cli
 	 * @return string
 	 */
-	protected static function getDumpFilePathForDump($cli){
-		$targetFileName = $cli->getArgument(4);
+	protected static function getDumpFileForDumpCommand($cli){
+		$command = '';
+		$targetFileName = $cli->getArgument(4, '');
 		$targetFilePath = $cli->getOption('prefix', '').$targetFileName;
-		if( file_exists($targetFilePath) AND !$cli->getOption('force') ){
-			throw new RuntimeException('target file already exists: '.$targetFilePath.' use --force to overwrite');
+		if( $targetFilePath!='' AND $targetFilePath!='STDOUT' ){
+			$command .= ' > ';
+			if( file_exists($targetFilePath) AND !$cli->getOption('force') ){
+				throw new RuntimeException('target file already exists: '.$targetFilePath.' use --force to overwrite');
+			}
+			$command .= $targetFilePath;
 		}
-		return $targetFilePath;
+		return $command;
 	}
 
 	/**
