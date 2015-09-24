@@ -162,7 +162,7 @@ class Ric_Dumper {
 		$mysqlDumpCommand .= ' -h '.$server;
 		$mysqlDumpCommand .= ' -P '.$port;
 		$mysqlDumpCommand .= ' -u '.$user;
-		$mysqlDumpCommand .= ' -p '.$pass;
+		$mysqlDumpCommand .= ' -p'.$pass;
 		$mysqlDumpCommand .= ' '.$database;
 		$mysqlDumpCommand .= ' '.join(' ', $tableList);
 		$command = $mysqlDumpCommand;
@@ -235,9 +235,9 @@ class Ric_Dumper {
 		}elseif( $compressionMode=='fast' ){
 			$command = '| lzop -1'; // lzop
 		}elseif( $compressionMode=='hard' ){
-			$command = '| ex -6 -c'; // ex
+			$command = '| xz-6 -c'; // xz
 		}elseif( $compressionMode=='extreme' ){
-			$command = '| ex -9 -e -c'; // ex
+			$command = '| xz-9 -e -c'; // xz
 		}else{
 			$command = '| bzip2 -9';
 		}
@@ -256,9 +256,9 @@ class Ric_Dumper {
 		}elseif( $compressionMode=='fast' ){
 			$command = '| lzop -d'; // lzop
 		}elseif( $compressionMode=='hard' ){
-			$command = '| ex -d'; // ex
+			$command = '| xz-d'; // xz
 		}elseif( $compressionMode=='extreme' ){
-			$command = '| ex -d '; // ex
+			$command = '| xz-d '; // xz
 		}else{
 			$command = '| bzip2 -d';
 		}
@@ -279,7 +279,7 @@ class Ric_Dumper {
 	}
 
 	/**
-	 * @param $cli
+	 * @param Ric_Client_Cli $cli
 	 * @return string
 	 */
 	protected static function getDumpFileForRestore($cli){
