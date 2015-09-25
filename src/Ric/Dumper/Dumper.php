@@ -21,7 +21,7 @@ class Ric_Dumper_Dumper {
 				throw new RuntimeException(' first arguments needs to be help, dump or restore'.PHP_EOL);
 			}
 			if( $mode=='help' ){
-				$msg = self::getHelp($cli->getArgument(1), $helpString);
+				$msg = self::getHelp($cli->getArgument(2), $helpString);
 			}else{
 				switch($resourceType){
 					case 'file':
@@ -79,9 +79,12 @@ class Ric_Dumper_Dumper {
 	 * @param string $helpString
 	 * @return string
 	 */
-	static protected function getHelp($command = 'global', $helpString){
+	static protected function getHelp($command='', $helpString){
 		if( $command and preg_match('~\n## Help '.preg_quote($command, '~').'(.*?)(\n## |$)~s', $helpString, $matches) ){
 			$helpString = $matches[1];
+		}
+		if( $command=='' AND defined('BUILD_DATE') ){
+			$helpString = 'build: '.BUILD_DATE.PHP_EOL.$helpString;
 		}
 		return $helpString;
 	}
@@ -186,8 +189,15 @@ class Ric_Dumper_Dumper {
 		if( $cli->getOption('test') ){
 			$output = $command;
 		}else{
-			exec($command, $output, $status);
-			$output = implode("\n", $output);
+			$targetFileName = $cli->getArgument(4, '');
+			if( $targetFileName!='' AND $targetFileName!='STDOUT' ){
+				exec($command, $output, $status);
+				$output = implode("\n", $output);
+			}else{
+				// pump result to STDOUT
+				passthru($command, $status);
+				$output = '';
+			}
 			if( $status!=0 ){
 				throw new RuntimeException('encryption failed: '.$command.' with: '.$output, 500);
 			}
@@ -274,8 +284,8 @@ class Ric_Dumper_Dumper {
 	protected static function getDumpFileForDumpCommand($cli){
 		$command = '';
 		$targetFileName = $cli->getArgument(4, '');
-		$targetFilePath = $cli->getOption('prefix', '').$targetFileName;
-		if( $targetFilePath!='' AND $targetFilePath!='STDOUT' ){
+		if( $targetFileName!='' AND $targetFileName!='STDOUT' ){
+			$targetFilePath = $cli->getOption('prefix', '').$targetFileName;
 			$command .= ' > ';
 			if( file_exists($targetFilePath) AND !$cli->getOption('force') ){
 				throw new RuntimeException('target file already exists: '.$targetFilePath.' use --force to overwrite');
