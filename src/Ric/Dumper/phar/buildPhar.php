@@ -18,6 +18,7 @@ $phar->addFile('../../Client/Cli.php', 'Cli.php');
 $phar->addFile('../../Server/Helper/SyntacticSugar.php', 'SyntacticSugar.php');
 $phar->addFile('../README.md', 'README.md');
 $stub = file_get_contents(__DIR__.'/dumper-phar-stub.php');
+$stub = str_replace('__LIVE__', date('Y-m-d H:i:s'), $stub); // inject build-date
 $phar->setStub($stub);
 $phar->compressFiles(Phar::GZ);
 $phar->stopBuffering();

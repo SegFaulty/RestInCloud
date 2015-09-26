@@ -1,6 +1,8 @@
 #!/usr/bin/php -d variables_order=EGPCS
 <?php
 
+define('BUILD_DATE', '__LIVE__');
+
 # make sure errors go to stderr
 ini_set('log_errors', 1);
 ini_set('error_log', 'syslog');
