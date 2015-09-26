@@ -140,35 +140,24 @@ class Ric_Dumper_Dumper {
 		$mysqlDefaultFile = $cli->getOption('mysqlDefaultFile', '');
 		$tableList = [];
 		if( $tablePattern!='' ){
-			$tableList = explode(',', $tablePattern);
-			foreach( $tableList as $tableEntry ){
+			foreach( explode(',', $tablePattern) as $tableEntry ){
 				if( strstr($tableEntry, '*') ){
-					throw new RuntimeException('table pattern with * is not implemented yet');
-					// todo read tables with patterns
+					// read tables with pattern from mysql
+					$command = 'echo "SHOW TABLES LIKE \''.str_replace('*', '%', $tableEntry).'\';"';
+					$command .= ' | '.self::getMysqlCommandString('mysql', $mysqlDefaultFile, $host, $port, $user, $pass, $database);
+					$command .= ' --skip-column-names';
+					exec($command, $output, $status);
+					if( $status!==0 ){
+						throw new RuntimeException('show tables ('.$command.') failed! :'.implode(';', $output));
+					}
+					$tableList = array_merge($tableList, $output);
+				}else{
+					$tableList[] = $tableEntry;
 				}
 			}
 			$tableList = array_unique($tableList);
 		}
-		$mysqlDumpCommand = 'mysqldump';
-		if( $mysqlDefaultFile!='' ){
-			$mysqlDumpCommand .= ' --defaults-file='.$mysqlDefaultFile;
-		}
-		if( $host!='' ){
-			$mysqlDumpCommand .= ' -h '.$host;
-		}
-		if( $port!='' AND $port!=3306 ){
-			$mysqlDumpCommand .= ' -P '.$port;
-		}
-		if( $user!='' ){
-			$mysqlDumpCommand .= ' -u '.$user;
-		}
-		if( $pass!='' ){
-			$mysqlDumpCommand .= ' -p'.$pass;
-		}
-		$mysqlDumpCommand .= ' '.$database;
-		$mysqlDumpCommand .= ' '.join(' ', $tableList);
-
-		$command = $mysqlDumpCommand;
+		$command = self::getMysqlCommandString('mysqldump', $mysqlDefaultFile, $host, $port, $user, $pass, $database, $tableList);
 		$command .= self::getCompressionCommand($cli);
 		$command .= self::getEncryptionCommand($cli);
 		$command .= self::getDumpFileForDumpCommand($cli);
@@ -186,29 +175,12 @@ class Ric_Dumper_Dumper {
 		$resourceString = $cli->getArgument(3);
 		list($user, $pass, $host, $port, $database) = self::parseMysqlResourceString($resourceString);
 		$mysqlDefaultFile = $cli->getOption('mysqlDefaultFile', '');
-		$mysqlCommand = 'mysql ';
-		if( $mysqlDefaultFile!='' ){
-			$mysqlCommand .= ' --defaults-file='.$mysqlDefaultFile;
-		}
-		if( $host!='' ){
-			$mysqlCommand .= ' -h '.$host;
-		}
-		if( $port!='' AND $port!=3306 ){
-			$mysqlCommand .= ' -P '.$port;
-		}
-		if( $user!='' ){
-			$mysqlCommand .= ' -u '.$user;
-		}
-		if( $pass!='' ){
-			$mysqlCommand .= ' -p'.$pass;
-		}
-		$mysqlCommand .= ' '.$database;
 
 		$dumpFilePath = self::getDumpFileForRestore($cli);
 		$command = 'cat '.$dumpFilePath;
 		$command .= self::getDecryptionCommand($cli);
 		$command .= self::getDecompressionCommand($cli);
-		$command .= ' | '.$mysqlCommand;
+		$command .= ' | '.self::getMysqlCommandString('mysql', $mysqlDefaultFile, $host, $port, $user, $pass, $database);
 
 		return self::executeCommand($cli, $command);
 	}
@@ -281,13 +253,13 @@ class Ric_Dumper_Dumper {
 		if( $compressionMode=='off' ){
 			$command = ''; // nothing
 		}elseif( $compressionMode=='fast' ){
-			$command = '| lzop -1'; // lzop
+			$command = ' | lzop -1'; // lzop
 		}elseif( $compressionMode=='hard' ){
-			$command = '| xz-6 -c'; // xz
+			$command = ' | xz-6 -c'; // xz
 		}elseif( $compressionMode=='extreme' ){
-			$command = '| xz-9 -e -c'; // xz
+			$command = ' | xz-9 -e -c'; // xz
 		}else{
-			$command = '| bzip2 -9';
+			$command = ' | bzip2 -9';
 		}
 		return $command;
 	}
@@ -302,13 +274,13 @@ class Ric_Dumper_Dumper {
 		if( $compressionMode=='off' ){
 			$command = ''; // nothing
 		}elseif( $compressionMode=='fast' ){
-			$command = '| lzop -d'; // lzop
+			$command = ' | lzop -d'; // lzop
 		}elseif( $compressionMode=='hard' ){
-			$command = '| xz-d'; // xz
+			$command = ' | xz-d'; // xz
 		}elseif( $compressionMode=='extreme' ){
-			$command = '| xz-d '; // xz
+			$command = ' | xz-d '; // xz
 		}else{
-			$command = '| bzip2 -d';
+			$command = ' | bzip2 -d';
 		}
 		return $command;
 	}
@@ -364,6 +336,38 @@ class Ric_Dumper_Dumper {
 		$database = $matches[5];
 		$tablePattern = (isset($matches[6]) ? $matches[6] : '');
 		return array($user, $pass, $server, $port, $database, $tablePattern);
+	}
+
+	/**
+	 * @param string $mysqlCommand
+	 * @param string $mysqlDefaultFile
+	 * @param string $host
+	 * @param int $port
+	 * @param string $user
+	 * @param string $pass
+	 * @param string $database
+	 * @param string[] $tableList
+	 * @return string
+	 */
+	protected static function getMysqlCommandString($mysqlCommand, $mysqlDefaultFile, $host, $port, $user, $pass, $database, $tableList = []){
+		if( $mysqlDefaultFile!='' ){
+			$mysqlCommand .= ' --defaults-file='.$mysqlDefaultFile;
+		}
+		if( $host!='' ){
+			$mysqlCommand .= ' -h '.$host;
+		}
+		if( $port!='' AND $port!=3306 ){
+			$mysqlCommand .= ' -P '.$port;
+		}
+		if( $user!='' ){
+			$mysqlCommand .= ' -u '.$user;
+		}
+		if( $pass!='' ){
+			$mysqlCommand .= ' -p'.$pass;
+		}
+		$mysqlCommand .= ' '.$database;
+		$mysqlCommand .= ' '.join(' ', $tableList);
+		return trim($mysqlCommand);
 	}
 
 }

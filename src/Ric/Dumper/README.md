@@ -52,7 +52,7 @@ without keyPattern, it only sets the keys
 default port: redis-default port
 
 ### Mysql
-dump mysql db / tables / sql
+dump mysql db / tables / sql (based on mysqldump)
 
 	dump mysql [{user}:{pass}@][{server}[:{port}]]/{dataBase}[/{tableNamePattern}] {targetFilePath} 
 	
