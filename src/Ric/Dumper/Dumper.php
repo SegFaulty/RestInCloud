@@ -35,7 +35,7 @@ class Ric_Dumper_Dumper {
 						if( $mode=='dump' ){
 							$msg = self::dumpMysql($cli);
 						}else{
-							throw new RuntimeException('not implemeted yet');
+							$msg = self::restoreMysql($cli);
 						}
 						break;
 					default:
@@ -79,7 +79,7 @@ class Ric_Dumper_Dumper {
 	 * @param string $helpString
 	 * @return string
 	 */
-	static protected function getHelp($command='', $helpString){
+	static protected function getHelp($command = '', $helpString){
 		if( $command and preg_match('~\n## Help '.preg_quote($command, '~').'(.*?)(\n## |$)~s', $helpString, $matches) ){
 			$helpString = $matches[1];
 		}
@@ -137,7 +137,7 @@ class Ric_Dumper_Dumper {
 		$cli->getArgumentCount(3, 4);
 		$resourceString = $cli->getArgument(3);
 		list($user, $pass, $host, $port, $database, $tablePattern) = self::parseMysqlResourceString($resourceString);
-		$mysqlDefaultFile = $cli->getOption('mysqlDefaultFile','');
+		$mysqlDefaultFile = $cli->getOption('mysqlDefaultFile', '');
 		$tableList = [];
 		if( $tablePattern!='' ){
 			$tableList = explode(',', $tablePattern);
@@ -167,6 +167,7 @@ class Ric_Dumper_Dumper {
 		}
 		$mysqlDumpCommand .= ' '.$database;
 		$mysqlDumpCommand .= ' '.join(' ', $tableList);
+
 		$command = $mysqlDumpCommand;
 		$command .= self::getCompressionCommand($cli);
 		$command .= self::getEncryptionCommand($cli);
@@ -175,7 +176,42 @@ class Ric_Dumper_Dumper {
 		return self::executeCommand($cli, $command);
 	}
 
+	/**
+	 * @param Ric_Client_Cli $cli
+	 * @return string
+	 * @throws RuntimeException
+	 */
+	static protected function restoreMysql($cli){
+		$cli->getArgumentCount(3, 4);
+		$resourceString = $cli->getArgument(3);
+		list($user, $pass, $host, $port, $database) = self::parseMysqlResourceString($resourceString);
+		$mysqlDefaultFile = $cli->getOption('mysqlDefaultFile', '');
+		$mysqlCommand = 'mysql ';
+		if( $mysqlDefaultFile!='' ){
+			$mysqlCommand .= ' --defaults-file='.$mysqlDefaultFile;
+		}
+		if( $host!='' ){
+			$mysqlCommand .= ' -h '.$host;
+		}
+		if( $port!='' AND $port!=3306 ){
+			$mysqlCommand .= ' -P '.$port;
+		}
+		if( $user!='' ){
+			$mysqlCommand .= ' -u '.$user;
+		}
+		if( $pass!='' ){
+			$mysqlCommand .= ' -p'.$pass;
+		}
+		$mysqlCommand .= ' '.$database;
 
+		$dumpFilePath = self::getDumpFileForRestore($cli);
+		$command = 'cat '.$dumpFilePath;
+		$command .= self::getDecryptionCommand($cli);
+		$command .= self::getDecompressionCommand($cli);
+		$command .= ' | '.$mysqlCommand;
+
+		return self::executeCommand($cli, $command);
+	}
 
 	/**
 	 * @param Ric_Client_Cli $cli
@@ -199,7 +235,7 @@ class Ric_Dumper_Dumper {
 				$output = '';
 			}
 			if( $status!=0 ){
-				throw new RuntimeException('encryption failed: '.$command.' with: '.$output, 500);
+				throw new RuntimeException('command execution failed: '.$command.' with: '.$output, 500);
 			}
 		}
 		return $output;
