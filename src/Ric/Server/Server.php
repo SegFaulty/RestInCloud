@@ -55,6 +55,8 @@ class Ric_Server_Server {
 	public function saveFileInCloud($tmpFilePath, $fileName, $retention, $timestamp, $noSync){
 		$result = [
 				'status' => 'OK',
+				'fileName' => $fileName,
+				'size' => filesize($tmpFilePath),
 		];
 
 		$version = $this->fileManager->storeFile($fileName, $tmpFilePath);
