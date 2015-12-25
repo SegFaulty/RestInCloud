@@ -114,4 +114,32 @@ class Ric_Client_Cli {
 		}
 		return $return;
 	}
+
+	/**
+	 * @return string
+	 */
+	public function dumpParameters(){
+		$out = '';
+		$out .= 'arguments: ';
+		foreach( $this->arguments as $value ){
+			$out .= '"'.$value.'", ';
+		}
+		$out .= PHP_EOL;
+		$out .= 'options: ';
+		foreach( $this->options as $key => $value ){
+			$out .= $key.': "'.$value.'", ';
+		}
+		$out .= PHP_EOL;
+		$out .= 'configFileOptions: ';
+		foreach( $this->configFileOptions as $key => $value ){
+			$out .= $key.': "'.$value.'", ';
+		}
+		$out .= PHP_EOL;
+		$out .= 'environment: ';
+		foreach( $this->env as $key => $value ){
+			$out .= $key.': "'.$value.'", ';
+		}
+		$out .= PHP_EOL;
+		return $out;
+	}
 }

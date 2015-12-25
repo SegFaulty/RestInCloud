@@ -17,9 +17,9 @@ class Ric_Client_CliHandler {
 		$msg = '';
 		$cli = new Ric_Client_Cli($argv, $env);
 		$cli->loadConfigFile($cli->getOption('configFile')); // load cofig file if present
-		$command = array_shift($cli->arguments);
+		$command = $cli->getArgument(1);
 		if( $cli->getOption('verbose') ){
-			self::dumpParameters($command, $cli);
+			self::dumpParameters($cli);
 		}
 
 		try{
@@ -47,7 +47,7 @@ class Ric_Client_CliHandler {
 					$msg = self::commandAdmin($client, $cli);
 					break;
 				case 'help':
-					$msg = self::getHelp(reset($cli->arguments), $helpString);
+					$msg = self::getHelp($cli->getArgument(1), $helpString);
 					break;
 				default:
 					throw new RuntimeException('command expected'.PHP_EOL.self::getHelp('', $helpString));
@@ -108,8 +108,8 @@ class Ric_Client_CliHandler {
 	 * @throws RuntimeException
 	 */
 	static protected function commandBackup($client, $cli){
-		$resource = $cli->getArgument(1);
-		if( count($cli->arguments)==1 ){
+		$resource = $cli->getArgument(2);
+		if( $cli->getArgumentCount(2, 3)==2 ){
 			if( is_file($resource) ){
 				$targetFileName = basename($resource);
 			}elseif( is_dir($resource) ){
@@ -118,7 +118,7 @@ class Ric_Client_CliHandler {
 				throw new RuntimeException('no targetFileName given, but resource is not a regular file or dir!');
 			}
 		}else{
-			$targetFileName = $cli->getArgument(2);
+			$targetFileName = $cli->getArgument(3);
 		}
 		$targetFileName = $cli->getOption('prefix', '').$targetFileName;
 		$password = $cli->getOption('pass', self::resolveSecretFile($cli->getOption('passFile')));
@@ -133,7 +133,8 @@ class Ric_Client_CliHandler {
 	 * @throws RuntimeException
 	 */
 	static protected function commandCheck($client, $cli){
-		$targetFileName = $cli->getArgument(1);
+		$cli->getArgumentCount(2, 2);
+		$targetFileName = $cli->getArgument(2);
 		$targetFileName = $cli->getOption('prefix', '').$targetFileName;
 		$minTimestamp = $cli->getOption('minTimestamp');
 		if( $minTimestamp<0 ){
@@ -150,20 +151,29 @@ class Ric_Client_CliHandler {
 	 * @throws RuntimeException
 	 */
 	static protected function commandList($client, $cli){
+		$cli->getArgumentCount(2, 2); // check argumentCount
 		$msg = '';
-		$targetFileName = $cli->arguments[0];
+		$targetFileName = $cli->getArgument(2);
 		$targetFileName = $cli->getOption('prefix', '').$targetFileName;
 		$versions = $client->versions($targetFileName);
-		$msg .= $targetFileName.PHP_EOL;
-		$msg .= 'Date       Time     Version (sha1)                           Size'.PHP_EOL;
-		$msg .= '----------|--------|----------------------------------------|--------------'.PHP_EOL;
-		$size = 0;
-		foreach( $versions as $fileVersion ){
-			$msg .= date('Y-m-d H:i:s', $fileVersion['timestamp']).' '.$fileVersion['version'].' '.sprintf('%14d', $fileVersion['size']).PHP_EOL;
-			$size += $fileVersion['size'];
+		if( count($versions)>0 ){
+			$msg .= $targetFileName.PHP_EOL;
+			$msg .= 'Date       Time     Version (sha1)                           Size'.PHP_EOL;
+			$msg .= '----------|--------|----------------------------------------|--------------'.PHP_EOL;
+			$size = 0;
+			foreach( $versions as $fileVersion ){
+				$date = date('Y-m-d H:i:s', $fileVersion['timestamp']);
+				if( $fileVersion['timestamp']==1422222222 ){
+					$date = '-- D E L E T E D --';
+				}
+				$msg .= $date.' '.$fileVersion['version'].' '.sprintf('%14d', $fileVersion['size']).PHP_EOL;
+				$size += $fileVersion['size'];
+			}
+			$msg .= '------------------------------------------------------------|--------------'.PHP_EOL;
+			$msg .= sprintf('versions: %-4d ', count($versions)).'                                              '.sprintf('%14d', $size).PHP_EOL;
+		}else{
+			$msg .= 'no version of "'.$targetFileName.'" found!'.PHP_EOL;
 		}
-		$msg .= '------------------------------------------------------------|--------------'.PHP_EOL;
-		$msg .= sprintf('versions: %-4d ', count($versions)).'                                              '.sprintf('%14d', $size).PHP_EOL;
 		return $msg;
 	}
 
@@ -174,11 +184,11 @@ class Ric_Client_CliHandler {
 	 * @throws RuntimeException
 	 */
 	static protected function commandRestore($client, $cli){
-		$targetFileName = $cli->arguments[0];
-		if( count($cli->arguments)==1 ){
+		$targetFileName = $cli->getArgument(2);
+		if( $cli->getArgumentCount(2, 3)==2 ){
 			$resource = getcwd().'/'.basename($targetFileName);
 		}else{
-			$resource = $cli->arguments[1];
+			$resource = $cli->getArgument(3);
 		}
 		$targetFileName = $cli->getOption('prefix', '').$targetFileName;
 		$client->restore($targetFileName, $resource, $cli->getOption('pass'), $cli->getOption('version'), (true AND $cli->getOption('overwrite')));
@@ -192,8 +202,9 @@ class Ric_Client_CliHandler {
 	 * @throws RuntimeException
 	 */
 	static protected function commandDelete($client, $cli){
-		$targetFileName = $cli->getArgument(1);
-		$version = $cli->getArgument(2);
+		$cli->getArgumentCount(3, 3); // check argumentCount
+		$targetFileName = $cli->getArgument(2);
+		$version = $cli->getArgument(3);
 		if( $targetFileName===null OR $version===null ){
 			throw new RuntimeException('name and version needed, use "all" for all version');
 		}
@@ -208,10 +219,10 @@ class Ric_Client_CliHandler {
 	 * @throws RuntimeException
 	 */
 	static protected function commandAdmin($client, $cli){
-		if( count($cli->arguments)==0 ){
+		if( $cli->getArgumentCount()==1 ){
 			throw new RuntimeException('admin command expected, see help');
 		}
-		$adminCommand = $cli->arguments[0];
+		$adminCommand = $cli->getArgument(2);
 		if( $adminCommand=='info' ){
 			$msg = json_encode($client->info(), JSON_PRETTY_PRINT);
 		}elseif( $adminCommand=='list' ){
@@ -219,32 +230,32 @@ class Ric_Client_CliHandler {
 		}elseif( $adminCommand=='health' ){
 			$msg = $client->health();
 		}elseif( $adminCommand=='addServer' ){
-			if( count($cli->arguments)!=2 ){
+			if( $cli->getArgumentCount()!=3 ){
 				throw new RuntimeException('needs one arg (targetServer)');
 			}
-			$msg = $client->addServer($cli->arguments[1]);
+			$msg = $client->addServer($cli->getArgument(3));
 		}elseif( $adminCommand=='removeServer' ){
-			if( count($cli->arguments)!=2 ){
+			if( $cli->getArgumentCount()!=3 ){
 				throw new RuntimeException('needs one arg (targetServer)');
 			}
-			$msg = $client->removeServer($cli->arguments[1]);
+			$msg = $client->removeServer($cli->getArgument(3));
 		}elseif( $adminCommand=='joinCluster' ){
-			if( count($cli->arguments)!=2 ){
+			if( $cli->getArgumentCount()!=3 ){
 				throw new RuntimeException('needs one arg (clusterServer)');
 			}
-			$msg = $client->joinCluster($cli->arguments[1]);
+			$msg = $client->joinCluster($cli->getArgument(3));
 		}elseif( $adminCommand=='leaveCluster' ){
 			$msg = $client->leaveCluster();
 		}elseif( $adminCommand=='removeFromCluster' ){
-			if( count($cli->arguments)!=2 ){
+			if( $cli->getArgumentCount()!=3 ){
 				throw new RuntimeException('needs one arg (targetServer)');
 			}
-			$msg = $client->removeFromCluster($cli->arguments[1]);
+			$msg = $client->removeFromCluster($cli->getArgument(3));
 		}elseif( $adminCommand=='copyServer' ){
-			if( count($cli->arguments)!=2 ){
+			if( $cli->getArgumentCount()!=3 ){
 				throw new RuntimeException('needs one arg (targetServer)');
 			}
-			$msg = $client->copyServer($cli->arguments[1]);
+			$msg = $client->copyServer($cli->getArgument(3));
 		}else{
 			throw new RuntimeException('unknown admin command');
 		}
@@ -252,31 +263,10 @@ class Ric_Client_CliHandler {
 	}
 
 	/**
-	 * @param string $command
 	 * @param Ric_Client_Cli $cli
 	 */
-	protected static function dumpParameters($command, $cli){
-		echo 'command: '.$command.PHP_EOL;
-		echo 'arguments: ';
-		foreach( $cli->arguments as $value ){
-			echo '"'.$value.'", ';
-		}
-		echo PHP_EOL;
-		echo 'options: ';
-		foreach( $cli->options as $key => $value ){
-			echo $key.': "'.$value.'", ';
-		}
-		echo PHP_EOL;
-		echo 'configFileOptions: ';
-		foreach( $cli->configFileOptions as $key => $value ){
-			echo $key.': "'.$value.'", ';
-		}
-		echo PHP_EOL;
-		echo 'environment: ';
-		foreach( $cli->env as $key => $value ){
-			echo $key.': "'.$value.'", ';
-		}
-		echo PHP_EOL;
+	protected static function dumpParameters($cli){
+		echo $cli->dumpParameters();
 	}
 
 }
