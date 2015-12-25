@@ -191,7 +191,8 @@ class Ric_Client_CliHandler {
 			$resource = $cli->getArgument(3);
 		}
 		$targetFileName = $cli->getOption('prefix', '').$targetFileName;
-		$client->restore($targetFileName, $resource, $cli->getOption('pass'), $cli->getOption('version'), (true AND $cli->getOption('overwrite')));
+		$password = $cli->getOption('pass', self::resolveSecretFile($cli->getOption('passFile')));
+		$client->restore($targetFileName, $resource, $password, $cli->getOption('version'), (true AND $cli->getOption('overwrite')));
 		return 'OK';
 	}
 

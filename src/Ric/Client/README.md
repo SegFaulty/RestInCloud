@@ -105,6 +105,7 @@ procedure:
 ### restore options
 
 * --pass Password
+* --passFile {passFilePath} read pass from file default: ENV ricPassFile -> ''
 * --overwrite   overwrite existing resource
 * --prefix
 
