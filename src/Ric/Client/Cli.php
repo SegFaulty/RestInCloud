@@ -82,6 +82,14 @@ class Ric_Client_Cli {
 	}
 
 	/**
+	 * get all arguments
+	 * @return array
+	 */
+	public function getArguments(){
+		return $this->arguments;
+	}
+
+	/**
 	 * @param null|int $min
 	 * @param null|int $max
 	 * @return int
