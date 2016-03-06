@@ -257,6 +257,8 @@ class Ric_Client_CliHandler {
 				throw new RuntimeException('needs one arg (targetServer)');
 			}
 			$msg = $client->copyServer($cli->getArgument(3));
+		}elseif( $adminCommand=='checkConsistency' ){
+			$msg = $client->checkConsistency();
 		}else{
 			throw new RuntimeException('unknown admin command');
 		}
@@ -266,7 +268,7 @@ class Ric_Client_CliHandler {
 	/**
 	 * @param Ric_Client_Cli $cli
 	 */
-	protected static function dumpParameters($cli){
+	static protected  function dumpParameters($cli){
 		echo $cli->dumpParameters();
 	}
 

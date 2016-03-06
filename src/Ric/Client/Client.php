@@ -517,10 +517,7 @@ class Ric_Client_Client {
 	 */
 	public function copyServer($targetServerHostPort){
 		$filesCopied = 0;
-		$headers = [];
-		$response = Ric_Rest_Client::get($this->buildUrl('', 'list'), [], $headers);
-		$this->checkServerResponse($response, $headers);
-		$fileNames = json_decode($response, true);
+		$fileNames = $this->listFiles();
 		foreach( $fileNames as $fileName ){
 			$versionInfos = $this->versions($fileName);
 			foreach( $versionInfos as $versionInfo ){
@@ -535,6 +532,74 @@ class Ric_Client_Client {
 		$response = json_encode(['status' => 'OK', 'filesCopied' => $filesCopied]);
 		return $response;
 	}
+
+	/**
+	 * @return string
+	 */
+	public function checkConsistency() {
+		$response = '';
+		$info = $this->info();
+		$servers = H::getIKS($info, ['config','servers'], []);
+		array_unshift($servers, $info['config']['hostPort']); // add current server
+		if( count($servers)>1 ){
+			// get all files from all servers
+			$allKnownFiles = [];
+			$knownFilesPerServer = [];
+			$clients = []; /** @var Ric_Client_Client[] $clients */
+			foreach( $servers as $server ){
+				$clients[$server] = new Ric_Client_Client($server, $info['config']['adminToken']);
+				$files = $clients[$server]->listFiles();
+				$knownFilesPerServer[$server] = $files;
+				$allKnownFiles = array_unique(array_merge($allKnownFiles, $files));
+			}
+			$missingFilesPerServer = [];
+			foreach( $knownFilesPerServer as $server => $files ){
+				$serverMissingFiles = array_diff($allKnownFiles, $files);
+				if( $serverMissingFiles ){
+					$missingFilesPerServer[$server] = $serverMissingFiles;
+					$response.= count($serverMissingFiles).' files missing on server: '.$server.PHP_EOL.join(PHP_EOL, $serverMissingFiles);
+				}
+			}
+			if( empty($missingFilesPerServer) ){
+				$response.= count($allKnownFiles).' files existing on all servers: OK'.PHP_EOL;
+			}
+			// check versions
+			foreach( $allKnownFiles as $fileName ){
+				$allKnownVersions = [];
+				$knownVersionsPerServer = [];
+				foreach( $servers as $server ){
+					$versionInfos = $clients[$server]->versions($fileName);
+					$versions = [];
+					foreach( $versionInfos as $versionInfo ){
+						$versions[] = $versionInfo['version'];
+					}
+					$knownVersionsPerServer[$server] = $versions;
+					$allKnownVersions = array_unique(array_merge($allKnownVersions, $versions));
+				}
+				$missingVersionsPerServer = [];
+				foreach( $knownVersionsPerServer as $server => $versions ){
+					$serverMissingVersions = array_diff($allKnownVersions, $versions);
+					if( $serverMissingVersions ){
+						$missingVersionsPerServer[$server] = $serverMissingVersions;
+						$response.= count($serverMissingVersions).' versions missing of file: '.$fileName.' on server: '.$server.PHP_EOL.join(PHP_EOL, $serverMissingVersions);
+					}
+				}
+				if( empty($missingVersionsPerServer) ){
+					$response.= count($allKnownVersions).' versions for '.$fileName.' existing on all servers: OK'.PHP_EOL;
+				}
+
+			}
+
+
+#			$response .= print_r($knownFilesPerServer, true);
+		}else{
+			$response .= 'no others servers, no consistence check necessary'.PHP_EOL;
+		}
+#$response .= print_r($info, true);
+#$response .= print_r($servers, true);
+		return $response;
+	}
+
 
 	##### TMP File handling ########
 	protected $tmpFilePaths = [];
