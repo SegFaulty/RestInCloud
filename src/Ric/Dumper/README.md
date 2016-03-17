@@ -29,10 +29,11 @@ restore with optionally filePath, if omitted it will be restored in working dir 
 will tar a dir to file
 
 	dump dir {dirPath} {targetFilePath}
-
+	
 restore with optionally dirPath, if omitted it will be restored in working dir with sourceFileName
 
-	restore dir [{dirPath}] {sourceFilePath}
+	restore dir {sourceFilePath}
+	
 
 ### Redis
 dump some (or all) redis keys
@@ -77,7 +78,7 @@ default compression is bzip2 because, gzip adds a timestamp to compressed file, 
 * `--compress off` to disable compression
 * `--compress fast` to try to compress with lzop -1  - the currently fastest compressor
 * `--compress hard` to try to compress with xz -6 - the slowest but strongest compressor 
-* `--compress extreme` to try to compress with xz -9 -e - the slowest but strongest compressor  with exteme settings
+* `--compress extreme` to try to compress with xz -9 -e - the slowest but strongest compressor  with exteme settings 
 
 Examples from http://catchchallenger.first-world.info//wiki/Quick_Benchmark:_Gzip_vs_Bzip2_vs_LZMA_vs_XZ_vs_LZ4_vs_LZO
 
@@ -87,6 +88,11 @@ Examples from http://catchchallenger.first-world.info//wiki/Quick_Benchmark:_Gzi
 * hard: with xz (level 6) - target: 67M (14.9%) in 3m6s with 93MB
 * hard: with xz (level 9) - target: 63M (14.0%) in 6m40s with 673MB!!
 
+choose the correct targetFile-suffix for the the used compression mode (example for a directory:)
+* default (bzip2) -> bla.tar.bz2
+* --compress fast (lzop) -> bla.tar.bz2
+* --compress hard (xz) -> bla.tar.xz
+* --compress extreme (xz) -> bla.tar.xz
 
 
 ## Encryption
@@ -99,7 +105,7 @@ add `--pass` or `--passFile` to encrypt the file with openssl
 * `--prefix` will added to dump file but will not add to restored resources (dir, file)   
 	* dump: `dump mysql.cnf mysql.cnf --prefix=server0815-`
 	* dump-file: `server0815-mysql.cnf`  
-	* restore: `restore dump mysql.cnf mysql.cnf --prefix=server0815-`
+	* restore: `restore mysql.cnf mysql.cnf --prefix=server0815-`
 * `--verbose` show more infos
 * `--test` only show commands, don't execute 
 

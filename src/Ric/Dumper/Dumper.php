@@ -31,6 +31,13 @@ class Ric_Dumper_Dumper {
 							$msg = self::restoreFile($cli);
 						}
 						break;
+					case 'dir':
+						if( $mode=='dump' ){
+							$msg = self::dumpDir($cli);
+						}else{
+							$msg = self::restoreDir($cli);
+						}
+						break;
 					case 'mysql':
 						if( $mode=='dump' ){
 							$msg = self::dumpMysql($cli);
@@ -114,13 +121,56 @@ class Ric_Dumper_Dumper {
 	 * @throws RuntimeException
 	 */
 	static protected function restoreFile($cli){
-		$cli->getArgumentCount(4, 4);
+		$dumpFilePath = self::getDumpFileForRestore($cli);
+		$argCount = $cli->getArgumentCount(3, 4);
+		if( $argCount==4 ){
+			$resourceFilePath = $cli->getArgument(3);
+		}else{
+			$resourceFilePath = basename($dumpFilePath);
+		}
+		if( is_file($resourceFilePath) AND !$cli->getOption('force') ){
+			throw new RuntimeException('restore file already exists: '.$resourceFilePath.' use --force to overwrite');
+		}
+		$command = 'cat '.$dumpFilePath;
+		$command .= self::getDecryptionCommand($cli);
+		$command .= self::getDecompressionCommand($cli);
+		$command .= ' > '.$resourceFilePath;
+
+		return self::executeCommand($cli, $command);
+	}
+
+	/**
+	 * @param Ric_Client_Cli $cli
+	 * @return string
+	 * @throws RuntimeException
+	 */
+	static protected function dumpDir($cli){
+		$cli->getArgumentCount(3, 4);
+		$resourceFilePath = $cli->getArgument(3);
+		if( !is_dir($resourceFilePath) ){
+			throw new RuntimeException('source dir not found: '.$resourceFilePath);
+		}
+		$command = 'tar -cp '.$resourceFilePath; // keep fileowners
+		$command .= self::getCompressionCommand($cli);
+		$command .= self::getEncryptionCommand($cli);
+		$command .= self::getDumpFileForDumpCommand($cli);
+
+		return self::executeCommand($cli, $command);
+	}
+
+	/**
+	 * @param Ric_Client_Cli $cli
+	 * @return string
+	 * @throws RuntimeException
+	 */
+	static protected function restoreDir($cli){
+		$cli->getArgumentCount(3);
 		$resourceFilePath = $cli->getArgument(3);
 		if( is_file($resourceFilePath) AND !$cli->getOption('force') ){
 			throw new RuntimeException('restore file already exists: '.$resourceFilePath.' use --force to overwrite');
 		}
 		$dumpFilePath = self::getDumpFileForRestore($cli);
-		$command = 'cat '.$dumpFilePath;
+		$command = 'tar -xp '.$dumpFilePath;
 		$command .= self::getDecryptionCommand($cli);
 		$command .= self::getDecompressionCommand($cli);
 		$command .= ' > '.$resourceFilePath;
@@ -276,9 +326,9 @@ class Ric_Dumper_Dumper {
 		}elseif( $compressionMode=='fast' ){
 			$command = ' | lzop -d'; // lzop
 		}elseif( $compressionMode=='hard' ){
-			$command = ' | xz-d'; // xz
+			$command = ' | xz -d'; // xz
 		}elseif( $compressionMode=='extreme' ){
-			$command = ' | xz-d '; // xz
+			$command = ' | xz -d '; // xz
 		}else{
 			$command = ' | bzip2 -d';
 		}
@@ -308,7 +358,8 @@ class Ric_Dumper_Dumper {
 	 * @return string
 	 */
 	protected static function getDumpFileForRestore($cli){
-		$targetFileName = $cli->getArgument(4);
+		$argCount = $cli->getArgumentCount();
+		$targetFileName = $cli->getArgument($argCount); // last arg is dumpFile
 		$targetFilePath = $cli->getOption('prefix', '').$targetFileName;
 		if( !file_exists($targetFilePath) ){
 			throw new RuntimeException('dump file not found: '.$targetFilePath);
