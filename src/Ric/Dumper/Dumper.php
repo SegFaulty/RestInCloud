@@ -44,7 +44,8 @@ class Ric_Dumper_Dumper {
 						}else{
 							$msg = self::restoreMysql($cli);
 						}
-						break;
+					case '':
+						throw new RuntimeException('second arg needs to be a resource type - see usage'.PHP_EOL);
 					default:
 						throw new RuntimeException('unknown resource type: '.$resourceType.PHP_EOL);
 
@@ -52,17 +53,31 @@ class Ric_Dumper_Dumper {
 			}
 		}catch(Exception $e){
 			$status = 1;
-			ini_set('display_errors', 'stderr'); // ensure we write to STDERR
-			fwrite(STDERR, trim('ERROR: '.$e->getMessage()).PHP_EOL);
+			static::stdErr(trim('ERROR: '.$e->getMessage()).PHP_EOL);
 		}
 
 		if( !$cli->getOption('quite') ){
-			echo rtrim($msg).PHP_EOL; // add trailing newline
+			static::stdOut(rtrim($msg).PHP_EOL); // add trailing newline
 		}
 		if( is_bool($status) ){
 			$status = (int) !$status;
 		}
 		return $status; // success -> 0 , failed >= 1
+	}
+
+	/**
+	 * @param string $msg
+	 */
+	static protected function stdOut($msg){
+		echo $msg;
+	}
+
+	/**
+	 * @param string $msg
+	 */
+	static protected function stdErr($msg){
+		ini_set('display_errors', 'stderr'); // ensure we write to STDERR
+		fwrite(STDERR, $msg);
 	}
 
 	/**
@@ -242,10 +257,10 @@ class Ric_Dumper_Dumper {
 	 */
 	static protected function executeCommand($cli, $command){
 		if( $cli->getOption('verbose') ){
-			echo $command.PHP_EOL;
+			static::stdOut($command.PHP_EOL);
 		}
 		if( $cli->getOption('test') ){
-			$output = $command;
+			$output = 'command: "'.$command.'"';
 		}else{
 			$targetFileName = $cli->getArgument(4, '');
 			if( $targetFileName!='' AND $targetFileName!='STDOUT' ){
@@ -383,6 +398,9 @@ class Ric_Dumper_Dumper {
 		$user = $matches[1];
 		$pass = $matches[2];
 		$server = $matches[3];
+		if( $server=='' ){
+			$server = 'localhost';
+		}
 		$port = intval(($matches[4] ? $matches[4] : 3306));
 		$database = $matches[5];
 		$tablePattern = (isset($matches[6]) ? $matches[6] : '');
