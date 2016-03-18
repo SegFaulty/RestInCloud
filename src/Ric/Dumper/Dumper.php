@@ -285,10 +285,16 @@ class Ric_Dumper_Dumper {
 	 */
 	static protected function getEncryptionCommand($cli){
 		$command = '';
+		// password
 		$password = $cli->getOption('pass', self::resolveSecretFile($cli->getOption('passFile')));
 		if( $password!='' ){
 			$salt = '_sdffHGetdsga';
 			$command = '| openssl enc -aes-256-cbc -S '.bin2hex(substr($salt, 0, 8)).' -k '.escapeshellarg((string) $password);
+		}
+		// public key // todo only for mini files, needs complete new thinking https://www.devco.net/archives/2006/02/13/public_-_private_key_encryption_using_openssl.php
+		$publicKey = $cli->getOption('publicKey');
+		if( $publicKey!='' ){
+			$command = '| openssl rsautl -encrypt -pubin -inkey '.escapeshellarg((string) $publicKey);
 		}
 		return $command;
 	}
@@ -300,10 +306,16 @@ class Ric_Dumper_Dumper {
 	 */
 	static protected function getDecryptionCommand($cli){
 		$command = '';
+		// password
 		$password = $cli->getOption('pass', self::resolveSecretFile($cli->getOption('passFile')));
 		if( $password!='' ){
 			$salt = '_sdffHGetdsga';
 			$command = '| openssl enc -d -aes-256-cbc -S '.bin2hex(substr($salt, 0, 8)).' -k '.escapeshellarg((string) $password);
+		}
+		// private key
+		$privateKey = $cli->getOption('privateKey');
+		if( $password!='' ){
+			$command = ' openssl rsautl -decrypt -inkey '.escapeshellarg((string) $privateKey);
 		}
 		return $command;
 	}
