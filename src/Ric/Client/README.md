@@ -153,6 +153,7 @@ a cluster is a bunch of servers, where all of them are added (addServer) to all 
     ric admin addServer {server}
     ric admin removeServer {server}
     ric admin copyServer {targetServer}
+    ric admin checkConsistency 
 
 
 
