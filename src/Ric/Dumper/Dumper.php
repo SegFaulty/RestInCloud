@@ -11,8 +11,12 @@ class Ric_Dumper_Dumper {
 	static public function handleExecute($argv, $env, $helpString){
 		$status = true;
 		$msg = '';
-		$cli = new Ric_Client_Cli($argv, $env);
+		$cli = new Ric_Client_Cli($argv, $env, 'dumper');
 		$cli->loadConfigFile($cli->getOption('configFile')); // load config file if present
+		if( $cli->getOption('verbose') ){
+			$msg.= $cli->dumpParameters();
+		}
+
 		$mode = $cli->getArgument(1);
 		$resourceType = $cli->getArgument(2);
 
@@ -21,28 +25,35 @@ class Ric_Dumper_Dumper {
 				throw new RuntimeException(' first arguments needs to be help, dump or restore'.PHP_EOL);
 			}
 			if( $mode=='help' ){
-				$msg = self::getHelp($cli->getArgument(2), $helpString);
+				$msg.= self::getHelp($cli->getArgument(2), $helpString);
 			}else{
 				switch($resourceType){
+					case 'std':
+						if( $mode=='dump' ){
+							$msg.= self::dumpStd($cli);
+						}else{
+							$msg.= self::restoreStd($cli);
+						}
+						break;
 					case 'file':
 						if( $mode=='dump' ){
-							$msg = self::dumpFile($cli);
+							$msg.= self::dumpFile($cli);
 						}else{
-							$msg = self::restoreFile($cli);
+							$msg.= self::restoreFile($cli);
 						}
 						break;
 					case 'dir':
 						if( $mode=='dump' ){
-							$msg = self::dumpDir($cli);
+							$msg.= self::dumpDir($cli);
 						}else{
-							$msg = self::restoreDir($cli);
+							$msg.= self::restoreDir($cli);
 						}
 						break;
 					case 'mysql':
 						if( $mode=='dump' ){
-							$msg = self::dumpMysql($cli);
+							$msg.= self::dumpMysql($cli);
 						}else{
-							$msg = self::restoreMysql($cli);
+							$msg.= self::restoreMysql($cli);
 						}
 						break;
 					case '':
@@ -58,7 +69,9 @@ class Ric_Dumper_Dumper {
 		}
 
 		if( !$cli->getOption('quite') ){
-			static::stdOut(rtrim($msg).PHP_EOL); // add trailing newline
+			if( trim($msg)!='' ){
+				static::stdOut(rtrim($msg).PHP_EOL); // add trailing newline
+			}
 		}
 		if( is_bool($status) ){
 			$status = (int) !$status;
@@ -117,6 +130,52 @@ class Ric_Dumper_Dumper {
 	 * @return string
 	 * @throws RuntimeException
 	 */
+	static protected function dumpStd($cli){
+		// todo experimental not checked
+		$cli->getArgumentCount(3, 4);
+		$resourceFilePath = $cli->getArgument(3);
+		if( $resourceFilePath!='STDIN' ){
+			throw new RuntimeException('source must be "STDIN" ');
+		}
+		$command = 'cat';
+		$command .= self::getCompressionCommand($cli);
+		$command .= self::getEncryptionCommand($cli);
+		$command .= self::getDumpFileForDumpCommand($cli);
+
+		return self::executeCommand($cli, $command);
+	}
+
+	/**
+	 * @param Ric_Client_Cli $cli
+	 * @return string
+	 * @throws RuntimeException
+	 */
+	static protected function restoreStd($cli){
+		// todo experimental not checked
+		$dumpFilePath = self::getDumpFileForRestore($cli);
+		$argCount = $cli->getArgumentCount(3, 4);
+		if( $argCount==4 ){
+			$resourceFilePath = $cli->getArgument(3);
+		}else{
+			$resourceFilePath = basename($dumpFilePath);
+		}
+		if( is_file($resourceFilePath) AND !$cli->getOption('force') ){
+			throw new RuntimeException('restore file already exists: '.$resourceFilePath.' use --force to overwrite');
+		}
+		$command = 'cat '.$dumpFilePath;
+		$command .= self::getDecryptionCommand($cli);
+		$command .= self::getDecompressionCommand($cli);
+		// geht nach stdout  da es
+
+		return self::executeCommand($cli, $command);
+	}
+
+
+	/**
+	 * @param Ric_Client_Cli $cli
+	 * @return string
+	 * @throws RuntimeException
+	 */
 	static protected function dumpFile($cli){
 		$cli->getArgumentCount(3, 4);
 		$resourceFilePath = $cli->getArgument(3);
@@ -166,7 +225,7 @@ class Ric_Dumper_Dumper {
 		if( !is_dir($resourceFilePath) ){
 			throw new RuntimeException('source dir not found: '.$resourceFilePath);
 		}
-		$command = 'tar -cp '.$resourceFilePath; // keep fileowners
+		$command = 'tar -C '.$resourceFilePath.' -cp .'; // keep fileowners, we change to the given dir
 		$command .= self::getCompressionCommand($cli);
 		$command .= self::getEncryptionCommand($cli);
 		$command .= self::getDumpFileForDumpCommand($cli);
@@ -181,15 +240,20 @@ class Ric_Dumper_Dumper {
 	 */
 	static protected function restoreDir($cli){
 		$cli->getArgumentCount(3);
-		$resourceFilePath = $cli->getArgument(3);
-		if( is_file($resourceFilePath) AND !$cli->getOption('force') ){
-			throw new RuntimeException('restore file already exists: '.$resourceFilePath.' use --force to overwrite');
+		$command = '';
+		$resourceFilePath = $cli->getArgument(3); // = restore dir
+		if( !is_dir($resourceFilePath) ){
+			$command .= 'mkdir -p '.$resourceFilePath.' && '; // create target dir if not exists
 		}
 		$dumpFilePath = self::getDumpFileForRestore($cli);
-		$command = 'tar -xp '.$dumpFilePath;
+		$command .= 'cat '.$dumpFilePath;
 		$command .= self::getDecryptionCommand($cli);
 		$command .= self::getDecompressionCommand($cli);
-		$command .= ' > '.$resourceFilePath;
+		$command .= ' | tar -C '.$resourceFilePath.' -xp'; // change dir to target dir
+		if( !$cli->getOption('force') ){
+			$command .= " --keep-old-files"; // don't replace existing files when extracting, treat them as errors
+		}
+		$command .= " --atime-preserve"; // don't touch mtime and atime
 
 		return self::executeCommand($cli, $command);
 	}
@@ -315,7 +379,7 @@ class Ric_Dumper_Dumper {
 		}
 		// private key
 		$privateKey = $cli->getOption('privateKey');
-		if( $password!='' ){
+		if( $privateKey!='' ){
 			$command = ' openssl rsautl -decrypt -inkey '.escapeshellarg((string) $privateKey);
 		}
 		return $command;
@@ -386,11 +450,14 @@ class Ric_Dumper_Dumper {
 	 * @return string
 	 */
 	protected static function getDumpFileForRestore($cli){
+		$targetFilePath = '';
 		$argCount = $cli->getArgumentCount();
 		$targetFileName = $cli->getArgument($argCount); // last arg is dumpFile
-		$targetFilePath = $cli->getOption('prefix', '').$targetFileName;
-		if( !file_exists($targetFilePath) ){
-			throw new RuntimeException('dump file not found: '.$targetFilePath);
+		if( $targetFileName!='STDOUT' ){ // if STDOUT dann empty $targetFilePath will end  STDIN like " cat | decription ...."
+			$targetFilePath = $cli->getOption('prefix', '').$targetFileName;
+			if( !file_exists($targetFilePath) ){
+				throw new RuntimeException('dump file not found: '.$targetFilePath);
+			}
 		}
 		return $targetFilePath;
 	}

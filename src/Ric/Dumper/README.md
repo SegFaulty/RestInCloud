@@ -75,10 +75,10 @@ tableNamePattern: list of tables: t1,t2,t3 or with wildcard configTable,dataTabl
 
 default compression is bzip2 because, gzip adds a timestamp to compressed file, that's really bad for backup purposes - files with same source content will be different - ever
 ### Compression Modes
-* `--compress off` to disable compression
-* `--compress fast` to try to compress with lzop -1  - the currently fastest compressor
-* `--compress hard` to try to compress with xz -6 - the slowest but strongest compressor 
-* `--compress extreme` to try to compress with xz -9 -e - the slowest but strongest compressor  with exteme settings 
+* `--compress=off` to disable compression
+* `--compress=fast` to try to compress with lzop -1  - the currently fastest compressor
+* `--compress=hard` to try to compress with xz -6 - the slowest but strongest compressor 
+* `--compress=extreme` to try to compress with xz -9 -e - the slowest but strongest compressor  with exteme settings 
 
 Examples from http://catchchallenger.first-world.info//wiki/Quick_Benchmark:_Gzip_vs_Bzip2_vs_LZMA_vs_XZ_vs_LZ4_vs_LZO
 
@@ -90,9 +90,9 @@ Examples from http://catchchallenger.first-world.info//wiki/Quick_Benchmark:_Gzi
 
 choose the correct targetFile-suffix for the the used compression mode (example for a directory:)
 * default (bzip2) -> bla.tar.bz2
-* --compress fast (lzop) -> bla.tar.bz2
-* --compress hard (xz) -> bla.tar.xz
-* --compress extreme (xz) -> bla.tar.xz
+* --compress=fast (lzop) -> bla.tar.bz2
+* --compress=hard (xz) -> bla.tar.xz
+* --compress=extreme (xz) -> bla.tar.xz
 
 
 ## Encryption
@@ -102,7 +102,7 @@ add `--pass` or `--passFile` to encrypt the file with openssl
 ## global options
 
 * `--force` in dump mode - force overwrite dump file; in restore mode - force overwrite resource
-* `--prefix` will added to dump file but will not add to restored resources (dir, file)   
+* `--prefix=pref_` will added to dump file but will not add to restored resources (dir, file)   
 	* dump: `dump mysql.cnf mysql.cnf --prefix=server0815-`
 	* dump-file: `server0815-mysql.cnf`  
 	* restore: `restore mysql.cnf mysql.cnf --prefix=server0815-`

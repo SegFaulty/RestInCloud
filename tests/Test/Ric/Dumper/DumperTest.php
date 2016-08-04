@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/../../../bootstrap.php';
 
-class Test_Ric_Server_ServerTest extends \PHPUnit_Framework_TestCase{
+class Test_Ric_Sumper_DumperTest extends \PHPUnit_Framework_TestCase{
 
 	public function test_dumpFile(){
 		$dumper = new Test_Ric_Dumper_Dumper();
@@ -29,15 +29,16 @@ class Test_Ric_Server_ServerTest extends \PHPUnit_Framework_TestCase{
 		$tests = [
 				['command' => 'dump dir', 'status' => 1, 'contains' => 'min 3 arguments required'],
 				['command' => 'dump dir testfile', 'status' => 1, 'contains' => 'source dir not found'],
-				['command' => 'dump dir '.__DIR__.'/DumperTest.php --test', 'status' => 1, 'contains' => 'source dir not found'],
-				['command' => 'dump dir '.__DIR__.' --test', 'status' => 0, 'contains' => '"tar -cp /home/www/RestInCloud/tests/Test/Ric/Dumper | bzip2 -9"'],
-				['command' => 'dump dir '.__DIR__.' --test', 'status' => 0, 'contains' => '"tar -cp /home/www/RestInCloud/tests/Test/Ric/Dumper | bzip2 -9"'],
+				['command' => 'dump dir '.__DIR__.'/DumperTest --test', 'status' => 1, 'contains' => 'source dir not found'],
+				['command' => 'dump dir '.__DIR__.' --test', 'status' => 0, 'contains' => '"tar -C '.__DIR__.' -cp . | bzip2 -9"'],
+				['command' => 'dump dir '.__DIR__.' STDOUT --test', 'status' => 0, 'contains' => '"tar -C '.__DIR__.' -cp . | bzip2 -9"'],
+				['command' => 'dump dir '.__DIR__.' /data/backup/foo.tar.bz2 --pass=secrET --test', 'status' => 0, 'contains' => '"tar -C '.__DIR__.' -cp . | bzip2 -9| openssl enc -aes-256-cbc -S 5f73646666484765 -k \'secrET\' > /data/backup/foo.tar.bz2"'],
 		];
 		foreach( $tests as $test ){
 			$args = explode(' ', $test['command']);
 			array_unshift($args, 'dumperScript');
 			ob_start();
-			self::assertSame($test['status'], $dumper->handleExecute($args, [], 'helpString'));
+			self::assertSame($test['status'], $dumper->handleExecute($args, [], 'helpString'),  'failed: '.$test['command']);
 			$out = ob_get_contents();
 			ob_end_clean();
 			self::assertContains($test['contains'], $out);
