@@ -44,6 +44,7 @@ class Ric_Dumper_Dumper {
 						}else{
 							$msg = self::restoreMysql($cli);
 						}
+						break;
 					case '':
 						throw new RuntimeException('second arg needs to be a resource type - see usage'.PHP_EOL);
 					default:
