@@ -73,7 +73,7 @@ tableNamePattern: list of tables: t1,t2,t3 or with wildcard configTable,dataTabl
 
 ## Compression
 
-default compression is bzip2 because, gzip adds a timestamp to compressed file, that's really bad for backup purposes - files with same source content will be different - ever
+default  compression is bzip2 because, gzip adds a timestamp to compressed file, that's really bad for backup purposes - files with same source content will be different - ever
 ### Compression Modes
 * `--compress=off` to disable compression
 * `--compress=fast` to try to compress with lzop -1  - the currently fastest compressor
