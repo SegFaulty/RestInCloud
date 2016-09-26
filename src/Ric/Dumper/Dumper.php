@@ -397,9 +397,9 @@ class Ric_Dumper_Dumper {
 		}elseif( $compressionMode=='fast' ){
 			$command = ' | lzop -1'; // lzop
 		}elseif( $compressionMode=='hard' ){
-			$command = ' | xz-6 -c'; // xz
+			$command = ' | xz -6 -c'; // xz
 		}elseif( $compressionMode=='extreme' ){
-			$command = ' | xz-9 -e -c'; // xz
+			$command = ' | xz -9 -e -c'; // xz
 		}else{
 			$command = ' | bzip2 -9';
 		}
