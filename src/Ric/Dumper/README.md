@@ -97,7 +97,18 @@ choose the correct targetFile-suffix for the the used compression mode (example 
 
 ## Encryption
 
-add `--pass` or `--passFile` to encrypt the file with openssl
+### symmetrically (password)
+use `--pass=secret` or `--passFile=/root/mysecret.txt` to encrypt the file (symmetrically with openssl (enc -aes-256-cbc)
+
+
+### asymmetrically (encrypt with public cert, decrypt with private key)
+* use `--publicCert=/root/backupPublicCert.pem` to encrypt the file asymetrically with a public certificate 
+* use `--privateKey=/root/backupPrivateKey.pem` to decrypt this file
+
+make Cert and PrivateKey: ("-nodes" disabled password for privatekey)
+
+`openssl req -x509 -sha256 -days 10000 -newkey rsa:2048 -subj '/' -keyout backupEncryptionPrivateKey.pem -out backupEncryptionPubCert.pem -nodes`
+
 
 ## global options
 

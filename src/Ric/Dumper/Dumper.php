@@ -356,10 +356,21 @@ class Ric_Dumper_Dumper {
 			$salt = '_sdffHGetdsga';
 			$command = '| openssl enc -aes-256-cbc -S '.bin2hex(substr($salt, 0, 8)).' -k '.escapeshellarg((string) $password);
 		}
-		// public key // todo only for mini files, needs complete new thinking https://www.devco.net/archives/2006/02/13/public_-_private_key_encryption_using_openssl.php
-		$publicKey = $cli->getOption('publicKey');
-		if( $publicKey!='' ){
-			$command = '| openssl rsautl -encrypt -pubin -inkey '.escapeshellarg((string) $publicKey);
+
+		/*
+				 # public key // inspired by https://www.devco.net/archives/2006/02/13/public_-_private_key_encryption_using_openssl.php
+				 # create privatekey and cert ("-nodes" disabled password for privatekey)
+				 openssl req -x509 -sha256 -days 10000 -newkey rsa:2048 -keyout backupEncryptionPrivateKey.pem -out backupEncryptionPubCert.pem -nodes -subj '/'
+				 # use cert for encryption
+				 openssl smime -encrypt -aes256 -binary -outform D -in phperror.log.bz2 -out phperror.log.bz2.der backupEncryptionPubCert.pem
+				 # use privatKey to decryption
+				 openssl smime -decrypt -inform D -binary -in phperror.log.bz2.der -inkey backupEncryptionPrivateKey.pem -out phperror.log.bz2.decrypted
+				 # check cert (todo Validity Not After : Feb 22 22:03:54 2044 GMT ... sollte noch lange halten?!, aber ich glaube es laesst sich immer decrypten
+				 openssl x509 -in backupEncryptionPubCert.pem -text
+		*/
+		$publicCert = $cli->getOption('publicCert');
+		if( $publicCert!='' ){
+			$command = '| openssl smime -encrypt -aes256 -binary -outform D '.escapeshellarg((string) $publicCert);
 		}
 		return $command;
 	}
@@ -380,7 +391,7 @@ class Ric_Dumper_Dumper {
 		// private key
 		$privateKey = $cli->getOption('privateKey');
 		if( $privateKey!='' ){
-			$command = ' openssl rsautl -decrypt -inkey '.escapeshellarg((string) $privateKey);
+			$command = '| openssl smime -decrypt -inform D -binary -inkey '.escapeshellarg((string) $privateKey);
 		}
 		return $command;
 	}
