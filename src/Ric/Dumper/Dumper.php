@@ -337,7 +337,7 @@ class Ric_Dumper_Dumper {
 				$output = '';
 			}
 			if( $status!=0 ){
-				throw new RuntimeException('command execution failed: '.$command.' with: '.$output, 500);
+				throw new RuntimeException('command execution failed: '.$command, 500);
 			}
 		}
 		return $output;
@@ -372,6 +372,15 @@ class Ric_Dumper_Dumper {
 		if( $publicCert!='' ){
 			$command = '| openssl smime -encrypt -aes256 -binary -outform D '.escapeshellarg((string) $publicCert);
 		}
+		// deterministic asyncronous ancryption
+		// 1. get sha1 of sourcefile
+		// 2. encrypt the sha1 with openssl async encryption
+		// 3. write the encrypted pw to targetfile  - we need a fixed len here ?!
+		// 4. use this sha1 as password for openssl enc -aes-256-cbc with fixed salt and append target file
+		// decrypt:
+		// 1. read the fixed len enxrypted key
+		// 2. decrypt with private key
+		// 3. use the result als password for openssl enc -d -aes-256-cbc for the rest of the file
 		return $command;
 	}
 
