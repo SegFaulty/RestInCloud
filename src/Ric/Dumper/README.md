@@ -110,6 +110,10 @@ make Cert and PrivateKey: ("-nodes" disabled password for privatekey)
 
 `openssl req -x509 -sha256 -days 10000 -newkey rsa:2048 -subj '/' -keyout backupEncryptionPrivateKey.pem -out backupEncryptionPublicCert.pem -nodes`
 
+show cert content:
+
+`openssl x509 -in backupEncryptionPublicCert.pem -text`
+
 deterministically means: same input data are encrypted to same output data (that is good for backups / deplucation, etc.)
 
 ## global options
