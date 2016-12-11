@@ -70,6 +70,15 @@ restore works only on database level
 
 tableNamePattern: list of tables: t1,t2,t3 or with wildcard configTable,dataTable1,dataTable*
 
+### InfluxDb
+dump influx instance (meta and all databases) or meta or single database
+
+	dump influx instance|meta|{database} {targetFilePath} 
+
+restore works only on database level
+
+see https://docs.influxdata.com/influxdb/v1.1/administration/backup_and_restore/#backing-up-a-database
+
 
 ## Compression
 

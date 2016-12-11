@@ -56,6 +56,13 @@ class Ric_Dumper_Dumper {
 							$msg.= self::restoreMysql($cli);
 						}
 						break;
+					case 'influxdb':
+						if( $mode=='dump' ){
+							$msg .= self::dumpInfluxDb($cli);
+						}else{
+							$msg .= self::restoreINfluxDbl($cli);
+						}
+						break;
 					case '':
 						throw new RuntimeException('second arg needs to be a resource type - see usage'.PHP_EOL);
 					default:
@@ -311,6 +318,57 @@ class Ric_Dumper_Dumper {
 		$command .= self::getDecryptionCommand($cli);
 		$command .= self::getDecompressionCommand($cli);
 		$command .= ' | '.self::getMysqlCommandString('mysql', $mysqlDefaultFile, $host, $port, $user, $pass, $database);
+
+		return self::executeCommand($cli, $command);
+	}
+
+	/**
+	 * @param Ric_Client_Cli $cli
+	 * @return string
+	 * @throws RuntimeException
+	 */
+	static protected function dumpInfluxDb($cli){
+		$cli->getArgumentCount(3, 4);
+		$resourceString = $cli->getArgument(3);
+		if( $resourceString!='instance' ){
+			// determine all databases
+		}
+		// influxd backup -database db /data/backup/influxdb
+
+		$option = '';
+		if( $resourceString=='instance' ){
+			throw new RuntimeException('dump influxdb instance is not yet implemented');
+		}elseif( $resourceString=='meta' ){
+		}else{
+			$option = ' -database '.$resourceString;
+		}
+
+		$command = 'tempDir=`/bin/mktemp -d` && /usr/bin/influxd backup'.$option.' $tempDir 2> /dev/null';
+		$command .= ' && tar -C $tempDir -c .'; // we change to the given dir
+		$command .= self::getCompressionCommand($cli);
+		$command .= self::getEncryptionCommand($cli);
+		$command .= self::getDumpFileForDumpCommand($cli);
+// eher nicht so gut		$command .= ' && /bin/rm -rf $tempDir'; // hui jui jui
+
+		return self::executeCommand($cli, $command);
+	}
+
+	/**
+	 * @param Ric_Client_Cli $cli
+	 * @return string
+	 * @throws RuntimeException
+	 */
+	static protected function restoreInfluxDb($cli){
+		$cli->getArgumentCount(3, 4);
+//		$resourceString = $cli->getArgument(3);
+//		list($user, $pass, $host, $port, $database) = self::parseMysqlResourceString($resourceString);
+//		$mysqlDefaultFile = $cli->getOption('mysqlDefaultFile', '');
+//
+		$dumpFilePath = self::getDumpFileForRestore($cli);
+		$command = 'cat '.$dumpFilePath;
+//		$command .= self::getDecryptionCommand($cli);
+//		$command .= self::getDecompressionCommand($cli);
+//		$command .= ' | '.self::getMysqlCommandString('mysql', $mysqlDefaultFile, $host, $port, $user, $pass, $database);
 
 		return self::executeCommand($cli, $command);
 	}
