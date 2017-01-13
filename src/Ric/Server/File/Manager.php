@@ -30,7 +30,8 @@ class Ric_Server_File_Manager {
 			$fileDir = $this->storageDir.$this->getSplitDirectoryFilePath($fileName);
 
 			if( !$version ){ // get the newest version
-				$version = reset(array_keys($this->getAllVersions($fileName)));
+				$versions = array_keys($this->getAllVersions($fileName));
+				$version = reset($versions);
 				if( !$version ){
 					throw new RuntimeException('no version of file not found', 404);
 				}
