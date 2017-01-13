@@ -132,7 +132,6 @@ procedure:
 * info - sever info, as admin config included
 * health - cluster info, as admin with quota infos and failure details  "OK" / "WARNING" / "CRITICAL"
 * list - list all file(name)s
-* listDetails - list all files with details incl. all versions
 * joinCluster - join/build a cluster (join the connected server to an existing cluster (via clusterServer), or build a cluster with the other server)
 * leaveCluster - disconnect the server from a cluster and remove from all clusterNodes
 * removeFromCluster - remove given server from all clusterNodes
@@ -144,7 +143,6 @@ procedure:
 a cluster is a bunch of servers, where all of them are added (addServer) to all servers, every server is a replicant of every server .. u got it
 
     ric admin list [{pattern}]
-    ric admin listDetails
     ric admin info
     ric admin health
     ric admin joinCluster {clusterServer}

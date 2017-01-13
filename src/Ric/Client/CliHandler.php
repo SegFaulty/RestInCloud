@@ -47,7 +47,7 @@ class Ric_Client_CliHandler {
 					$msg = self::commandAdmin($client, $cli);
 					break;
 				case 'help':
-					$msg = self::getHelp($cli->getArgument(1), $helpString);
+					$msg = self::getHelp($cli->getArgument(2), $helpString);
 					break;
 				default:
 					throw new RuntimeException('command expected'.PHP_EOL.self::getHelp('', $helpString));
@@ -94,7 +94,7 @@ class Ric_Client_CliHandler {
 	 * @return string
 	 */
 	static protected function getHelp($command = 'global', $helpString){
-		if( $command and preg_match('~\n## Help '.preg_quote($command, '~').'(.*?)(\n## |$)~s', $helpString, $matches) ){
+		if( $command and preg_match('~\n(## Help '.preg_quote($command, '~').'(.*?))(\n## |$)~s', $helpString, $matches) ){
 			$helpString = $matches[1];
 		}
 		$helpString = 'for server version: '.Ric_Client_Client::MIN_SERVER_VERSION.PHP_EOL.$helpString;
