@@ -515,8 +515,21 @@ class Ric_Dumper_Dumper {
 		if( $targetFileName!='' AND $targetFileName!='STDOUT' ){
 			$targetFilePath = $cli->getOption('prefix', '').$targetFileName;
 			$command .= ' > ';
-			if( file_exists($targetFilePath) AND !$cli->getOption('force') ){
-				throw new RuntimeException('target file already exists: '.$targetFilePath.' use --force to overwrite');
+			if( $cli->getOption('rotate') AND $cli->getOption('force') ){
+				throw new RuntimeException('you can not use --force and --rotate on the same time');
+			}
+			if( file_exists($targetFilePath) ){
+				if( $cli->getOption('rotate') ){
+					$rotateCount = $cli->getOption('rotate', 0);
+					if( $rotateCount===true ){
+						$rotateCount = 3; //  if only "--rotate" we use default "--rotate=3"
+					}
+					self::rotateFile($targetFilePath, $rotateCount);
+				}elseif( $cli->getOption('force') ){
+					// overwrite
+				}else{
+					throw new RuntimeException('target file already exists: '.$targetFilePath.' use --force to overwrite or --rotate[=3]');
+				}
 			}
 			$command .= $targetFilePath;
 		}
@@ -597,4 +610,32 @@ class Ric_Dumper_Dumper {
 		return trim($mysqlCommand);
 	}
 
+	/**
+ 	 * rotate file (if exists) and adds ".1" ".2" to rotated files
+	 * returns rotated file count
+	 * @param string $sourceFilePath
+	 * @param int $maxRotationFiles
+	 * @return int
+	 */
+	static protected function rotateFile($sourceFilePath, $maxRotationFiles){
+		$rotatedFileCount = 0;
+		if( file_exists($sourceFilePath) ){ // don't rotate if file not exists
+			$filePaths = [$sourceFilePath];
+			for( $i = 1; $i<=$maxRotationFiles; $i++ ){
+				$filePaths[] = $sourceFilePath.'.'.$i;
+			}
+			$filePaths = array_reverse($filePaths);
+			foreach( $filePaths as $index => $filePath ){
+				if( $index<$maxRotationFiles ){
+					if( file_exists($filePaths[$index+1]) AND ($index==$maxRotationFiles-1 OR file_exists($filePaths[$index+2])) ){ // nur rotieren wenn auch das file davor existier oder es das source file sit
+						if( !rename($filePaths[$index+1], $filePath) ){
+							throw new RuntimeException('rename '.$filePaths[$index-1].' to '.$filePath.' failed!');
+						}
+						$rotatedFileCount++;
+					}
+				}
+			}
+		}
+		return $rotatedFileCount;
+	}
 }

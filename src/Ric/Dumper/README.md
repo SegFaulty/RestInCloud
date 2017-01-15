@@ -3,6 +3,19 @@
 a command line tool to store different type of resources (like mysql, redis, dirs) in a (compressed, encrypted) file
 and restore it vice versa
 
+supported resources:
+* STDIN / STDOUT
+* file
+* dir
+* redis instance
+* mysql database
+* influxdb instance or single database
+
+the file can optionally be:
+* compressed (default bz2, fast lzop or hard with xz)
+* encrypted (aes-256, or asymmetrically (not ready yet))
+* rotated (multi version as "config.sql.1" etc.)
+
 # Usage
 dump
 
@@ -15,6 +28,15 @@ restore
 if targetFilePath is omitted or `STDOUT`, the content is piped to stdout
 
 ## Resource
+
+### STDIN / STDOUT
+dump piped content or restore to stdout
+
+	dump std STDIN {targetFilePath}
+
+restore to STDOUT 
+
+	restore std STDOUT {sourceFilePath} 
 
 ### File
 only compress and encrypt it
@@ -124,6 +146,10 @@ show cert content:
 `openssl x509 -in backupEncryptionPublicCert.pem -text`
 
 deterministically means: same input data are encrypted to same output data (that is good for backups / deplucation, etc.)
+
+## Rotation
+
+use `--rotate` (default: 3) or `--rotate=3` to rotate the targetFilePath if already exists ()it adds ".1") 
 
 ## global options
 
