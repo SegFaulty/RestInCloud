@@ -60,7 +60,7 @@ class Ric_Dumper_Dumper {
 						if( $mode=='dump' ){
 							$msg .= self::dumpInfluxDb($cli);
 						}else{
-							$msg .= self::restoreINfluxDbl($cli);
+							$msg .= self::restoreInfluxDb($cli);
 						}
 						break;
 					case '':
@@ -160,14 +160,9 @@ class Ric_Dumper_Dumper {
 	static protected function restoreStd($cli){
 		// todo experimental not checked
 		$dumpFilePath = self::getDumpFileForRestore($cli);
-		$argCount = $cli->getArgumentCount(3, 4);
-		if( $argCount==4 ){
-			$resourceFilePath = $cli->getArgument(3);
-		}else{
-			$resourceFilePath = basename($dumpFilePath);
-		}
-		if( is_file($resourceFilePath) AND !$cli->getOption('force') ){
-			throw new RuntimeException('restore file already exists: '.$resourceFilePath.' use --force to overwrite');
+		$resourceFilePath = $cli->getArgument(3);
+		if( $resourceFilePath!='STDIN' AND $resourceFilePath!='STDOUT' ){
+			throw new RuntimeException('source must be "STDIN or STDOUT" ');
 		}
 		$command = 'cat '.$dumpFilePath;
 		$command .= self::getDecryptionCommand($cli);
@@ -189,7 +184,8 @@ class Ric_Dumper_Dumper {
 		if( !is_file($resourceFilePath) ){
 			throw new RuntimeException('source file not found: '.$resourceFilePath);
 		}
-		$command = 'cat '.$resourceFilePath;
+		$command =  self::getPrefixDumpCommand($cli);
+		$command .= 'cat '.$resourceFilePath;
 		$command .= self::getCompressionCommand($cli);
 		$command .= self::getEncryptionCommand($cli);
 		$command .= self::getDumpFileForDumpCommand($cli);
@@ -232,7 +228,8 @@ class Ric_Dumper_Dumper {
 		if( !is_dir($resourceFilePath) ){
 			throw new RuntimeException('source dir not found: '.$resourceFilePath);
 		}
-		$command = 'tar -C '.$resourceFilePath.' -cp .'; // keep fileowners, we change to the given dir
+		$command =  self::getPrefixDumpCommand($cli);
+		$command .= 'tar -C '.$resourceFilePath.' -cp .'; // keep fileowners, we change to the given dir
 		$command .= self::getCompressionCommand($cli);
 		$command .= self::getEncryptionCommand($cli);
 		$command .= self::getDumpFileForDumpCommand($cli);
@@ -246,7 +243,7 @@ class Ric_Dumper_Dumper {
 	 * @throws RuntimeException
 	 */
 	static protected function restoreDir($cli){
-		$cli->getArgumentCount(3);
+		$cli->getArgumentCount(3, 4);
 		$command = '';
 		$resourceFilePath = $cli->getArgument(3); // = restore dir
 		if( !is_dir($resourceFilePath) ){
@@ -294,7 +291,8 @@ class Ric_Dumper_Dumper {
 			}
 			$tableList = array_unique($tableList);
 		}
-		$command = self::getMysqlCommandString('mysqldump', $mysqlDefaultFile, $host, $port, $user, $pass, $database, $tableList);
+		$command =  self::getPrefixDumpCommand($cli);
+		$command .= self::getMysqlCommandString('mysqldump', $mysqlDefaultFile, $host, $port, $user, $pass, $database, $tableList);
 		$command .= self::getCompressionCommand($cli);
 		$command .= self::getEncryptionCommand($cli);
 		$command .= self::getDumpFileForDumpCommand($cli);
@@ -343,7 +341,8 @@ class Ric_Dumper_Dumper {
 			$option = ' -database '.$resourceString;
 		}
 
-		$command = 'tempDir=`/bin/mktemp -d` && /usr/bin/influxd backup'.$option.' $tempDir 2> /dev/null';
+		$command =  self::getPrefixDumpCommand($cli);
+		$command .= 'tempDir=`/bin/mktemp -d` && /usr/bin/influxd backup'.$option.' $tempDir 2> /dev/null';
 		$command .= ' && tar -C $tempDir -c .'; // we change to the given dir
 		$command .= self::getCompressionCommand($cli);
 		$command .= self::getEncryptionCommand($cli);
@@ -459,6 +458,20 @@ class Ric_Dumper_Dumper {
 		$privateKey = $cli->getOption('privateKey');
 		if( $privateKey!='' ){
 			$command = '| openssl smime -decrypt -inform D -binary -inkey '.escapeshellarg((string) $privateKey);
+		}
+		return $command;
+	}
+
+	/**
+	 * get prefix commands
+	 * @param Ric_Client_Cli $cli
+	 * @return string
+	 */
+	static protected function getPrefixDumpCommand($cli){
+		$command = '';
+		$skipUmask = (bool) $cli->getOption('skipUmask', false);
+		if( !$skipUmask ){
+			$command .= 'umask 0077 && '; // set umask to  give only the current user read/write
 		}
 		return $command;
 	}
