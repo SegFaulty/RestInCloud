@@ -54,7 +54,7 @@ will tar a dir to file
 	
 restore with optionally dirPath, if omitted it will be restored in working dir with sourceFileName
 
-	restore dir {sourceFilePath}
+	restore dir {dirPath} {sourceFilePath}
 	
 
 ### Redis
