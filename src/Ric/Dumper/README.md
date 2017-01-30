@@ -11,7 +11,7 @@ restore:
 
 	#> dumper restore mysql /myLocalDatabase /data/backup/myLocalDatabase.sql.bz2 
 
-the idea is the restore command has the same parameters (and order) as the dump command you only have to replace _dump_ with _restore_  
+the idea is the restore command has the same parameters (and order) as the dump command you only have to replace `dump` with `restore`  
 
 
 supported resources:
