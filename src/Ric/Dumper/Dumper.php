@@ -342,12 +342,13 @@ class Ric_Dumper_Dumper {
 		}
 
 		$command =  self::getPrefixDumpCommand($cli);
-		$command .= 'tempDir=`/bin/mktemp -d` && /usr/bin/influxd backup'.$option.' $tempDir 2> /dev/null';
+		$command .= 'tempDir=`/bin/mktemp -d -t dumper-influx.XXXXXXXXXX` && /usr/bin/influxd backup'.$option.' $tempDir 2> /dev/null';
 		$command .= ' && tar -C $tempDir -c .'; // we change to the given dir
 		$command .= self::getCompressionCommand($cli);
 		$command .= self::getEncryptionCommand($cli);
 		$command .= self::getDumpFileForDumpCommand($cli);
-// eher nicht so gut		$command .= ' && /bin/rm -rf $tempDir'; // hui jui jui
+		// mutig
+		$command .= ' && /bin/rm -r "$tempDir"'; // hui jui jui
 
 		return self::executeCommand($cli, $command);
 	}
