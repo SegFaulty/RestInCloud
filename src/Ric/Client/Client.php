@@ -440,10 +440,15 @@ class Ric_Client_Client {
 
 	/**
 	 * list files
+	 * @param string $pattern
 	 * @return array
 	 */
-	public function listFiles(){
-		$response = Ric_Rest_Client::get($this->buildUrl('', 'list'), [], $headers);
+	public function listFiles($pattern=''){
+		$parameters = [];
+		if( !empty($pattern) ){
+			$parameters['pattern'] = $pattern;
+		}
+		$response = Ric_Rest_Client::get($this->buildUrl('', 'list'), $parameters, $headers);
 		$this->checkServerResponse($response, $headers);
 		return json_decode($response, true);
 	}

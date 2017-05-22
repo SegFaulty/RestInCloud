@@ -131,7 +131,7 @@ procedure:
 
 * info - sever info, as admin config included
 * health - cluster info, as admin with quota infos and failure details  "OK" / "WARNING" / "CRITICAL"
-* list - list all file(name)s
+* list - list all file(name)s; or all matching fileNames if (regex-)pattern given e.g. "admin list /mysql-.*/i"
 * joinCluster - join/build a cluster (join the connected server to an existing cluster (via clusterServer), or build a cluster with the other server)
 * leaveCluster - disconnect the server from a cluster and remove from all clusterNodes
 * removeFromCluster - remove given server from all clusterNodes

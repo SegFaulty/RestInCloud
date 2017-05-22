@@ -145,7 +145,7 @@ class Ric_Server_File_Manager {
 			if( $splFileInfo->isFile() ){
 				/** @noinspection PhpUnusedLocalVariableInspection */
 				list($fileName, $version) = $this->extractVersionFromFullFileName($splFileInfo->getFilename());
-				if( $pattern!=null AND !preg_match($pattern, $fileName) ){
+				if( !empty($pattern) AND !preg_match($pattern, $fileName) ){
 					continue;
 				}
 				$index++;
