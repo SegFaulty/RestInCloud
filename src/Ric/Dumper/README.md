@@ -3,6 +3,17 @@
 a command line tool to store different type of resources (like mysql, redis, dirs) in a (compressed, encrypted) file
 and restore it vice versa
 
+dump:
+
+	#> dumper dump mysql /myLocalDatabase /data/backup/myLocalDatabase.sql.bz2 
+
+restore:
+
+	#> dumper restore mysql /myLocalDatabase /data/backup/myLocalDatabase.sql.bz2 
+
+the idea is the restore command has the same parameters (and order) as the dump command you only have to replace `dump` with `restore`  
+
+
 supported resources:
 * STDIN / STDOUT
 * file
@@ -15,61 +26,67 @@ the file can optionally be:
 * compressed (default bz2, fast lzop or hard with xz)
 * encrypted (aes-256, or asymmetrically (not ready yet))
 * rotated (multi version as "config.sql.1" etc.)
-
+* with read/write-permission for current user only (default, see skipUmask)
+ 
 # Usage
 dump
 
-	dumper dump {resource} [{targetFilePath}]
+	dumper dump {resource} [{dumpFile}]
 
 restore
 
-	dumper restore {resource} {sourceFilePath}
+	dumper restore {resource} {dumpFile}
 
-if targetFilePath is omitted or `STDOUT`, the content is piped to stdout
 
-## Resource
+if _dumpFile_ is omitted or `STDOUT`, the content is piped to stdout
+
+## Resources
 
 ### STDIN / STDOUT
 dump piped content or restore to stdout
 
-	dump std STDIN {targetFilePath}
+	dump std STDIN {dumpFile}
 
-restore to STDOUT 
+restore  
 
-	restore std STDOUT {sourceFilePath} 
+	restore std STDIN {dumpFile} 
+
+or you can use (same) 
+
+	restore std STDOUT {dumpFile} 
 
 ### File
 only compress and encrypt it
 
-	dump file {filePath} {targetFilePath}
+	dump file {filePath} {dumpFile}
 
-restore with optionally filePath, if omitted it will be restored in working dir with sourceFileName
+restore with optionally filePath, if omitted it will be restored in working dir with dumpFileName
 
-	restore file [{filePath}] {sourceFilePath}
+	restore file [{filePath}] {dumpFile}
 
 ### Dir
 will tar a dir to file
 
-	dump dir {dirPath} {targetFilePath}
+	dump dir {dirPath} {dumpFile}
 	
-restore with optionally dirPath, if omitted it will be restored in working dir with sourceFileName
+restore with dirPath
 
-	restore dir {dirPath} {sourceFilePath}
+	restore dir {dirPath} {dumpFile}
 	
 
 ### Redis
 dump some (or all) redis keys
 keyPattern is a "match" pattern for redis command `scan`
 
-	dump redis [{pass}@]{server}[:{port}][/{keyPattern}] {targetFilePath}
+	dump redis [{pass}@]{server}[:{port}][/{keyPattern}] {dumpFile}
 
 if restore is called with keyPattern, it will delete all matching keys before restore
 
-	restore redis [{pass}@]{server}[:{port}][/{keyPattern}] {sourceFilePath}
+	restore redis [{pass}@]{server}[:{port}][/{keyPattern}] {dumpFile}
 
 without keyPattern, it only sets the keys
 
-	restore redis [{pass}@]{server}[:{port}] {sourceFilePath}
+	restore redis [{pass}@]{server}[:{port}] {dumpFile}
 
 
 default port: redis-default port
@@ -77,25 +94,28 @@ default port: redis-default port
 ### Mysql
 dump mysql db / tables / sql (based on mysqldump)
 
-	dump mysql [{user}:{pass}@][{server}[:{port}]]/{dataBase}[/{tableNamePattern}] {targetFilePath} 
+	dump mysql [{user}:{pass}@][{server}[:{port}]]/{dataBase}[/{tableNamePattern}] {dumpFile} 
 	
-* `--mysqlDefaultFile=/etc/mysql/debian.cnf` in ini style for host, user, password, database  (needs read privileges) see http://dev.mysql.com/doc/refman/5.5/en/option-files.html#option_general_defaults-file
+* use `--mysqlDefaultFile=/etc/mysql/debian.cnf` in ini style for host, user, password, database  (needs read privileges) see http://dev.mysql.com/doc/refman/5.5/en/option-files.html#option_general_defaults-file
 * default port: mysql-default port
 * default server: localhost
+* default user: current use (on unbutu root needs no password, so its pretty easy to use)
+* tableNamePattern: list of tables: t1,t2,t3 or with wildcard configTable,dataTable1,dataTable*
 
 
 restore works only on database level
 
-	restore mysql [{user}:{pass}@]{server}[:{port}]/{dataBase} {sourceFilePath}
+	restore mysql [{user}:{pass}@]{server}[:{port}]/{dataBase} {dumpFile}
 
+you can restore the dump as plain sql file as well (makes only sense if the dumpFile ist encrypted and/or compressed):
 
+	restore file dump.sql {dumpFile}
 
-tableNamePattern: list of tables: t1,t2,t3 or with wildcard configTable,dataTable1,dataTable*
 
 ### InfluxDb
 dump influx instance (meta and all databases) or meta or single database
 
-	dump influx instance|meta|{database} {targetFilePath} 
+	dump influx instance|meta|{database} {dumpFile} 
 
 restore works only on database level
 
@@ -147,17 +167,17 @@ show cert content:
 
 deterministically means: same input data are encrypted to same output data (that is good for backups / deplucation, etc.)
 
-## Rotation
-
-use `--rotate` (default: 3) or `--rotate=3` to rotate the targetFilePath if already exists ()it adds ".1") 
-
-## global options
+## File Creation Options
 
 * `--force` in dump mode - force overwrite dump file; in restore mode - force overwrite resource
+* `--rotate` or `--rotate=4` (default: 3) to rotate the targetFile if already exists (it adds ".1" etc.) 
+* `--skipUmask` skip the default umask of 0077 (this gives only the current user read/write acces to the target-file) 
+
+## Global options
+
+* `--test` only show commands, don't execute 
 * `--prefix=pref_` will added to dump file but will not add to restored resources (dir, file)   
 	* dump: `dump mysql.cnf mysql.cnf --prefix=server0815-`
 	* dump-file: `server0815-mysql.cnf`  
 	* restore: `restore mysql.cnf mysql.cnf --prefix=server0815-`
 * `--verbose` show more infos
-* `--test` only show commands, don't execute 
-
