@@ -11,6 +11,7 @@
 class Ric_Client_Client {
 
 	const MIN_SERVER_VERSION = '0.6.0'; // server needs to be on this or a higher version, BUT on the same MAJOR version  ok: 1.4.0 < 1.8.3  but fail:  1.4.0 < 2.3.0  because client is to old
+	const CLIENT_VERSION = '0.2.0'; //
 
 	protected $server = '';
 	protected $auth = '';
@@ -144,7 +145,7 @@ class Ric_Client_Client {
 	 * @param int $timestamp to set correct modificationTime [default:requestTime]
 	 * @param string $retention to select the backup retention strategy [default:last3]
 	 * @param bool $noSync to suppress synchronisation to replication servers (used for internal sync)
-	 * @return array
+	 * @return string
 	 * @throws RuntimeException
 	 */
 	public function storeFile($filePath, $name = '', $retention = null, $timestamp = null, $noSync = false){
@@ -164,32 +165,54 @@ class Ric_Client_Client {
 	}
 
 	/**
+	 * default timestamp is "file" : file modification time
 	 *
 	 * @param string $resource
 	 * @param string $targetFileName
 	 * @param string $password
 	 * @param string $retention
-	 * @param int $timestamp
+	 * @param int|string $timestamp
 	 * @param int $minReplicas
 	 * @param int $minSize
 	 * @throws RuntimeException
 	 * @return bool
 	 */
-	public function backup($resource, $targetFileName, $password = null, $retention = null, $timestamp = null, $minReplicas = null, $minSize = 1){
-		$rawFilePath = $this->getFilePathForResource($resource);
+	public function backup($filePath, $targetFileName, $password = null, $retention = null, $timestamp = 'file', $minReplicas = null, $minSize = 1){
+		if( is_file($filePath) ){
+			// fine
+		}elseif( is_dir($filePath) ){
+			throw new RuntimeException('backup of directories is not supported, use "dumper" to build a file and feed this here');
+		}elseif( $filePath=='STDIN' ){
+			$MAX_STDIN_LEN = 1000000;
+			$filePath = $this->getTmpFilePath();
+			while( !feof(STDIN) ){
+				$data = fread(STDIN, $MAX_STDIN_LEN);
+				file_put_contents($filePath, $data, FILE_APPEND);
+			}
+			if( filesize($filePath)==0 ){
+				throw new RuntimeException('STDIN was empty, i stop here');
+			}
+			if( filesize($filePath)==$MAX_STDIN_LEN ){
+				throw new RuntimeException('STDIN size limit exeeded ['.$MAX_STDIN_LEN.'] operation cancelled, pipe to a standard file and feed this here ');
+			}
+		}else{
+			throw new RuntimeException('resource not found or unsupported type');
+		}
 
 		if( $timestamp=='file' ){
-			$timestamp = filemtime($rawFilePath);
+			$timestamp = filemtime($filePath);
 		}
 		if( $timestamp=='now' OR $timestamp<=0 ){
 			$timestamp = time();
 		}
 
-		if( filesize($rawFilePath)<$minSize ){
-			throw new RuntimeException('required min file size('.$minSize.') not reached (was '.filesize($rawFilePath).')');
+		if( filesize($filePath)<$minSize ){
+			throw new RuntimeException('required min file size('.$minSize.') not reached (was '.filesize($filePath).')');
 		}
 
-		$filePath = $this->getEncryptedFilePath($rawFilePath, $password, substr(md5($targetFileName), 0, 8)); // we have to provide the same salt for the same filename to get a file with the same sha1, but it should be not the same for all files, so we take the $targetFileName itself ;-)
+		if( $password!==null ){ // since 0.2 we only encrypt if password not null
+			$filePath = $this->getEncryptedFilePath($filePath, $password, substr(md5($targetFileName), 0, 8)); // we have to provide the same salt for the same filename to get a file with the same sha1, but it should be not the same for all files, so we take the $targetFileName itself ;-)
+		}
 
 		$sha1 = sha1_file($filePath);
 		$params = [];
@@ -255,100 +278,41 @@ class Ric_Client_Client {
 
 	/**
 	 *
-	 * @param string $targetFileName
-	 * @param string $resource
+	 * @param string $backupFileName
+	 * @param string $targetFilePath
 	 * @param null $password
 	 * @param string $version
 	 * @param bool $overwrite
 	 * @return bool
 	 */
-	public function restore($targetFileName, $resource, $password = null, $version = null, $overwrite = true){
-		$tmpFilePath = $this->getTmpFilePath();
+	public function restore($backupFileName, $targetFilePath, $password = null, $version = null, $overwrite = true){
 		$params = [];
 		if( $version ){
 			$params['version'] = $version;
 		}
-		$fileUrl = $this->buildUrl($targetFileName, '', $params);
+		$tmpFilePath = $this->getTmpFilePath();
+		$fileUrl = $this->buildUrl($backupFileName, '', $params);
 		// get
-		$oFH = fopen($tmpFilePath, 'w+');
+		$oFH = fopen($tmpFilePath, 'wb+');
 		$this->logDebug('get: '.$fileUrl);
 		Ric_Rest_Client::get($fileUrl, [], $headers, $oFH);
 		$this->checkServerResponse('', $headers, $tmpFilePath);
-		$this->restoreResourceFromFile($tmpFilePath, $resource, $password, $overwrite);
+
+		$this->logDebug('downloaded as tmpFile: '.$tmpFilePath.'['.filesize($tmpFilePath).']');
+		if( $password!==null ){
+			$tmpFilePath = $this->getDecryptedFilePath($tmpFilePath, $password);
+		}
+
+		if( file_exists($targetFilePath) AND !$overwrite ){
+			throw new RuntimeException('resource ['.realpath($targetFilePath).'] (file or dir) already exists! restore skipped');
+		}
+		$this->logDebug('restore as file: '.$targetFilePath);
+		if( !copy($tmpFilePath, $targetFilePath) ){
+			throw new RuntimeException('restore as file: '.$targetFilePath.' failed!');
+		}
+
+
 		return true;
-	}
-
-	/**
-	 * @param $encryptedFilePath
-	 * @param string $resource
-	 * @param string $password
-	 * @param bool $overwrite
-	 * @throws RuntimeException
-	 * @internal param string $filePath
-	 */
-	protected function restoreResourceFromFile($encryptedFilePath, $resource, $password, $overwrite = true){
-		$this->logDebug('downloaded as tmpFile: '.$encryptedFilePath.'['.filesize($encryptedFilePath).']');
-		$filePath = $this->getDecryptedFilePath($encryptedFilePath, $password);
-		if( preg_match('~^mysql://~', $resource) ){
-			throw new RuntimeException('resource type mysql not implemented');
-		}elseif( preg_match('~^redis://~', $resource) ){ // redis://pass@123.234.23.23:3343/mykeys_* <- dump as msgpack (ttls?)
-			throw new RuntimeException('resource type mysql not implemented');
-		}else{
-			// restore as file
-			if( file_exists($resource) AND !$overwrite ){
-				throw new RuntimeException('resource ['.realpath($resource).'] (file or dir) already exists! restore skipped');
-			}
-			$this->logDebug('restore as file: '.$resource);
-			if( !copy($filePath, $resource) ){
-				throw new RuntimeException('restore as file: '.$resource.' failed!');
-			}
-		}
-	}
-
-	/**
-	 * transfor a resource into a file
-	 * file->file
-	 * dir-> tar.gz->file
-	 * mysql -> sql-dump-file
-	 * redis -> ?
-	 * -
-	 * @param string $resource
-	 * @throws RuntimeException
-	 * @return string
-	 */
-	protected function getFilePathForResource($resource){
-		if( is_file($resource) ){
-			$this->logDebug('file resource detected');
-			$filePath = $resource;
-		}elseif( is_dir($resource) ){
-			$this->logDebug('dir resource detected');
-			$tmpTarFile = $this->getTmpFilePath('.tar.bz2');
-			$command = 'tar -cjf '.$tmpTarFile.' -C '.realpath($resource).' .'; // change to dir and backup content of dir not the upper path     backup /etc/apache/ -> will back conf,sites-enabled ... not /etc/apache/conf
-			$this->logDebug('dir as tar with bzip: '.$command);
-			exec($command, $output, $status);
-			if( $status!=0 ){
-				throw new RuntimeException('tar dir failed: '.$command.' with: '.print_r($output, true), 500);
-			}
-			touch($tmpTarFile, filemtime(rtrim($resource, '/').'/.')); // get the dir mod-date and set it to created tar
-			$this->logDebug('set modification time of tar to '.date('Y-m-d H:i:s', filemtime($tmpTarFile)));
-			$filePath = $tmpTarFile;
-		}elseif( $resource=='STDIN' ){
-			$filePath = $this->getTmpFilePath();
-			while( !feof(STDIN) ){
-				$data = fread(STDIN, 1000000);
-				file_put_contents($filePath, $data, FILE_APPEND);
-			}
-			if( filesize($filePath)==0 ){
-				throw new RuntimeException('STDIN was empty, i stop here');
-			}
-		}elseif( preg_match('~^mysql://~', $resource) ){
-			throw new RuntimeException('resource type mysql not implemented');
-		}elseif( preg_match('~^redis://~', $resource) ){ // redis://pass@123.234.23.23:3343/mykeys_* <- dump as msgpack (ttls?)
-			throw new RuntimeException('resource type mysql not implemented');
-		}else{
-			throw new RuntimeException('resource not found or unsupported type');
-		}
-		return $filePath;
 	}
 
 	/**
@@ -518,7 +482,7 @@ class Ric_Client_Client {
 
 	/**
 	 * @param string $targetServerHostPort
-	 * @return string
+	 * @return array
 	 */
 	public function copyServer($targetServerHostPort){
 		$filesCopied = 0;
@@ -534,8 +498,7 @@ class Ric_Client_Client {
 				$filesCopied++;
 			}
 		}
-		$response = json_encode(['status' => 'OK', 'filesCopied' => $filesCopied]);
-		return $response;
+		return ['status' => 'OK', 'filesCopied' => $filesCopied];
 	}
 
 	/**
@@ -604,6 +567,79 @@ class Ric_Client_Client {
 #$response .= print_r($servers, true);
 		return $response;
 	}
+
+	/**
+	 * Todo do this on server??!?
+	 * @param string $pattern regex
+	 * @return array
+	 */
+	public function getInventory($pattern){
+		$files = $this->listFiles($pattern);
+		foreach( $files as $fileName ){
+			$versions = $this->versions($fileName);
+			$lastVersion = reset($versions);
+			$allVersionsSize = 0;
+			$versionCount = 0;
+			foreach( $versions as $fileVersion ){
+				$allVersionsSize += $fileVersion['size'];
+				if( $fileVersion['timestamp']!=1422222222 ){ # '-- D E L E T E D --';
+					$versionCount++;
+				}
+			}
+			$result[$fileName] = [
+					'file'     => $fileName,
+					'time'     => $lastVersion['timestamp'],
+					'size'     => $lastVersion['size'],
+					'version'  => $lastVersion['version'],
+					'versions' => $versionCount,
+					'allsize'  => $allVersionsSize,
+			];
+		}
+		return $result;
+	}
+
+	/**
+	 * @param string $pattern
+	 * @param string $localSnapshotDir
+	 * @return array
+	 */
+	public function takeSnapshot($pattern, $localSnapshotDir){
+		$targetDir = rtrim($localSnapshotDir, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR; // ensure we have a trailing /
+		if( !is_dir($targetDir) ){
+			throw new RuntimeException($targetDir.' is not a writable targetDir');
+		}
+		$inventory = $this->getInventory($pattern);
+
+		$this->logDebug('start snapshot of '.count($inventory).' server files'.($pattern ? ' with pattern "'.$pattern.'"' : ''));
+		$transferredFiles = 0;
+		$transferredBytes = 0;
+		foreach( $inventory as $fileEntry ){
+
+			$fileName = $fileEntry['file'];
+			$localFile = $targetDir.$fileName;
+			if( file_exists($localFile) AND filesize($localFile)==$fileEntry['size'] AND sha1_file($localFile)==$fileEntry['version'] ){ // check if file already exists and is uptodate
+				touch($localFile, $fileEntry['time']); // is in sync, only update modification date
+				$this->logDebug($fileName.' is already uptodate');
+			}else{
+				$this->restore($fileName, $localFile); // overwrite active
+				if( file_exists($localFile) AND filesize($localFile)==$fileEntry['size'] AND sha1_file($localFile)==$fileEntry['version'] ){ // check again
+					// fine
+					touch($localFile, $fileEntry['time']); // is in sync, only update modification date
+					$transferredFiles++;
+					$transferredBytes += $fileEntry['size'];
+					$this->logDebug($fileName.' updated to version '.$fileEntry['version'].' '.date('Y-m-d H:i:s', $fileEntry['time']));
+				}else{
+					throw new RuntimeException('sanity check after restore file '.$fileName.' to '.$localFile.' failed! WHoops!');
+				}
+			}
+		}
+
+		$result = ['status' => 'OK', 'serverFiles' => count($inventory), 'transferredFiles' => $transferredFiles, 'transferredBytes' => $transferredBytes];
+		$this->logDebug('end snapshot '.H::implodeKeyValue($result));
+
+		return $result;
+	}
+
 
 
 	##### TMP File handling ########

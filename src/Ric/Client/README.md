@@ -8,23 +8,18 @@
 	ln -s ric.phar ric
 	ric help
 
-## Help global
+## Help Summary
 
-this commandline tool hilft dir resourcen (files, dirs, databases) als file in einem RestInCloud-Cluster zu backupen
-
-aus einer resource wird immer eine datei generiert, diese wird gzipped und encrypted und dann upgeloaded
-
-* wird das password weggelassen, wird die datei immernoch mit einem salt encrypted, kann also nicht im klartext gelesen werden, allerdings kann sie jeder entschluesseln
-
+backup and restore localFiles in restInCloud Cluster
 
 ### commands
 
 * ric help - show help
-* ric backup - store a a resource (file/dir/dump) in RestInCloud Backup Server
-* ric check - check if a resource is valid backuped
-* ric list - all versions of a resource
-* ric restore - restore a backuped resource
-* ric delete - delete a resource
+* ric backup - store a file in RestInCloud Backup Server
+* ric check - check if a file is valid backuped
+* ric list - all versions of a backupFile
+* ric restore - restore a backuped file
+* ric delete - delete a backupFile
 * ric admin - manage RestInCloud Server and Cluster
 
 use ric help {command} for command details
@@ -39,7 +34,7 @@ you can define every option as environment variable with prefix "ric" (server ->
 * --auth {token}  default: ENV ricAuth -> ''
 * --authFile {tokenFilePath} read auth from file default: ENV ricAuthFile -> ''
 * --server RicServer default: ENV ricServer -> ''
-* --prefix prefix all target names default: ENV ricPrefix -> ''
+* --prefix prefix all target/backup names default: ENV ricPrefix -> ''
 * --ignoreVersion ignore no matching server version errors
 
 the configuration order is
@@ -49,18 +44,17 @@ the configuration order is
 * if not use application default
 
 ## Help backup
-    ric backup {resource} [{targetFileName}] [options]
+    ric backup {sourceFilePath} [{targetFileName}] [options]
 
-    ric backup /home/www/ric/config/
-    ric backup /home/www/ric/config/ testService_host1_config.tar.gz --retention=last7
+    ric backup /etc/apache.conf
+    ric backup /etc/apache.conf myhost03-apache.conf --retention=last7
 
-backups the config dir (as tar.gz) with last7 versions
+backups the config with last7 versions
 procedure:
-* detect resource type (file, dir, STDIN, (mysql, redis) ..) and make a file of it
-* encrypt the file with salt(based on targetFileName) and (optionally) password
-* (optionaly check minSize)
-* refresh this file with post request
-* if failed store file with put request
+* (optionally) password encrypt the file (salted with targetFileName)
+* (optionally) check minSize
+* try to refresh this file backup per post request (meta-data only) to the server
+* if file not exists as backup or has changed upload the file per put request
 * check the file (sha1, minSize, minReplicas)
 
 * use "STDIN" as resource string to backup the piped content
@@ -73,7 +67,7 @@ procedure:
 * --pass Password
 * --passFile {passFilePath} read pass from file default: ENV ricPassFile -> ''
 * --retention default: last3
-* --timestamp as int or 'now' or 'file' default: now
+* --timestamp as int or 'now' or 'file' default: file (modification time of source file)
 * --minReplicas default: max(1, count(servers)-1)
 * --minSize default: 1
 * --prefix
@@ -90,7 +84,7 @@ procedure:
 * --minReplicas 3
 * --prefix
 
-* --sic aktivere sic (nur nötig wenn keine andere sic option)
+* --sic send sic (nur nötig wenn keine andere sic option)
 * --sicChannel default --target
 * --sicServer default ENV: sicServer
 // setzt sic auf critical, if verified failed
@@ -98,18 +92,18 @@ procedure:
 
 ## Help restore
 
-	ric restore {fileName} [{localResource}] [options]
+	ric restore {backupFileName} [{localFilePath}] [options]
 
-    ric restore hostname%??%??homewww/ric/config.tar.gz /tmp/restore/
+    ric restore hostname03-www-files.tar.gz /tmp/
 
 ### restore options
 
-* --pass Password
+* --pass Password (use --pass "" (empty) to restore file to restore files from version 0.1
 * --passFile {passFilePath} read pass from file default: ENV ricPassFile -> ''
 * --overwrite   overwrite existing resource
 * --prefix
 
- if --prefix is set, the restored file will not contains the prefix!
+ if --prefix is set, it is added to the backupFileName, the restored file will not contains the prefix!
 
 ## Help list
 
@@ -143,6 +137,7 @@ procedure:
 a cluster is a bunch of servers, where all of them are added (addServer) to all servers, every server is a replicant of every server .. u got it
 
     ric admin list [{pattern}]
+    ric admin inventory [{pattern}] [{sortby:[file]|time|versions|size|allsize}]
     ric admin info
     ric admin health
     ric admin joinCluster {clusterServer}
@@ -151,7 +146,8 @@ a cluster is a bunch of servers, where all of them are added (addServer) to all 
     ric admin addServer {server}
     ric admin removeServer {server}
     ric admin copyServer {targetServer}
-    ric admin checkConsistency 
+    ric admin checkConsistency
+    ric admin snapshot targetdir
 
 
 

@@ -129,7 +129,7 @@ ricWriterToke: barSecret
 
 * no daemon type, only react on request, no long running requests
 * all response is json, except download and errors
-* the base is a normal filesystem, files in a hashed directory, with original filenames extended by it's sha1
+* the base is a normal filesystem, files in a hashed directory, with original filenames extended by it's sha1 (referenced as "version")
 * no other persistent storage for attributes no database
 * it's seen as critical, if a file has no replicas
 

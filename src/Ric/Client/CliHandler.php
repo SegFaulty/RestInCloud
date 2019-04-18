@@ -47,10 +47,10 @@ class Ric_Client_CliHandler {
 					$msg = self::commandAdmin($client, $cli);
 					break;
 				case 'help':
-					$msg = self::getHelp($cli->getArgument(2), $helpString);
+					$msg = self::getHelp($helpString, $cli->getArgument(2, 'Summary'));
 					break;
 				default:
-					throw new RuntimeException('command expected'.PHP_EOL.self::getHelp('', $helpString));
+					throw new RuntimeException('command expected'.PHP_EOL.self::getHelp($helpString));
 
 			}
 			if( $cli->getOption('verbose') ){
@@ -73,12 +73,13 @@ class Ric_Client_CliHandler {
 	}
 
 	/**
+	 * returns null (!) if no path is given
 	 * @param string $filePath
 	 * @throws RuntimeException
 	 * @return string
 	 */
 	static protected function resolveSecretFile($filePath){
-		$secret = '';
+		$secret = null;
 		if( $filePath!='' ){
 			if( !file_exists($filePath) OR !is_readable($filePath) ){
 				throw new RuntimeException('authFile not found or not readable: '.$filePath);
@@ -93,11 +94,11 @@ class Ric_Client_CliHandler {
 	 * @param string $helpString
 	 * @return string
 	 */
-	static protected function getHelp($command = 'global', $helpString){
+	static protected function getHelp($helpString, $command = 'Summary'){
 		if( $command and preg_match('~\n(## Help '.preg_quote($command, '~').'(.*?))(\n## |$)~s', $helpString, $matches) ){
 			$helpString = $matches[1];
 		}
-		$helpString = 'for server version: '.Ric_Client_Client::MIN_SERVER_VERSION.PHP_EOL.$helpString;
+		$helpString = 'ric client v'.Ric_Client_Client::CLIENT_VERSION.' required server version: '.Ric_Client_Client::MIN_SERVER_VERSION.PHP_EOL.PHP_EOL.$helpString;
 		return $helpString;
 	}
 
@@ -112,17 +113,15 @@ class Ric_Client_CliHandler {
 		if( $cli->getArgumentCount(2, 3)==2 ){
 			if( is_file($resource) ){
 				$targetFileName = basename($resource);
-			}elseif( is_dir($resource) ){
-				$targetFileName = basename($resource).'.tar.bz2';
 			}else{
-				throw new RuntimeException('no targetFileName given, but resource is not a regular file or dir!');
+				throw new RuntimeException('no backupFileName given, but source is not a regular file! please add an backupFileName as parameter');
 			}
 		}else{
 			$targetFileName = $cli->getArgument(3);
 		}
 		$targetFileName = $cli->getOption('prefix', '').$targetFileName;
 		$password = $cli->getOption('pass', self::resolveSecretFile($cli->getOption('passFile')));
-		$client->backup($resource, $targetFileName, $password, $cli->getOption('retention'), $cli->getOption('timestamp'), $cli->getOption('minReplicas'), $cli->getOption('minSize'));
+		$client->backup($resource, $targetFileName, $password, $cli->getOption('retention'), $cli->getOption('timestamp', 'file'), $cli->getOption('minReplicas'), $cli->getOption('minSize'));
 		return 'OK'.PHP_EOL.$targetFileName;
 	}
 
@@ -184,15 +183,15 @@ class Ric_Client_CliHandler {
 	 * @throws RuntimeException
 	 */
 	static protected function commandRestore($client, $cli){
-		$targetFileName = $cli->getArgument(2);
+		$backupFileName = $cli->getArgument(2);
 		if( $cli->getArgumentCount(2, 3)==2 ){
-			$resource = getcwd().'/'.basename($targetFileName);
+			$resource = getcwd().'/'.basename($backupFileName);
 		}else{
 			$resource = $cli->getArgument(3);
 		}
-		$targetFileName = $cli->getOption('prefix', '').$targetFileName;
+		$backupFileName = $cli->getOption('prefix', '').$backupFileName;
 		$password = $cli->getOption('pass', self::resolveSecretFile($cli->getOption('passFile')));
-		$client->restore($targetFileName, $resource, $password, $cli->getOption('version'), (true AND $cli->getOption('overwrite')));
+		$client->restore($backupFileName, $resource, $password, $cli->getOption('version'), (true AND $cli->getOption('overwrite')));
 		return 'OK';
 	}
 
@@ -229,6 +228,10 @@ class Ric_Client_CliHandler {
 		}elseif( $adminCommand=='list' ){
 			$pattern = $cli->getArgument(3, '');
 			$msg = join(PHP_EOL, $client->listFiles($pattern));
+		}elseif( $adminCommand=='inventory' ){
+			$pattern = $cli->getArgument(3, '');
+			$sort = $cli->getArgument(4, 'file');
+			$msg = self::adminBuildInventory($client, $pattern, $sort);
 		}elseif( $adminCommand=='health' ){
 			$msg = $client->health();
 		}elseif( $adminCommand=='addServer' ){
@@ -257,9 +260,16 @@ class Ric_Client_CliHandler {
 			if( $cli->getArgumentCount()!=3 ){
 				throw new RuntimeException('needs one arg (targetServer)');
 			}
-			$msg = $client->copyServer($cli->getArgument(3));
+			$msg = json_encode($client->copyServer($cli->getArgument(3)));
 		}elseif( $adminCommand=='checkConsistency' ){
 			$msg = $client->checkConsistency();
+		}elseif( $adminCommand=='snapshot' ){
+			if( $cli->getArgumentCount()<3 ){
+				throw new RuntimeException('needs one arg (targetDir)');
+			}
+			$localSnapshotDir = $cli->getArgument(3);
+			$pattern = $cli->getArgument(4, '');
+			$msg = json_encode($client->takeSnapshot($pattern, $localSnapshotDir));
 		}else{
 			throw new RuntimeException('unknown admin command');
 		}
@@ -271,6 +281,38 @@ class Ric_Client_CliHandler {
 	 */
 	static protected  function dumpParameters($cli){
 		echo $cli->dumpParameters();
+	}
+
+	/**
+	 * @param Ric_Client_Client $client
+	 * @param string $pattern
+	 * @param string $sort
+	 * @return string
+	 */
+	private static function adminBuildInventory($client, $pattern, $sort){
+		$overallSize = 0;
+		$overallCount = 0;
+		$allLastVersionsSize = 0;
+		$inventory = $client->getInventory($pattern);
+		foreach( $inventory as $entry ){
+			$allLastVersionsSize += $entry['size'];
+			$overallSize += $entry['allsize'];
+			$overallCount += $entry['versions'];
+		}
+
+		array_multisort(array_column($inventory, $sort), SORT_ASC, $inventory);
+
+		$msg = count($inventory).' Files sorted by '.$sort.PHP_EOL;
+		$msg .= 'Date       Time               Size #Vers  all Vers Size  File'.PHP_EOL;
+		$msg .= '----------|--------|--------------|-----|--------------|--------------'.PHP_EOL;
+		foreach( $inventory as $fileResult ){
+			$msg .= date('Y-m-d H:i:s', $fileResult['time']);
+			$msg .= ' '.sprintf('%14s', number_format($fileResult['size'], 0, ',', '.')).' '.sprintf('%5d', $fileResult['versions']).' '.sprintf('%14.14s', number_format($fileResult['allsize'], 0, ',', '.'));
+			$msg .= ' '.$fileResult['file'].PHP_EOL;
+		}
+		$msg .= '           overall ';
+		$msg .= ' '.sprintf('%14s', number_format($allLastVersionsSize, 0, ',', '.')).' '.sprintf('%5d', $overallCount).' '.sprintf('%14.14s', number_format($overallSize, 0, ',', '.'));
+		return $msg;
 	}
 
 }
