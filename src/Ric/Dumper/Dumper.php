@@ -293,6 +293,7 @@ class Ric_Dumper_Dumper {
 		}
 		$command =  self::getPrefixDumpCommand($cli);
 		$command .= self::getMysqlCommandString('mysqldump', $mysqlDefaultFile, $host, $port, $user, $pass, $database, $tableList);
+        $command .= ' --skip-dump-date'; // to be deterministic
 		$command .= self::getCompressionCommand($cli);
 		$command .= self::getEncryptionCommand($cli);
 		$command .= self::getDumpFileForDumpCommand($cli);
