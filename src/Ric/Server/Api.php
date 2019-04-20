@@ -130,11 +130,22 @@ class Ric_Server_Api {
 	 */
 	protected function handlePutRequest(){
 		$this->auth(Ric_Server_Auth_Definition::ROLE__WRITER);
-		$retention = H::getRP('retention', Ric_Server_Definition::RETENTION__LAST3);
+		$retention = H::getRP('retention', Ric_Server_Definition::RETENTION__AUTO);
 		$timestamp = (int) H::getRP('timestamp', time());
 		$noSync = (bool) H::getRP('noSync');
 
 		$tmpFilePath = $this->readInputStreamToTempFile();
+
+		if( $retention==Ric_Server_Definition::RETENTION__AUTO ){
+            $fileSize = filesize($tmpFilePath);
+            if( $fileSize<10485760 ){ // < 10MB
+                $retention = '3l7d4w12m';
+            }elseif( $fileSize<1073741824 ){ // < 1GB
+                $retention = '3l4w';
+            }else{
+                $retention = '3l';
+            }
+        }
 
 		$fileName = $this->extractFileNameFromRequest();
 		$response = $this->server->saveFileInCloud($tmpFilePath, $fileName, $retention, $timestamp, $noSync);
