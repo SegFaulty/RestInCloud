@@ -414,6 +414,7 @@ class Ric_Server_Server {
 		$helpString = str_replace('ric1.server', $_SERVER['HTTP_HOST'], $helpString);
 		$retentions = '';
 		$retentions .= '     '.Ric_Server_Definition::RETENTION__OFF.' : keep only the last version'.PHP_EOL;
+		$retentions .= '     '.Ric_Server_Definition::RETENTION__AUTO.' : size dependend:  <10MB = 3l7d4w12m  | <1GB 3l4w  | default 3l'.PHP_EOL;
 		$retentions .= '     '.Ric_Server_Definition::RETENTION__LAST3.' : keep last 3 versions'.PHP_EOL;
 		$retentions .= '     '.Ric_Server_Definition::RETENTION__LAST7.' : keep last 7 versions'.PHP_EOL;
 		$retentions .= '     '.Ric_Server_Definition::RETENTION__3L7D4W12M.' : keep last 3 versions then last of 7 days, 4 weeks, 12 month (max 23 Versions)'.PHP_EOL;

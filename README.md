@@ -55,9 +55,9 @@ if your ric-servers are running, you can use the smart "ric" cli tool to backup 
 
  * PUT http://ric1.server/error.log - upload a file to the store
    - use ?timestamp=1422653.. to set correct modificationTime [default:requestTime]
-   - use &retention=last3 to select the backup retention strategy [default:last3]
+   - use &retention=last3 to select the backup retention strategy [default:auto]
    - use &noSync to suppress syncronisation to replication servers (used for internal sync)
-   - retention strategies (versions sorted by timestamp):
+   - retention strategies see Ric_Server_Definition (versions sorted by timestamp):
 {retentionList}
    - with curl:
      curl -X PUT --upload /home/www/phperror.log http://ric1.server/error.log
