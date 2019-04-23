@@ -4,8 +4,8 @@
  
 ## Initial Setup
 
-see [in server tests](../README.md)
+see [in server tests](../scenarios/README.md)
 
 ## Update after code change
 
-see [in server tests](../README.md)
+see [in server tests](../scenarios/README.md)
