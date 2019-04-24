@@ -208,7 +208,7 @@ class Ric_Server_Cluster_Manager {
 	 */
 	public function pushFileToServer($server, $fileName, $filePath, $retention, $sha1 = ''){
 		$result = '';
-		if( $sha1!='' ){
+		if( $sha1=='' ){
 			$sha1 = sha1_file($filePath);
 		}
 		$timestamp = filemtime($filePath);
