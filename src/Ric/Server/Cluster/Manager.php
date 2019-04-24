@@ -216,7 +216,7 @@ class Ric_Server_Cluster_Manager {
 		// try to refresh file, no retention allowed
 		$url = $serverUrl.$fileName.'?sha1='.$sha1.'&timestamp='.$timestamp.'&noSync=1&token='.$this->configManager->getValue('writerToken');
 		$response = Ric_Rest_Client::post($url);
-		if( trim($response)!='1' ){
+		if( !$this->isResponseStatusOk($response) ){
 			// refresh failed, upload
 			$url = $serverUrl.$fileName.'?timestamp='.$timestamp.'&retention='.$retention.'&noSync=1&token='.$this->configManager->getValue('writerToken');
 			$response = Ric_Rest_Client::putFile($url, $filePath);
