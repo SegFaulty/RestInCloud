@@ -132,9 +132,15 @@ class Ric_Server_Api {
 		$this->auth(Ric_Server_Auth_Definition::ROLE__WRITER);
 		$retention = H::getRP('retention', Ric_Server_Definition::RETENTION__AUTO);
 		$timestamp = (int) H::getRP('timestamp', time());
+		$sha1 = (int) H::getRP('sha1');
 		$noSync = (bool) H::getRP('noSync');
 
 		$tmpFilePath = $this->readInputStreamToTempFile();
+
+		//check saved file against sha1
+		if( $sha1 AND sha1_file($tmpFilePath)!=$sha1 ){
+			throw new RuntimeException('sha1 of uploaded file ('.filesize($tmpFilePath).') does not match the given sha1', 400);
+		}
 
 		if( $retention==Ric_Server_Definition::RETENTION__AUTO ){
             $fileSize = filesize($tmpFilePath);
@@ -177,7 +183,7 @@ class Ric_Server_Api {
 	}
 
 	/**
-	 * check and refresh a with a post request
+	 * check and refresh a file with a post request
 	 * @throws RuntimeException
 	 */
 	protected function actionPostRefresh(){

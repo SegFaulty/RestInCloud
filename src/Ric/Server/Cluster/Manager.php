@@ -218,7 +218,7 @@ class Ric_Server_Cluster_Manager {
 		$response = Ric_Rest_Client::post($url);
 		if( !$this->isResponseStatusOk($response) ){
 			// refresh failed, upload
-			$url = $serverUrl.$fileName.'?timestamp='.$timestamp.'&retention='.$retention.'&noSync=1&token='.$this->configManager->getValue('writerToken');
+			$url = $serverUrl.$fileName.'?sha1='.$sha1.'&timestamp='.$timestamp.'&retention='.$retention.'&noSync=1&token='.$this->configManager->getValue('writerToken');
 			$response = Ric_Rest_Client::putFile($url, $filePath);
 			if( !$this->isResponseStatusOk($response) ){
 				$result = 'failed to upload to '.$server.' :'.$response.PHP_EOL;

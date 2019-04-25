@@ -54,11 +54,13 @@ if your ric-servers are running, you can use the smart "ric" cli tool to backup 
  * GET http://ric1.server/?info - show server infos (and quota if set)
 
  * PUT http://ric1.server/error.log - upload a file to the store
-   - use ?timestamp=1422653.. to set correct modificationTime [default:requestTime]
+   - use ?sha1=a39a3ee5e6b4.. to ensure the consistency of the uploaded file
+   - use &timestamp=1422653.. to set correct modificationTime [default:requestTime]
    - use &retention=last3 to select the backup retention strategy [default:auto]
    - use &noSync to suppress syncronisation to replication servers (used for internal sync)
    - retention strategies see [Ric_Server_Definition](src/Ric/Server/Definition.php) (versions sorted by timestamp):
 {retentionList}
+   - empty retention parameter means keep all version, omited retention parameters means use default retention
    - with curl:
      curl -X PUT --upload /home/www/phperror.log http://ric1.server/error.log
      curl -X PUT --upload "/home/www/phperror.log" "http://ric1.server/error.log&retention=last7&timestamp=1429628531"

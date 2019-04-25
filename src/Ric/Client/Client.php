@@ -159,6 +159,7 @@ class Ric_Client_Client {
 		if( $noSync ){
 			$params['noSync'] = 1;
 		}
+		$params['sha1'] = sha1_file($filePath);
 		$response = Ric_Rest_Client::putFile($this->buildUrl($name, '', $params), $filePath, $headers);
 		$this->checkServerResponse($response, $headers);
 		return $response;
@@ -507,10 +508,11 @@ class Ric_Client_Client {
 	public function checkConsistency() {
 		$response = '';
 		$info = $this->info();
+		$status = 'OK';
 		$servers = H::getIKS($info, ['config','servers'], []);
 		array_unshift($servers, $info['config']['hostPort']); // add current server
 		if( count($servers)>1 ){
-			// get all files from all servers
+			// check all files from all servers
 			$allKnownFiles = [];
 			$knownFilesPerServer = [];
 			$clients = []; /** @var Ric_Client_Client[] $clients */
@@ -525,20 +527,28 @@ class Ric_Client_Client {
 				$serverMissingFiles = array_diff($allKnownFiles, $files);
 				if( $serverMissingFiles ){
 					$missingFilesPerServer[$server] = $serverMissingFiles;
-					$response.= count($serverMissingFiles).' files missing on server: '.$server.PHP_EOL.join(PHP_EOL, $serverMissingFiles);
+					$response .= '[CRITICAL] '.count($serverMissingFiles).' files missing on server: '.$server.PHP_EOL.'  '.join(PHP_EOL.'  ', $serverMissingFiles).PHP_EOL;
+					$status = 'CRITICAL';
 				}
 			}
 			if( empty($missingFilesPerServer) ){
-				$response.= count($allKnownFiles).' files existing on all servers: OK'.PHP_EOL;
+				$response .= '[OK] '.count($allKnownFiles).' files existing on all servers'.PHP_EOL;
 			}
+
 			// check versions
 			foreach( $allKnownFiles as $fileName ){
 				$allKnownVersions = [];
 				$knownVersionsPerServer = [];
+				$primaryFileVersion = null;
+				$primaryFileTimestamp = null;
 				foreach( $servers as $server ){
 					$versionInfos = $clients[$server]->versions($fileName);
 					$versions = [];
 					foreach( $versionInfos as $versionInfo ){
+						if( $primaryFileVersion OR $versionInfo['timestamp']>$primaryFileTimestamp ){
+							$primaryFileVersion = $versionInfo['version'];
+							$primaryFileTimestamp = $versionInfo['timestamp'];
+						}
 						$versions[] = $versionInfo['version'];
 					}
 					$knownVersionsPerServer[$server] = $versions;
@@ -548,15 +558,23 @@ class Ric_Client_Client {
 				foreach( $knownVersionsPerServer as $server => $versions ){
 					$serverMissingVersions = array_diff($allKnownVersions, $versions);
 					if( $serverMissingVersions ){
+						if( !in_array($primaryFileVersion, $versions) ){
+							$status = 'CRITICAL';
+							$response .= '[CRITICAL] primary version ['.$primaryFileVersion.'] from '.date('Y-m-d H:i:s', $primaryFileTimestamp).' missing of file: '.$fileName.' on server: '.$server.PHP_EOL;
+						}
+						if( $status=='OK' ){
+							$status = 'WARNING';
+						}
+						$response .= '[WARNING] '.count($serverMissingVersions).' versions missing of file: '.$fileName.' on server: '.$server.PHP_EOL.'  '.join(PHP_EOL.'  ', $serverMissingVersions).PHP_EOL;
 						$missingVersionsPerServer[$server] = $serverMissingVersions;
-						$response.= count($serverMissingVersions).' versions missing of file: '.$fileName.' on server: '.$server.PHP_EOL.join(PHP_EOL, $serverMissingVersions);
 					}
 				}
 				if( empty($missingVersionsPerServer) ){
-					$response.= count($allKnownVersions).' versions for '.$fileName.' existing on all servers: OK'.PHP_EOL;
+					$response .= '[OK] '.count($allKnownVersions).' versions for '.$fileName.' existing on all servers'.PHP_EOL;
 				}
 
 			}
+			$response .= 'Status: '.$status.PHP_EOL;
 
 
 #			$response .= print_r($knownFilesPerServer, true);
