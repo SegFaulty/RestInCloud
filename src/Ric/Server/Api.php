@@ -162,7 +162,7 @@ class Ric_Server_Api {
 	 * @return string filepath
 	 */
 	protected function readInputStreamToTempFile(){
-		$tmpFilePath = sys_get_temp_dir().'/_'.__CLASS__.'_'.uniqid('', true);
+		$tmpFilePath = $this->server->getTmpFilePath(); // get a tmpFile in storeDir / with autodelete
 		$putData = fopen("php://input", "r");
 		$fp = fopen($tmpFilePath, "w");
 		stream_copy_to_stream($putData, $fp);
@@ -427,4 +427,5 @@ class Ric_Server_Api {
 			}
 		}
 	}
+
 }

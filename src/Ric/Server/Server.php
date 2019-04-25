@@ -36,6 +36,9 @@ class Ric_Server_Server {
 		$this->fileManager = new Ric_Server_File_Manager($this->configManager->getValue('storeDir'));
 		$this->clusterManager = new Ric_Server_Cluster_Manager($this->configManager);
 
+		// set tmp dir to store dir, to create the uploaded files on the store drive (to avoid copying to final destination, they will be renamed)
+		$this->setTmpDir($this->configManager->getValue('storeDir'));
+
 		// check server id, set if empty, the serverId is a randomHexString for every instanu to prevent a server add its own because of different host names
 		if( $this->configManager->getValue('serverId')=='' ){
 			$this->configManager->setRuntimeValue('serverId', substr(md5(uniqid('', true)), 0, 8));
@@ -70,6 +73,7 @@ class Ric_Server_Server {
 				throw new RuntimeException('Quota exceeded!', 507);
 			}
 		}
+
 		// set timestamp
 		$filePath = $this->fileManager->getFilePath($fileName, $version);
 		$this->fileManager->updateTimestamp($fileName, $version, $timestamp);
@@ -560,6 +564,48 @@ class Ric_Server_Server {
 			$this->fileManager->deleteFile($fileName, $version);
 		}
 		return count($wantedVersions);
+	}
+
+	##### TMP File handling ########
+	private $tmpFilePaths = [];
+	private $tmpFileDir = ''; // use system default
+
+	/**
+	 * set the tmpDir to writable and secure location
+	 * @param $dir
+	 */
+	private function setTmpDir($dir){
+		$this->tmpFileDir = $dir;
+	}
+
+	/**
+	 * return filePath
+	 * file will be delete on script termination (via register_shutdown_function deleteTmpFiles)
+	 * extension ".jpg" for imagemagick zum beispiel
+	 * use __CLASS__
+	 * if self::$tmpFileDir is empty the system default tmp dir is used
+	 * @param string $extension
+	 * @return string
+	 */
+	public function getTmpFilePath($extension = ''){
+		$tmpFile = $this->tmpFileDir;
+		if( $tmpFile=='' ){
+			$tmpFile = sys_get_temp_dir();
+		}
+		$tmpFile .= '/_'.__CLASS__.'_'.uniqid('', true).$extension;
+		$this->tmpFilePaths[] = $tmpFile;
+		return $tmpFile;
+	}
+
+	/**
+	 * remove all tmpFiles
+	 */
+	public function __destruct(){
+		foreach( $this->tmpFilePaths as $tmpFilePath ){
+			if( file_exists($tmpFilePath) ){
+				unlink($tmpFilePath);
+			}
+		}
 	}
 
 }

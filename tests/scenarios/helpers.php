@@ -54,17 +54,18 @@ function checkOk($responseOrResult, $description='Status Ok expected but got {$r
 	}
 	$description = str_replace('{$response}', var_export($responseOrResult, true), $description);
 	if( is_string($responseOrResult) ){
-		$responseOrResult = unJson($responseOrResult);
+		$responseOrResult = unJson($responseOrResult, $description);
 	}
 	check(isset($responseOrResult['status']) AND $responseOrResult['status']=='OK', $description, $occuredAt);
 }
 
 /**
  * @param string $response
+ * @param string $description
  * @return array
  */
-function unJson($response){
+function unJson($response, $description = ''){
 	$result = json_decode($response, true);
-	check(is_array($result), 'failed! response:'.$response);
+	check(is_array($result), ' invalid json for: '.$description.' repsonse: '.$response);
 	return $result;
 }
