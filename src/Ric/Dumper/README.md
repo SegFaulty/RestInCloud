@@ -68,10 +68,15 @@ restore with optionally filePath, if omitted it will be restored in working dir 
 will tar a dir to file
 
 	dump dir {dirPath} {dumpFile}
-	
+
+option:
+--exclude={pattern} (exclude files/dirs; see tar --exclude;  for multiple patterns use: --exclude="{pattern}|{pattern}|{pattern}"
+
+
 restore with dirPath
 
 	restore dir {dirPath} {dumpFile}
+
 	
 
 ### Redis

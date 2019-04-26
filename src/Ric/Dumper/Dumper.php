@@ -228,8 +228,12 @@ class Ric_Dumper_Dumper {
 		if( !is_dir($resourceFilePath) ){
 			throw new RuntimeException('source dir not found: '.$resourceFilePath);
 		}
+		$excludes = array_filter(explode('|', $cli->getOption('exclude')));
 		$command =  self::getPrefixDumpCommand($cli);
 		$command .= 'tar -C '.$resourceFilePath.' -cp .'; // keep fileowners, we change to the given dir
+		if( $excludes ){
+			$command .= ' --exclude='.implode(' --exclude=', $excludes);
+		}
 		$command .= self::getCompressionCommand($cli);
 		$command .= self::getEncryptionCommand($cli);
 		$command .= self::getDumpFileForDumpCommand($cli);
