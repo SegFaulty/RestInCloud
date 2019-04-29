@@ -141,7 +141,7 @@ class Ric_Server_Api {
 		if( $sha1 ){
 			$sha1Uploaded = sha1_file($tmpFilePath);
 			if( $sha1Uploaded!=$sha1 ){
-				throw new RuntimeException('sha1 ('.$sha1Uploaded.') of uploaded file ('.filesize($tmpFilePath).' Bytes) does not match the given sha1', 400);
+				throw new RuntimeException('sha1 ('.$sha1Uploaded.') of uploaded file ('.filesize($tmpFilePath).' Bytes) does not match the given sha1 ('.$sha1.')', 400);
 			}
 		}
 
