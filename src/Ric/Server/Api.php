@@ -138,8 +138,11 @@ class Ric_Server_Api {
 		$tmpFilePath = $this->readInputStreamToTempFile();
 
 		//check saved file against sha1
-		if( $sha1 AND sha1_file($tmpFilePath)!=$sha1 ){
-			throw new RuntimeException('sha1 of uploaded file ('.filesize($tmpFilePath).') does not match the given sha1', 400);
+		if( $sha1 ){
+			$sha1Uploaded = sha1_file($tmpFilePath);
+			if( $sha1Uploaded!=$sha1 ){
+				throw new RuntimeException('sha1 ('.$sha1Uploaded.') of uploaded file ('.filesize($tmpFilePath).' Bytes) does not match the given sha1', 400);
+			}
 		}
 
 		if( $retention==Ric_Server_Definition::RETENTION__AUTO ){
