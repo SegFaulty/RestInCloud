@@ -132,7 +132,7 @@ class Ric_Server_Api {
 		$this->auth(Ric_Server_Auth_Definition::ROLE__WRITER);
 		$retention = H::getRP('retention', Ric_Server_Definition::RETENTION__AUTO);
 		$timestamp = (int) H::getRP('timestamp', time());
-		$sha1 = (int) H::getRP('sha1');
+		$sha1 = H::getRP('sha1');
 		$noSync = (bool) H::getRP('noSync');
 
 		$tmpFilePath = $this->readInputStreamToTempFile();
