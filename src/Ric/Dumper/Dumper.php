@@ -2,6 +2,7 @@
 
 class Ric_Dumper_Dumper {
 
+	const VERSION = '0.3.0';
 	/**
 	 * @param array $argv
 	 * @param array $env
@@ -123,11 +124,12 @@ class Ric_Dumper_Dumper {
 	 * @return string
 	 */
 	static protected function getHelp($command = '', $helpString){
-		if( $command and preg_match('~\n## Help '.preg_quote($command, '~').'(.*?)(\n## |$)~s', $helpString, $matches) ){
+		if( $command and preg_match('~\n#+ Help '.preg_quote($command, '~').'(.*?)(\n#+ |$)~si', $helpString, $matches) ){
 			$helpString = $matches[1];
 		}
 		if( $command=='' AND defined('BUILD_DATE') ){
-			$helpString = 'build: '.BUILD_DATE.PHP_EOL.$helpString;
+			$helpString = ' v'.self::VERSION.' build: '.BUILD_DATE.PHP_EOL.$helpString;
+
 		}
 		return $helpString;
 	}
@@ -279,18 +281,30 @@ class Ric_Dumper_Dumper {
 		$tableList = [];
 		if( $tablePattern!='' ){
 			foreach( explode(',', $tablePattern) as $tableEntry ){
+				$tables = [];
+				$exclude = false;
+				if( substr($tableEntry, 0, 1)=='-' ){
+					$exclude = true;
+					$tableEntry = substr($tableEntry, 1);
+				}
 				if( strstr($tableEntry, '*') ){
 					// read tables with pattern from mysql
 					$command = 'echo "SHOW TABLES LIKE \''.str_replace('*', '%', $tableEntry).'\';"';
 					$command .= ' | '.self::getMysqlCommandString('mysql', $mysqlDefaultFile, $host, $port, $user, $pass, $database);
 					$command .= ' --skip-column-names';
+					$output = null;
 					exec($command, $output, $status);
 					if( $status!==0 ){
 						throw new RuntimeException('show tables ('.$command.') failed! :'.implode(';', $output));
 					}
-					$tableList = array_merge($tableList, $output);
+					$tables = $output;
 				}else{
-					$tableList[] = $tableEntry;
+					$tables[] = $tableEntry;
+				}
+				if( $exclude ){
+					$tableList = array_diff($tableList, $tables);
+				}else{
+					$tableList = array_merge($tableList, $tables);
 				}
 			}
 			$tableList = array_unique($tableList);

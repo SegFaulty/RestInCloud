@@ -42,7 +42,7 @@ if _dumpFile_ is omitted or `STDOUT`, the content is piped to stdout
 
 ## Resources
 
-### STDIN / STDOUT
+### Help STDIN/STDOUT
 dump piped content or restore to stdout
 
 	dump std STDIN {dumpFile}
@@ -55,7 +55,7 @@ or you can use (same)
 
 	restore std STDOUT {dumpFile} 
 
-### File
+### Help File
 only compress and encrypt it
 
 	dump file {filePath} {dumpFile}
@@ -64,7 +64,7 @@ restore with optionally filePath, if omitted it will be restored in working dir 
 
 	restore file [{filePath}] {dumpFile}
 
-### Dir
+### Help Dir
 will tar a dir to file
 
 	dump dir {dirPath} {dumpFile}
@@ -79,7 +79,7 @@ restore with dirPath
 
 	
 
-### Redis
+### Help Redis
 dump some (or all) redis keys
 keyPattern is a "match" pattern for redis command `scan`
 
@@ -96,7 +96,7 @@ without keyPattern, it only sets the keys
 
 default port: redis-default port
 
-### Mysql
+### Help Mysql
 dump mysql db / tables / sql (based on mysqldump)
 
 	dump mysql [{user}:{pass}@][{server}[:{port}]]/{dataBase}[/{tableNamePattern}] {dumpFile} 
@@ -105,8 +105,9 @@ dump mysql db / tables / sql (based on mysqldump)
 * default port: mysql-default port
 * default server: localhost
 * default user: current use (on unbutu root needs no password, so its pretty easy to use)
-* tableNamePattern: list of tables: t1,t2,t3 or with wildcard configTable,dataTable1,dataTable*
-
+* tableNamePattern: list of tables: t1,t2,t3 or with wildcard configTable,dataTable1,dataTable*  or exclude with "-" e.g.: dump mysql mysql.sql.bz2 "/mysql/*,-help*,-events"
+* table patterns are processed in list order so thats correct: /mysql/*,-event  that will not work as intented: /mysql/-event,*
+* if wildcard table pattern (*) are given, a mysql command will be executed to get the corresponding tables (even if dumper "--test" option is in effect)
 
 restore works only on database level
 
@@ -117,7 +118,7 @@ you can restore the dump as plain sql file as well (makes only sense if the dump
 	restore file dump.sql {dumpFile}
 
 
-### InfluxDb
+### Help InfluxDb
 dump influx instance (meta and all databases) or meta or single database
 
 	dump influx instance|meta|{database} {dumpFile} 
