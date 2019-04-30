@@ -98,6 +98,7 @@ procedure:
 
 ### restore options
 
+* --version (sha1) for restore an older version
 * --pass Password (use --pass "" (empty) to restore file to restore files from version 0.1
 * --passFile {passFilePath} read pass from file default: ENV ricPassFile -> ''
 * --overwrite   overwrite existing resource
