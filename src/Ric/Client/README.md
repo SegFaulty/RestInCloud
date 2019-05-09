@@ -127,14 +127,14 @@ procedure:
 * list - list all file(name)s; or all matching fileNames if (regex-)pattern given e.g. "admin list /mysql-.*/i"
 * inventory - list files with version and size informations
 * info - sever info, as admin config included
-* health - cluster info, as admin with quota infos and failure details  "OK" / "WARNING" / "CRITICAL"
+* health - cluster info, as admin with quota infos and failure details  "OK" / "WARNING" / "CRITICAL" // command exit status and STDERR supported
 * joinCluster - join/build a cluster (join the connected server to an existing cluster (via clusterServer), or build a cluster with the other server)
 * leaveCluster - disconnect the server from a cluster and remove from all clusterNodes
 * removeFromCluster - remove given server from all clusterNodes
 * addServer - add a replication client
 * removeServer - remove a replication client
 * copyServer - connected server to targetServer
-* checkConsistency - check files and version off all servers (optionally only for {pattern} matching files)
+* checkConsistency - check files and version off all servers (optionally only for {pattern} matching files)  // command exit status and STDERR supported
 
 a cluster is a bunch of servers, where all of them are added (addServer) to all servers, every server is a replicant of every server .. u got it
 

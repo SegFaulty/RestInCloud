@@ -11,7 +11,7 @@
 class Ric_Client_Client {
 
 	const MIN_SERVER_VERSION = '0.8.0'; // server needs to be on this or a higher version, BUT on the same MAJOR version  ok: 1.4.0 < 1.8.3  but fail:  1.4.0 < 2.3.0  because client is to old
-	const CLIENT_VERSION = '0.4.0'; //
+	const CLIENT_VERSION = '0.5.0'; //
 
 	const MAGIC_DELETION_TIMESTAMP = 1422222222; // 2015-01-25 22:43:42
 
@@ -425,11 +425,12 @@ class Ric_Client_Client {
 	 * @throws RuntimeException
 	 * @return string
 	 */
-	public function health(){
+	public function health(&$cliStatus, &$stderrMsg){
 		$response = Ric_Rest_Client::get($this->buildUrl('', 'health'), [], $headers);
 		$this->checkServerResponse($response, $headers);
 		if( !$this->isResponseStatusOk($response) ){
-			throw new RuntimeException('health check critical: '.$response);
+			$cliStatus = false;
+			$stderrMsg = 'health check critical: '.$response;
 		}
 		return $response;
 	}
@@ -505,10 +506,12 @@ class Ric_Client_Client {
 	}
 
 	/**
-	 * @param $pattern
+	 * @param string $pattern
+	 * @param bool $cliStatus
+	 * @param string $stderrMsg
 	 * @return string
 	 */
-	public function checkConsistency($pattern){
+	public function checkConsistency($pattern, &$cliStatus, &$stderrMsg){
 		$response = '';
 		$info = $this->info();
 		$status = 'OK';
@@ -530,7 +533,7 @@ class Ric_Client_Client {
 				$serverMissingFiles = array_diff($allKnownFiles, $files);
 				if( $serverMissingFiles ){
 					$missingFilesPerServer[$server] = $serverMissingFiles;
-					$response .= '[CRITICAL] '.count($serverMissingFiles).' files missing on server: '.$server.PHP_EOL.'  '.join(PHP_EOL.'  ', $serverMissingFiles).PHP_EOL;
+					$stderrMsg .= '[CRITICAL] '.count($serverMissingFiles).' files missing on server: '.$server.PHP_EOL.'  '.join(PHP_EOL.'  ', $serverMissingFiles).PHP_EOL;
 					$status = 'CRITICAL';
 				}
 			}
@@ -563,12 +566,12 @@ class Ric_Client_Client {
 					if( $serverMissingVersions ){
 						if( !in_array($primaryFileVersion, $versions) ){
 							$status = 'CRITICAL';
-							$response .= '[CRITICAL] primary version ['.$primaryFileVersion.'] from '.date('Y-m-d H:i:s', $primaryFileTimestamp).' missing of file: '.$fileName.' on server: '.$server.PHP_EOL;
+							$stderrMsg .= '[CRITICAL] primary version ['.$primaryFileVersion.'] from '.date('Y-m-d H:i:s', $primaryFileTimestamp).' missing of file: '.$fileName.' on server: '.$server.PHP_EOL;
 						}
 						if( $status=='OK' ){
 							$status = 'WARNING';
 						}
-						$response .= '[WARNING] '.count($serverMissingVersions).' versions missing of file: '.$fileName.' on server: '.$server.PHP_EOL.'  '.join(PHP_EOL.'  ', $serverMissingVersions).PHP_EOL;
+						$stderrMsg .= '[WARNING] '.count($serverMissingVersions).' versions missing of file: '.$fileName.' on server: '.$server.PHP_EOL.'  '.join(PHP_EOL.'  ', $serverMissingVersions).PHP_EOL;
 						$missingVersionsPerServer[$server] = $serverMissingVersions;
 					}
 				}
@@ -578,14 +581,11 @@ class Ric_Client_Client {
 
 			}
 			$response .= 'Status: '.$status.PHP_EOL;
-
-
 #			$response .= print_r($knownFilesPerServer, true);
 		}else{
 			$response .= 'no others servers, no consistence check necessary'.PHP_EOL;
 		}
-#$response .= print_r($info, true);
-#$response .= print_r($servers, true);
+		$cliStatus = ($status=='OK');
 		return $response;
 	}
 

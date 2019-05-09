@@ -15,6 +15,7 @@ class Ric_Client_CliHandler {
 	static public function handleExecute($argv, $env, $helpString){
 		$status = true;
 		$msg = '';
+		$stderrMsg = '';
 		$cli = new Ric_Client_Cli($argv, $env);
 		$cli->loadConfigFile($cli->getOption('configFile')); // load cofig file if present
 		$command = $cli->getArgument(1);
@@ -44,7 +45,7 @@ class Ric_Client_CliHandler {
 					$msg = self::commandDelete($client, $cli);
 					break;
 				case 'admin':
-					$msg = self::commandAdmin($client, $cli);
+					$msg = self::commandAdmin($client, $cli, $status, $stderrMsg);
 					break;
 				case 'help':
 					$msg = self::getHelp($helpString, $cli->getArgument(2, 'Summary'));
@@ -58,8 +59,9 @@ class Ric_Client_CliHandler {
 			}
 		}catch(Exception $e){
 			$status = 1;
-			ini_set('display_errors', 'stderr'); // ensure we write to STDERR
-			fwrite(STDERR, trim('ERROR: '.$e->getMessage()).PHP_EOL);
+			$stderrMsg = 'Exception: '.$e->getMessage();
+#			ini_set('display_errors', 'stderr'); // ensure we write to STDERR
+#			fwrite(STDERR, trim('ERROR: '.$e->getMessage()).PHP_EOL);
 #			file_put_contents("php://stderr", rtrim($e->getMessage()).PHP_EOL);
 		}
 
@@ -68,6 +70,10 @@ class Ric_Client_CliHandler {
 		}
 		if( is_bool($status) ){
 			$status = (int) !$status;
+		}
+		if( $stderrMsg ){
+			ini_set('display_errors', 'stderr'); // ensure we write to STDERR
+			fwrite(STDERR, trim($stderrMsg).PHP_EOL);
 		}
 		return $status; // success -> 0 , failed >= 1
 	}
@@ -215,10 +221,11 @@ class Ric_Client_CliHandler {
 	/**
 	 * @param Ric_Client_Client $client
 	 * @param Ric_Client_Cli $cli
+	 * @param bool $status
+	 * @param string $stderrMsg
 	 * @return string
-	 * @throws RuntimeException
 	 */
-	static protected function commandAdmin($client, $cli){
+	static protected function commandAdmin($client, $cli, &$status, &$stderrMsg){
 		if( $cli->getArgumentCount()==1 ){
 			throw new RuntimeException('admin command expected, see help');
 		}
@@ -233,7 +240,7 @@ class Ric_Client_CliHandler {
 			$sort = $cli->getArgument(4, 'file');
 			$msg = self::adminBuildInventory($client, $pattern, $sort);
 		}elseif( $adminCommand=='health' ){
-			$msg = $client->health();
+			$msg = $client->health($status, $stderrMsg);
 		}elseif( $adminCommand=='addServer' ){
 			if( $cli->getArgumentCount()!=3 ){
 				throw new RuntimeException('needs one arg (targetServer)');
@@ -263,7 +270,7 @@ class Ric_Client_CliHandler {
 			$msg = json_encode($client->copyServer($cli->getArgument(3)));
 		}elseif( $adminCommand=='checkConsistency' ){
 			$pattern = $cli->getArgument(3, '');
-			$msg = $client->checkConsistency($pattern);
+			$msg = $client->checkConsistency($pattern, $status, $stderrMsg);
 		}elseif( $adminCommand=='snapshot' ){
 			if( $cli->getArgumentCount()<3 ){
 				throw new RuntimeException('needs one arg (targetDir)');
