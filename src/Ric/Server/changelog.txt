@@ -1,0 +1,1 @@
+0.8.0 2019-05-09 list method remove default limit 100 and hard limit 1000, if limit omitted list will return all existing files, chunking is not an advantage, because start <- has to iterate over all files step by step
