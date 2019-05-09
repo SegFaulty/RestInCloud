@@ -134,7 +134,7 @@ procedure:
 * addServer - add a replication client
 * removeServer - remove a replication client
 * copyServer - connected server to targetServer
-* checkConsistency - check files and version off all servers
+* checkConsistency - check files and version off all servers (optionally only for {pattern} matching files)
 
 a cluster is a bunch of servers, where all of them are added (addServer) to all servers, every server is a replicant of every server .. u got it
 
@@ -148,7 +148,7 @@ a cluster is a bunch of servers, where all of them are added (addServer) to all 
     ric admin addServer {server}
     ric admin removeServer {server}
     ric admin copyServer {targetServer}
-    ric admin checkConsistency
+    ric admin checkConsistency [{pattern}]
     ric admin snapshot targetdir
 
 

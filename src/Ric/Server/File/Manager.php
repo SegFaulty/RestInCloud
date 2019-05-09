@@ -132,7 +132,7 @@ class Ric_Server_File_Manager {
 	 * @param int $limit
 	 * @return Ric_Server_File_FileInfo[]
 	 */
-	public function getFileNamesForPattern($pattern = '', $start = 0, $limit = 100){
+	public function getFileNamesForPattern($pattern = '', $start = 0, $limit = null){
 		$fileNames = [];
 		$dirIterator = new RecursiveDirectoryIterator($this->storageDir);
 		$iterator = new RecursiveIteratorIterator($dirIterator, RecursiveIteratorIterator::SELF_FIRST);
@@ -153,7 +153,7 @@ class Ric_Server_File_Manager {
 					continue;
 				}
 				$fileNames[$fileName] = $fileName;
-				if( count($fileNames)>=$limit ){
+				if( $limit!==null AND count($fileNames)>=$limit ){
 					break;
 				}
 			}

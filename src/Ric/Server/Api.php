@@ -328,7 +328,7 @@ class Ric_Server_Api {
 			throw new RuntimeException('not a valid regex: '.$errorMessage, 400);
 		}
 		$start = H::getRP('start', 0);
-		$limit = min(1000, H::getRP('limit', 100));
+		$limit = H::getRP('limit'); // if omitted unlimited
 
 		$response = $this->server->listFileNames($pattern, $start, $limit);
 		$this->sendResponse($response);

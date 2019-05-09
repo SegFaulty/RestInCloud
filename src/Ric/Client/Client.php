@@ -13,6 +13,8 @@ class Ric_Client_Client {
 	const MIN_SERVER_VERSION = '0.7.0'; // server needs to be on this or a higher version, BUT on the same MAJOR version  ok: 1.4.0 < 1.8.3  but fail:  1.4.0 < 2.3.0  because client is to old
 	const CLIENT_VERSION = '0.3.0'; //
 
+	const MAGIC_DELETION_TIMESTAMP = 1422222222; // 2015-01-25 22:43:42
+
 	protected $server = '';
 	protected $auth = '';
 	protected $log = '';
@@ -503,9 +505,10 @@ class Ric_Client_Client {
 	}
 
 	/**
+	 * @param $pattern
 	 * @return string
 	 */
-	public function checkConsistency() {
+	public function checkConsistency($pattern){
 		$response = '';
 		$info = $this->info();
 		$status = 'OK';
@@ -518,7 +521,7 @@ class Ric_Client_Client {
 			$clients = []; /** @var Ric_Client_Client[] $clients */
 			foreach( $servers as $server ){
 				$clients[$server] = new Ric_Client_Client($server, $info['config']['adminToken']);
-				$files = $clients[$server]->listFiles();
+				$files = $clients[$server]->listFiles($pattern);
 				$knownFilesPerServer[$server] = $files;
 				$allKnownFiles = array_unique(array_merge($allKnownFiles, $files));
 			}
@@ -600,7 +603,7 @@ class Ric_Client_Client {
 			$versionCount = 0;
 			foreach( $versions as $fileVersion ){
 				$allVersionsSize += $fileVersion['size'];
-				if( $fileVersion['timestamp']!=1422222222 ){ # '-- D E L E T E D --';
+				if( $fileVersion['timestamp']!=self::MAGIC_DELETION_TIMESTAMP ){ # '-- D E L E T E D --';
 					$versionCount++;
 				}
 			}

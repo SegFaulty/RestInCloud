@@ -262,7 +262,8 @@ class Ric_Client_CliHandler {
 			}
 			$msg = json_encode($client->copyServer($cli->getArgument(3)));
 		}elseif( $adminCommand=='checkConsistency' ){
-			$msg = $client->checkConsistency();
+			$pattern = $cli->getArgument(3, '');
+			$msg = $client->checkConsistency($pattern);
 		}elseif( $adminCommand=='snapshot' ){
 			if( $cli->getArgumentCount()<3 ){
 				throw new RuntimeException('needs one arg (targetDir)');
