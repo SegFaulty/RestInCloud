@@ -71,7 +71,7 @@ class Ric_Client_Client {
 	 */
 	protected function logDebug($msg){
 		if( $this->debug ){
-			$this->log .= date('Y-m-d H:i:s').' '.$msg.PHP_EOL;
+			fwrite(STDOUT, $msg.PHP_EOL);
 		}
 	}
 
@@ -634,28 +634,34 @@ class Ric_Client_Client {
 		$this->logDebug('start snapshot of '.count($inventory).' server files'.($pattern ? ' with pattern "'.$pattern.'"' : ''));
 		$transferredFiles = 0;
 		$transferredBytes = 0;
+		$fileNumber = 0;
+		$fileCount = count($inventory);
+		$indent = str_repeat(' ', strlen($fileCount) * 2 + 2);
 		foreach( $inventory as $fileEntry ){
+			$fileNumber++;
+			$this->logDebug(str_pad($fileNumber, strlen($fileCount), 0, STR_PAD_LEFT).'/'.$fileCount.' '.$fileName.' '.filesize($localFile).'Byte '.date('Y-m-d H:i:s', filemtime($localFile)));
 
 			$fileName = $fileEntry['file'];
 			$localFile = $targetDir.$fileName;
 			if( file_exists($localFile) AND filesize($localFile)==$fileEntry['size'] AND sha1_file($localFile)==$fileEntry['version'] ){ // check if file already exists and is uptodate
 				touch($localFile, $fileEntry['time']); // is in sync, only update modification date
-				$this->logDebug($fileName.' is already uptodate');
+				$this->logDebug($indent.' is already uptodate');
 			}else{
+				$this->logDebug(' update to new version ('.date('Y-m-d H:is:s', $fileEntry['time']).') - '.$fileEntry['size'].'Byte');
 				$this->restore($fileName, $localFile); // overwrite active
 				if( file_exists($localFile) AND filesize($localFile)==$fileEntry['size'] AND sha1_file($localFile)==$fileEntry['version'] ){ // check again
 					// fine
 					touch($localFile, $fileEntry['time']); // is in sync, only update modification date
 					$transferredFiles++;
 					$transferredBytes += $fileEntry['size'];
-					$this->logDebug($fileName.' updated to version '.$fileEntry['version'].' '.date('Y-m-d H:i:s', $fileEntry['time']));
+					$this->logDebug($indent.' updated successfully to version '.$fileEntry['version']);
 				}else{
 					throw new RuntimeException('sanity check after restore file '.$fileName.' to '.$localFile.' failed! WHoops!');
 				}
 			}
 		}
 
-		$result = ['status' => 'OK', 'serverFiles' => count($inventory), 'transferredFiles' => $transferredFiles, 'transferredBytes' => $transferredBytes];
+		$result = ['status' => 'OK', 'serverFiles' => $fileCount, 'transferredFiles' => $transferredFiles, 'transferredBytes' => $transferredBytes];
 		$this->logDebug('end snapshot '.H::implodeKeyValue($result));
 
 		return $result;
