@@ -11,7 +11,7 @@
 class Ric_Client_Client {
 
 	const MIN_SERVER_VERSION = '0.8.0'; // server needs to be on this or a higher version, BUT on the same MAJOR version  ok: 1.4.0 < 1.8.3  but fail:  1.4.0 < 2.3.0  because client is to old
-	const CLIENT_VERSION = '0.5.0'; //
+	const CLIENT_VERSION = '0.6.0'; //
 
 	const MAGIC_DELETION_TIMESTAMP = 1422222222; // 2015-01-25 22:43:42
 
@@ -19,6 +19,7 @@ class Ric_Client_Client {
 	protected $auth = '';
 	protected $log = '';
 	protected $debug = false;
+	protected $quiet = false;
 	protected $checkVersion = true;
 
 	/**
@@ -27,7 +28,6 @@ class Ric_Client_Client {
 	 */
 	public function __construct($serverHostPort, $auth){
 		$this->server = $serverHostPort;
-		$this->logDebug('server:'.$serverHostPort);
 		$this->auth = $auth;
 	}
 
@@ -43,6 +43,14 @@ class Ric_Client_Client {
 	 */
 	public function setDebug($bool){
 		$this->debug = (true AND $bool);
+	}
+
+	/**
+	 * if true suppress info msgs
+	 * @param $bool
+	 */
+	public function setQuiet($bool){
+		$this->quiet = (true AND $bool);
 	}
 
 	/**
@@ -76,6 +84,15 @@ class Ric_Client_Client {
 	}
 
 	/**
+	 * @param string $msg
+	 */
+	protected function logInfo($msg){
+		if( !$this->quiet ){
+			fwrite(STDOUT, $msg.PHP_EOL);
+		}
+	}
+
+	/**
 	 * build api url
 	 * @param string $fileName
 	 * @param string $command
@@ -99,7 +116,7 @@ class Ric_Client_Client {
 		if( !empty($parameters) ){
 			$url .= '&'.http_build_query($parameters);
 		}
-		$this->logDebug(__METHOD__.' url:'.$url);
+#		$this->logDebug(__METHOD__.' url:'.$url);
 		return $url;
 	}
 
@@ -229,7 +246,7 @@ class Ric_Client_Client {
 		$this->checkServerResponse($response, $headers);
 		if( !$this->isResponseStatusOk($response) ){
 			// Put
-			$this->logDebug('POST refresh failed, file has to be sent via PUT');
+			$this->logInfo('send file to server ');
 			if( $retention ){
 				$params['retention'] = $retention;
 			}
@@ -237,9 +254,9 @@ class Ric_Client_Client {
 			$headers = [];
 			$response = Ric_Rest_Client::putFile($fileUrl, $filePath, $headers);
 			$this->checkServerResponse($response, $headers);
-			$this->logDebug('PUT result:'.$response);
+			$this->logInfo(' result:'.$response);
 		}else{
-			$this->logDebug('POST refresh succeeded, no file transfer necessary');
+			$this->logInfo('file already up-to-date, no file transfer necessary');
 		}
 		// Verify
 		$this->check($targetFileName, $minReplicas, $sha1);
@@ -272,7 +289,7 @@ class Ric_Client_Client {
 		$fileUrl = $this->buildUrl($targetFileName, 'check', $params);
 		$response = Ric_Rest_Client::get($fileUrl, [], $headers);
 		$this->checkServerResponse($response, $headers);
-		$this->logDebug('Check ('.$fileUrl.') result: '.$response);
+		$this->logInfo('Check ('.$fileUrl.') result: '.$response);
 		if( !$this->isResponseStatusOk($response) ){
 			throw new RuntimeException('check failed: '.$response);
 		}
@@ -313,6 +330,7 @@ class Ric_Client_Client {
 		if( !copy($tmpFilePath, $targetFilePath) ){
 			throw new RuntimeException('restore as file: '.$targetFilePath.' failed!');
 		}
+		$this->logInfo('file: '.$targetFilePath.' successfully restored');
 
 
 		return true;
@@ -625,13 +643,14 @@ class Ric_Client_Client {
 	 * @return array
 	 */
 	public function takeSnapshot($pattern, $localSnapshotDir){
+		$startTime = time();
 		$targetDir = rtrim($localSnapshotDir, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR; // ensure we have a trailing /
 		if( !is_dir($targetDir) ){
 			throw new RuntimeException($targetDir.' is not a writable targetDir');
 		}
 		$inventory = $this->getInventory($pattern);
 
-		$this->logDebug('start snapshot of '.count($inventory).' server files'.($pattern ? ' with pattern "'.$pattern.'"' : ''));
+		$this->logInfo('start snapshot of '.count($inventory).' server files'.($pattern ? ' with pattern "'.$pattern.'"' : ''));
 		$transferredFiles = 0;
 		$transferredBytes = 0;
 		$fileNumber = 0;
@@ -639,30 +658,34 @@ class Ric_Client_Client {
 		$indent = str_repeat(' ', strlen($fileCount) * 2 + 2);
 		foreach( $inventory as $fileEntry ){
 			$fileNumber++;
-			$this->logDebug(str_pad($fileNumber, strlen($fileCount), 0, STR_PAD_LEFT).'/'.$fileCount.' '.$fileName.' '.filesize($localFile).'Byte '.date('Y-m-d H:i:s', filemtime($localFile)));
-
 			$fileName = $fileEntry['file'];
 			$localFile = $targetDir.$fileName;
+
+			$this->logInfo(str_pad($fileNumber, strlen($fileCount), 0, STR_PAD_LEFT).'/'.$fileCount.' '.$fileName.' '.$fileEntry['size'].' Byte '.date('Y-m-d H:i:s', $fileEntry['time']));
+
 			if( file_exists($localFile) AND filesize($localFile)==$fileEntry['size'] AND sha1_file($localFile)==$fileEntry['version'] ){ // check if file already exists and is uptodate
 				touch($localFile, $fileEntry['time']); // is in sync, only update modification date
-				$this->logDebug($indent.' is already uptodate');
+				$this->logInfo($indent.' is already up-to-date');
 			}else{
-				$this->logDebug(' update to new version ('.date('Y-m-d H:is:s', $fileEntry['time']).') - '.$fileEntry['size'].'Byte');
+				$this->logInfo($indent.' update to new version ('.date('Y-m-d H:is:s', $fileEntry['time']).') - '.$fileEntry['size'].' Byte');
+				$quiet = $this->quiet;
+				$this->quiet = true; // quiete restore
 				$this->restore($fileName, $localFile); // overwrite active
+				$this->quiet = $quiet;
 				if( file_exists($localFile) AND filesize($localFile)==$fileEntry['size'] AND sha1_file($localFile)==$fileEntry['version'] ){ // check again
 					// fine
 					touch($localFile, $fileEntry['time']); // is in sync, only update modification date
 					$transferredFiles++;
 					$transferredBytes += $fileEntry['size'];
-					$this->logDebug($indent.' updated successfully to version '.$fileEntry['version']);
+					$this->logInfo($indent.' updated successfully to version '.$fileEntry['version']);
 				}else{
 					throw new RuntimeException('sanity check after restore file '.$fileName.' to '.$localFile.' failed! WHoops!');
 				}
 			}
 		}
 
-		$result = ['status' => 'OK', 'serverFiles' => $fileCount, 'transferredFiles' => $transferredFiles, 'transferredBytes' => $transferredBytes];
-		$this->logDebug('end snapshot '.H::implodeKeyValue($result));
+		$result = ['status' => 'OK', 'serverFiles' => $fileCount, 'transferredFiles' => $transferredFiles, 'transferredBytes' => $transferredBytes, 'runTime' => time() - $startTime];
+		$this->logInfo('end snapshot '.H::implodeKeyValue($result));
 
 		return $result;
 	}

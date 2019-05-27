@@ -27,6 +27,7 @@ class Ric_Client_CliHandler {
 			$auth = $cli->getOption('auth', self::resolveSecretFile($cli->getOption('authFile')));
 			$client = new Ric_Client_Client($cli->getOption('server'), $auth);
 			$client->setDebug($cli->getOption('verbose'));
+			$client->setQuiet($cli->getOption('quiet'));
 			$client->setCheckVersion(!$cli->getOption('ignoreVersion'));
 			switch($command){
 				case 'backup':
