@@ -11,7 +11,7 @@
 class Ric_Client_Client {
 
 	const MIN_SERVER_VERSION = '0.8.0'; // server needs to be on this or a higher version, BUT on the same MAJOR version  ok: 1.4.0 < 1.8.3  but fail:  1.4.0 < 2.3.0  because client is to old
-	const CLIENT_VERSION = '0.6.0'; //
+	const CLIENT_VERSION = '0.7.0'; //
 
 	const MAGIC_DELETION_TIMESTAMP = 1422222222; // 2015-01-25 22:43:42
 
@@ -310,35 +310,36 @@ class Ric_Client_Client {
 		if( $version ){
 			$params['version'] = $version;
 		}
-		$tmpFilePath = $this->getTmpFilePath();
+		$tmpFilePath = $this->getTmpFilePath($targetFilePath);
 		$fileUrl = $this->buildUrl($backupFileName, '', $params);
 		// get
 		$oFH = fopen($tmpFilePath, 'wb+');
 		$this->logDebug('get: '.$fileUrl);
 		Ric_Rest_Client::get($fileUrl, [], $headers, $oFH);
+		$sha1 = (isset($headers['ETag']) ? $headers['ETag'] : null);
 		$this->checkServerResponse('', $headers, $tmpFilePath);
+		$this->logDebug('downloaded as tmpFile: '.$tmpFilePath.' - '.filesize($tmpFilePath).' Bytes');
+		$this->logDebug('check sha1 of '.$tmpFilePath.' expected: '.$sha1);
+		$sha1_file = sha1_file($tmpFilePath);
+		$this->logDebug('sha1 is '.$sha1_file);
+		if( $sha1!=$sha1_file ){
+			throw new RuntimeException('sha1 of successfully downloaded file ('.$tmpFilePath.') is not equal with the server send sha1 ('.$sha1.')');
+		}
+		$this->logDebug('sha1 is ok');
 
-		$this->logDebug('downloaded as tmpFile: '.$tmpFilePath.'['.filesize($tmpFilePath).']');
 		if( $password!==null ){
-			$tmpFilePath = $this->getDecryptedFilePath($tmpFilePath, $password);
+			$this->logDebug('decrypt file');
+			$tmpFilePath = $this->getDecryptedFilePath($tmpFilePath, $password); // will create another __temp__ file but removes this inline, the resulting filePath should be the same as given $tmpFilePath
 		}
-
-		if( file_exists($targetFilePath) AND !$overwrite ){
-			throw new RuntimeException('resource ['.realpath($targetFilePath).'] (file or dir) already exists! restore skipped');
-		}
-		$this->logDebug('restore as file: '.$targetFilePath);
-		if( !copy($tmpFilePath, $targetFilePath) ){
-			throw new RuntimeException('restore as file: '.$targetFilePath.' failed!');
-		}
+		$this->bringTmpFileInPlace($tmpFilePath, $overwrite);
 		$this->logInfo('file: '.$targetFilePath.' successfully restored');
-
 
 		return true;
 	}
 
 	/**
 	 * encrypt to a new file
-	 * if the passowrd is empty, the result file is still encoded with a salt !!!
+	 * if the password is empty, the result file is still encoded with a salt !!!
 	 * @param string $filePath
 	 * @param string $password
 	 * @param string $salt
@@ -350,7 +351,7 @@ class Ric_Client_Client {
 			throw new RuntimeException('file not found or not a regular file: '.$filePath);
 		}
 
-		$encryptedFilePath = $this->getTmpFilePath('.ricenc');
+		$encryptedFilePath = $this->getTmpFilePath();
 
 		$command = 'openssl enc -aes-256-cbc -S '.bin2hex(substr($salt, 0, 8)).' -in '.$filePath.' -out '.$encryptedFilePath.' -k '.escapeshellarg((string) $password);
 		exec($command, $output, $status);
@@ -373,14 +374,14 @@ class Ric_Client_Client {
 		if( !is_file($encryptedFilePath) ){
 			throw new RuntimeException('file not found or not a regular file: '.$encryptedFilePath);
 		}
-		$decryptedFilePath = $this->getTmpFilePath();
+		$decryptedFilePath = $this->getTmpFilePath($encryptedFilePath); // add another __temp__ layer
 		$command = 'openssl enc -aes-256-cbc -d -in '.$encryptedFilePath.' -out '.$decryptedFilePath.' -k '.escapeshellarg((string) $password);
 		exec($command, $output, $status);
 		if( $status!=0 ){
 			throw new RuntimeException('decryption failed '.$command.' with '.print_r($output, true), 500);
 		}
-
-		return $decryptedFilePath;
+		$this->bringTmpFileInPlace($decryptedFilePath); // remove the above added temp layer
+		return $encryptedFilePath;
 	}
 
 	/**
@@ -664,10 +665,14 @@ class Ric_Client_Client {
 			$this->logInfo(str_pad($fileNumber, strlen($fileCount), 0, STR_PAD_LEFT).'/'.$fileCount.' '.$fileName.' '.$fileEntry['size'].' Byte '.date('Y-m-d H:i:s', $fileEntry['time']));
 
 			if( file_exists($localFile) AND filesize($localFile)==$fileEntry['size'] AND sha1_file($localFile)==$fileEntry['version'] ){ // check if file already exists and is uptodate
-				touch($localFile, $fileEntry['time']); // is in sync, only update modification date
-				$this->logInfo($indent.' is already up-to-date');
+				if( filemtime($localFile)===$fileEntry['time'] ){
+					$this->logInfo($indent.' is already on latest version');
+				}else{
+					touch($localFile, $fileEntry['time']); // is in sync, only update modification date
+					$this->logInfo($indent.' file not changed, file time updated to '.date('Y-m-d H:i:s', $fileEntry['time']));
+				}
 			}else{
-				$this->logInfo($indent.' update to new version ('.date('Y-m-d H:is:s', $fileEntry['time']).') - '.$fileEntry['size'].' Byte');
+				$this->logInfo($indent.' update to new version ('.date('Y-m-d H:i:s', $fileEntry['time']).') - '.$fileEntry['size'].' Byte');
 				$quiet = $this->quiet;
 				$this->quiet = true; // quiete restore
 				$this->restore($fileName, $localFile); // overwrite active
@@ -705,22 +710,41 @@ class Ric_Client_Client {
 	}
 
 	/**
-	 * return filePath
+	 * use $defaultFilePath to get a tmp filePath from the targetFilePath in the destination directory to avoid copy over filesystems, use bringTmpFileInPlace to activate the tmp file (remove the __temp__ postfix)
+	 * returns filePath
 	 * file will be delete on script termination (via register_shutdown_function deleteTmpFiles)
-	 * extension ".jpg" for imagemagick zum beispiel
-	 * use __CLASS__
+	 * uses __CLASS__
 	 * if self::$tmpFileDir is empty the system default tmp dir is used
-	 * @param string $extension
+	 * @param string|null $defaultFilePath
 	 * @return string
 	 */
-	public function getTmpFilePath($extension = ''){
-		$tmpFile = $this->tmpFileDir;
-		if( $tmpFile=='' ){
-			$tmpFile = sys_get_temp_dir();
+	public function getTmpFilePath($defaultFilePath = null){
+		$filePath = $defaultFilePath;
+		if( $filePath===null ){
+			$filePath = $this->tmpFileDir;
+			if( $filePath=='' ){
+				$filePath = sys_get_temp_dir();
+			}
+			$filePath .= '/_'.__CLASS__;
 		}
-		$tmpFile .= '/_'.__CLASS__.'_'.uniqid('', true).$extension;
-		$this->tmpFilePaths[] = $tmpFile;
-		return $tmpFile;
+		$filePath .= '__temp__'.uniqid('', true);
+		$this->tmpFilePaths[] = $filePath;
+		return $filePath;
+	}
+
+	/**
+	 * removes the __temp__ postfix
+	 * @param $tmpFilePath
+	 * @param bool $overwriteExisting
+	 */
+	public function bringTmpFileInPlace($tmpFilePath, $overwriteExisting = true){
+		$realFilePath = preg_replace('~__temp__[^_]+$~', '', $tmpFilePath);
+		if( !$overwriteExisting AND file_exists($realFilePath) ){
+			throw new RuntimeException('file already exists: '.$realFilePath);
+		}
+		if( !rename($tmpFilePath, $realFilePath) ){
+			throw new RuntimeException('failed to rename to file: '.$realFilePath);
+		};
 	}
 
 	/**
