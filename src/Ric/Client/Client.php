@@ -307,10 +307,18 @@ class Ric_Client_Client {
 	 */
 	public function restore($backupFileName, $targetFilePath, $password = null, $version = null, $overwrite = true){
 		$params = [];
+		if( !$overwrite AND file_exists($targetFilePath) ){
+			throw new RuntimeException('target file '.$targetFilePath.' already exists');
+		}
 		if( $version ){
 			$params['version'] = $version;
 		}
-		$tmpFilePath = $this->getTmpFilePath($targetFilePath);
+		if( $this->tmpFileDir ){
+			$this->logDebug('download to given tmpDir: '.$this->tmpFileDir);
+			$tmpFilePath = $this->getTmpFilePath();  // use tmpDir for download and decryption
+		}else{
+			$tmpFilePath = $this->getTmpFilePath($targetFilePath); // we us thefinal destination, to prevent file copies
+		}
 		$fileUrl = $this->buildUrl($backupFileName, '', $params);
 		// get
 		$oFH = fopen($tmpFilePath, 'wb+');
@@ -321,7 +329,6 @@ class Ric_Client_Client {
 		$this->logDebug('downloaded as tmpFile: '.$tmpFilePath.' - '.filesize($tmpFilePath).' Bytes');
 		$this->logDebug('check sha1 of '.$tmpFilePath.' expected: '.$sha1);
 		$sha1_file = sha1_file($tmpFilePath);
-		$this->logDebug('sha1 is '.$sha1_file);
 		if( $sha1!=$sha1_file ){
 			throw new RuntimeException('sha1 of successfully downloaded file ('.$tmpFilePath.') is not equal with the server send sha1 ('.$sha1.')');
 		}
@@ -331,7 +338,16 @@ class Ric_Client_Client {
 			$this->logDebug('decrypt file');
 			$tmpFilePath = $this->getDecryptedFilePath($tmpFilePath, $password); // will create another __temp__ file but removes this inline, the resulting filePath should be the same as given $tmpFilePath
 		}
-		$this->bringTmpFileInPlace($tmpFilePath, $overwrite);
+		if( $this->tmpFileDir ){
+			// we must copy the file to target partion
+			$this->logDebug('copy to target location: '.$tmpFilePath.' > '.$targetFilePath);
+			if( !copy($tmpFilePath, $targetFilePath) ){
+				throw new RuntimeException('copy to '.$targetFilePath.' failed');
+			}
+			unlink($tmpFilePath); // we delete here, to prevent zilloins remaining tmp files until script ends
+		}else{
+			$this->bringTmpFileInPlace($tmpFilePath, $overwrite);
+		}
 		$this->logInfo('file: '.$targetFilePath.' successfully restored');
 
 		return true;
@@ -721,11 +737,11 @@ class Ric_Client_Client {
 	public function getTmpFilePath($defaultFilePath = null){
 		$filePath = $defaultFilePath;
 		if( $filePath===null ){
-			$filePath = $this->tmpFileDir;
+			$filePath = rtrim($this->tmpFileDir, DIRECTORY_SEPARATOR);
 			if( $filePath=='' ){
 				$filePath = sys_get_temp_dir();
 			}
-			$filePath .= '/_'.__CLASS__;
+			$filePath .= DIRECTORY_SEPARATOR.'_'.__CLASS__;
 		}
 		$filePath .= '__temp__'.uniqid('', true);
 		$this->tmpFilePaths[] = $filePath;

@@ -28,14 +28,15 @@ use ric help {command} for command details
 
 you can define every option as environment variable with prefix "ric" (server -> ricServer)
 
-* --configFile configFilePath (you can define all options in this config file, one per line "option: value" ...
+* --configFile={configFilePath} (you can define all options in this config file, one per line "option: value" ...
 * --verbose show debug details default: false
 * --quite don't print anything except failures default: false
-* --auth {token}  default: ENV ricAuth -> ''
-* --authFile {tokenFilePath} read auth from file default: ENV ricAuthFile -> ''
-* --server RicServer default: ENV ricServer -> ''
-* --prefix prefix all target/backup names default: ENV ricPrefix -> ''
-* --ignoreVersion ignore no matching server version errors
+* --auth={tokenString}  default: ENV ricAuth -> ''
+* --authFile={tokenFilePath} read auth from file default: ENV ricAuthFile -> ''
+* --server={host} RicServer default: ENV ricServer -> ''
+* --prefix={prefix} all target/backup names default: ENV ricPrefix -> ''
+* --ignoreVersion={version} ignore no matching server version errors
+* --tempDir={path} if given this is usend instead of System-Temp-Dir AND it forces "restore" to download to tmpdDir (and decrypt in tmpDir) and then copy to target location instead of create a tmpFile at target location und rename it (use this if you have a slow target drive like usb stick)
 
 the configuration order is
 * use commandline option if present,

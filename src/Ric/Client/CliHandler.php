@@ -28,6 +28,7 @@ class Ric_Client_CliHandler {
 			$client = new Ric_Client_Client($cli->getOption('server'), $auth);
 			$client->setDebug($cli->getOption('verbose'));
 			$client->setQuiet($cli->getOption('quiet'));
+			$client->setTmpDir($cli->getOption('tempDir'));
 			$client->setCheckVersion(!$cli->getOption('ignoreVersion'));
 			switch($command){
 				case 'backup':
