@@ -2,6 +2,14 @@
 
 
 /**
+ * Attention if you Update from Waps_Rest_Client
+ *
+ * check
+ * CURLOPT_TIMEOUT = 0   deactivate
+ * CURLOPT_LOW_SPEED_LIMIT
+ * CURLOPT_LOW_SPEED_TIME
+ *
+ *
  * Class Ric_Rest_Client
  * - use $header to send AND RECEIVE headers (status Code is added as header "Http-Code")
  *   $headers=['User-Agent' => 'Mozilla/5.0'];Ric_Rest_Client::post($apiUrl, $data, $headers, $curl);$status = $headers['Http-Code']
@@ -19,14 +27,15 @@
 class Ric_Rest_Client {
 
 	const HEADER__HTTP_CODE = 'Http-Code';
-	static protected $curlHandle = null;
-
 	/**
 	 * @var array
 	 */
 	static protected $defaultCurlOptions = array(
+			CURLOPT_TIMEOUT         => 0,  // no (static) timeout
+			CURLOPT_LOW_SPEED_LIMIT => 1024, // bytes in ...
+			CURLOPT_LOW_SPEED_TIME  => 180,   // seconds
+
 			CURLOPT_CONNECTTIMEOUT       => 10,
-			CURLOPT_TIMEOUT              => 60,
 			CURLOPT_FOLLOWLOCATION       => true,
 			CURLOPT_MAXREDIRS            => 10,
 			CURLOPT_DNS_USE_GLOBAL_CACHE => true,
@@ -34,6 +43,8 @@ class Ric_Rest_Client {
 			CURLOPT_FTP_USE_EPSV         => false, // don't use extended passive mode -> better compatibility
 			CURLOPT_SSL_VERIFYPEER       => true, // verify the peer's SSL certificate
 	);
+
+	static protected $curlHandle = null;
 
 
 	/**
