@@ -37,6 +37,7 @@ you can define every option as environment variable with prefix "ric" (server ->
 * --prefix={prefix} all target/backup names default: ENV ricPrefix -> ''
 * --ignoreVersion={version} ignore no matching server version errors
 * --tempDir={path} if given this is usend instead of System-Temp-Dir AND it forces "restore" to download to tmpdDir (and decrypt in tmpDir) and then copy to target location instead of create a tmpFile at target location und rename it (use this if you have a slow target drive like usb stick)
+* --timeout={seconds} sets curl timeout (be aware that for GB-Files the backup process can take plenty of minutes) default is no timeout
 
 the configuration order is
 * use commandline option if present,

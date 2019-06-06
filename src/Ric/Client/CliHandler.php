@@ -30,6 +30,7 @@ class Ric_Client_CliHandler {
 			$client->setQuiet($cli->getOption('quiet'));
 			$client->setTmpDir($cli->getOption('tempDir'));
 			$client->setCheckVersion(!$cli->getOption('ignoreVersion'));
+			Ric_Rest_Client::setDefaultCurlOption(CURLOPT_TIMEOUT, $cli->getOption('timeout')); // set or remove (if not given) timeout
 			switch($command){
 				case 'backup':
 					$msg = self::commandBackup($client, $cli);

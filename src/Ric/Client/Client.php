@@ -11,7 +11,7 @@
 class Ric_Client_Client {
 
 	const MIN_SERVER_VERSION = '0.8.0'; // server needs to be on this or a higher version, BUT on the same MAJOR version  ok: 1.4.0 < 1.8.3  but fail:  1.4.0 < 2.3.0  because client is to old
-	const CLIENT_VERSION = '0.7.0'; //
+	const CLIENT_VERSION = '0.8.0'; //
 
 	const MAGIC_DELETION_TIMESTAMP = 1422222222; // 2015-01-25 22:43:42
 
@@ -323,10 +323,13 @@ class Ric_Client_Client {
 		// get
 		$oFH = fopen($tmpFilePath, 'wb+');
 		$this->logDebug('get: '.$fileUrl);
+		$startTime = microtime(true);
 		Ric_Rest_Client::get($fileUrl, [], $headers, $oFH);
+		$runTime = microtime(true) - $startTime;
 		$sha1 = (isset($headers['ETag']) ? $headers['ETag'] : null);
 		$this->checkServerResponse('', $headers, $tmpFilePath);
-		$this->logDebug('downloaded as tmpFile: '.$tmpFilePath.' - '.filesize($tmpFilePath).' Bytes');
+		$fileSize = filesize($tmpFilePath);
+		$this->logDebug('downloaded as tmpFile: '.$tmpFilePath.' - '.$fileSize.' Bytes '.round($fileSize / $runTime / 1024 / 1024, 3).' MB/s');
 		$this->logDebug('check sha1 of '.$tmpFilePath.' expected: '.$sha1);
 		$sha1_file = sha1_file($tmpFilePath);
 		if( $sha1!=$sha1_file ){
@@ -339,11 +342,18 @@ class Ric_Client_Client {
 			$tmpFilePath = $this->getDecryptedFilePath($tmpFilePath, $password); // will create another __temp__ file but removes this inline, the resulting filePath should be the same as given $tmpFilePath
 		}
 		if( $this->tmpFileDir ){
-			// we must copy the file to target partion
-			$this->logDebug('copy to target location: '.$tmpFilePath.' > '.$targetFilePath);
-			if( !copy($tmpFilePath, $targetFilePath) ){
+			// we must copy the file to target partion, but we use a tmpFile to keep the existing file until we the new one is copied
+			$targetTempFilePath = $this->getTmpFilePath($targetFilePath);
+			$this->logDebug('copy to target location as as tmpFile '.$targetTempFilePath);
+			$startTime = microtime(true);
+			if( !copy($tmpFilePath, $targetTempFilePath) ){
 				throw new RuntimeException('copy to '.$targetFilePath.' failed');
 			}
+			$runTime = microtime(true) - $startTime;
+			$this->logDebug('copied in '.round($runTime, 1).'s with '.round($fileSize / $runTime / 1024 / 1024, 3).' MB/s');
+			$this->logDebug('finally rename to '.basename($targetFilePath));
+			$this->bringTmpFileInPlace($targetTempFilePath, $overwrite);
+			$this->logDebug('delete tmpFile: '.$tmpFilePath);
 			unlink($tmpFilePath); // we delete here, to prevent zilloins remaining tmp files until script ends
 		}else{
 			$this->bringTmpFileInPlace($tmpFilePath, $overwrite);
@@ -630,6 +640,7 @@ class Ric_Client_Client {
 	 * @return array
 	 */
 	public function getInventory($pattern){
+		$result = [];
 		$files = $this->listFiles($pattern);
 		foreach( $files as $fileName ){
 			$versions = $this->versions($fileName);
@@ -677,18 +688,28 @@ class Ric_Client_Client {
 			$fileNumber++;
 			$fileName = $fileEntry['file'];
 			$localFile = $targetDir.$fileName;
+			$localFileSize = 0;
+			$localFileTimestamp = 0;
+			if( file_exists($localFile) ){
+				$localFileSize = filesize($localFile);
+				$localFileTimestamp = filemtime($localFile);
+			}
 
-			$this->logInfo(str_pad($fileNumber, strlen($fileCount), 0, STR_PAD_LEFT).'/'.$fileCount.' '.$fileName.' '.$fileEntry['size'].' Byte '.date('Y-m-d H:i:s', $fileEntry['time']));
+			$this->logInfo(str_pad($fileNumber, strlen($fileCount), 0, STR_PAD_LEFT).'/'.$fileCount.' '.$fileName.' server: '.$fileEntry['size'].' Byte '.date('Y-m-d H:i:s', $fileEntry['time']));
 
-			if( file_exists($localFile) AND filesize($localFile)==$fileEntry['size'] AND sha1_file($localFile)==$fileEntry['version'] ){ // check if file already exists and is uptodate
-				if( filemtime($localFile)===$fileEntry['time'] ){
+			if( $localFileTimestamp>0 AND $localFileSize==$fileEntry['size'] AND sha1_file($localFile)==$fileEntry['version'] ){ // check if file already exists and is uptodate, check first szie then (if necessary check sha1)
+				if( $localFileTimestamp===$fileEntry['time'] ){
 					$this->logInfo($indent.' is already on latest version');
 				}else{
 					touch($localFile, $fileEntry['time']); // is in sync, only update modification date
 					$this->logInfo($indent.' file not changed, file time updated to '.date('Y-m-d H:i:s', $fileEntry['time']));
 				}
 			}else{
-				$this->logInfo($indent.' update to new version ('.date('Y-m-d H:i:s', $fileEntry['time']).') - '.$fileEntry['size'].' Byte');
+				if( $localFileTimestamp==0 ){
+					$this->logInfo($indent.' does not exists locally, get file from server');
+				}else{
+					$this->logInfo($indent.' update local version ('.date('Y-m-d H:i:s', $localFileTimestamp).' - '.$localFileSize['size'].' Byte)');
+				}
 				$quiet = $this->quiet;
 				$this->quiet = true; // quiete restore
 				$this->restore($fileName, $localFile); // overwrite active

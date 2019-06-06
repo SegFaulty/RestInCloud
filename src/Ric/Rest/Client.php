@@ -2,14 +2,6 @@
 
 
 /**
- * Attention if you Update from Waps_Rest_Client
- *
- * check
- * CURLOPT_TIMEOUT = 0   deactivate
- * CURLOPT_LOW_SPEED_LIMIT
- * CURLOPT_LOW_SPEED_TIME
- *
- *
  * Class Ric_Rest_Client
  * - use $header to send AND RECEIVE headers (status Code is added as header "Http-Code")
  *   $headers=['User-Agent' => 'Mozilla/5.0'];Ric_Rest_Client::post($apiUrl, $data, $headers, $curl);$status = $headers['Http-Code']
@@ -23,19 +15,19 @@
  * - use $outputFileHandle to store the response content in a file
  *   $oFH = fopen('response.html', 'w+); Ric_Rest_Client::get($url, [], [], null, $oFh);fclose($oFH);
  * - request (and transparently decodes) with Accept-Encoding => deflate, gzip (if available, curl automatic)
+ * - default timeout is 60s change with Ric_Rest_Client::setDefaultCurlOption(CURLOPT_TIMEOUT,null)
  */
 class Ric_Rest_Client {
 
 	const HEADER__HTTP_CODE = 'Http-Code';
+	static protected $curlHandle = null;
+
 	/**
 	 * @var array
 	 */
 	static protected $defaultCurlOptions = array(
-			CURLOPT_TIMEOUT         => 0,  // no (static) timeout
-			CURLOPT_LOW_SPEED_LIMIT => 1024, // bytes in ...
-			CURLOPT_LOW_SPEED_TIME  => 180,   // seconds
-
 			CURLOPT_CONNECTTIMEOUT       => 10,
+			CURLOPT_TIMEOUT              => 60,
 			CURLOPT_FOLLOWLOCATION       => true,
 			CURLOPT_MAXREDIRS            => 10,
 			CURLOPT_DNS_USE_GLOBAL_CACHE => true,
@@ -44,8 +36,33 @@ class Ric_Rest_Client {
 			CURLOPT_SSL_VERIFYPEER       => true, // verify the peer's SSL certificate
 	);
 
-	static protected $curlHandle = null;
+	/**
+	 * return single or all defaultOptions
+	 * @param string $curlOpt // CURLOPT_*
+	 * @return mixed|null
+	 */
+	static public function getDefaultCurlOptions($curlOpt = null){
+		if( $curlOpt===null ){
+			return self::$defaultCurlOptions;
+		}
+		if( isset(self::$defaultCurlOptions[$curlOpt]) ){
+			return self::$defaultCurlOptions[$curlOpt];
+		}
+		return null;
+	}
 
+	/**
+	 * set (or if value===null remove) defaultOption
+	 * @param string $curlOpt // CURLOPT_*
+	 * @param mixed $value
+	 */
+	static public function setDefaultCurlOption($curlOpt, $value){
+		if( $value===null ){
+			unset(self::$defaultCurlOptions[$curlOpt]);
+		}else{
+			self::$defaultCurlOptions[$curlOpt] = $value;
+		}
+	}
 
 	/**
 	 * @param string $url
