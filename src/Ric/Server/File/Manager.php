@@ -44,10 +44,11 @@ class Ric_Server_File_Manager {
 	/**
 	 * @param string $fileName
 	 * @param string $tmpFilePath
-	 * @throws RuntimeException
+	 * @param int|null $timestamp // optionally set timestamp
 	 * @return string version
+	 * @throws RuntimeException
 	 */
-	public function storeFile($fileName, $tmpFilePath){
+	public function storeFile($fileName, $tmpFilePath, $timestamp = null){
 
 		// get correct filePath
 		$version = sha1_file($tmpFilePath);
@@ -61,7 +62,11 @@ class Ric_Server_File_Manager {
 			}
 		}
 
-		if( !rename($tmpFilePath, $filePath) ){
+		if( rename($tmpFilePath, $filePath) ){
+			if( $timestamp ){
+				touch($filePath, $timestamp);
+			}
+		}else{
 			$version = '';
 		}
 		return $version;

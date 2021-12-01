@@ -5,7 +5,7 @@
  */
 class Ric_Server_Server {
 
-	const VERSION = '0.8.0'; // dont forget to change the client(s) version | if you break api backward compatibility inc the major version | all clients will fail until they updated
+	const VERSION = '0.8.1'; // dont forget to change the client(s) version | if you break api backward compatibility inc the major version | all clients will fail until they updated
 
 	/**
 	 * @var Ric_Server_ConfigManager
@@ -56,37 +56,37 @@ class Ric_Server_Server {
 	 * @throws RuntimeException
 	 */
 	public function saveFileInCloud($tmpFilePath, $fileName, $retention, $timestamp, $noSync){
-		$result = [
-				'status' => 'OK',
-				'fileName' => $fileName,
-				'size' => filesize($tmpFilePath),
-		];
+		$filesize = filesize($tmpFilePath);
 
-		$version = $this->fileManager->storeFile($fileName, $tmpFilePath);
-		$result['version'] = $version;
+		$result = [
+				'status'    => 'OK',
+				'fileName'  => $fileName,
+				'size'      => $filesize,
+				'timestamp' => $timestamp,
+		];
 
 		// check quota
 		if( $this->configManager->getValue('quota')>0 ){
-			if( $this->fileManager->getDirectorySize()>$this->configManager->getValue('quota') * 1024 * 1024 ){
-				$filePath = $this->fileManager->getFilePath($fileName, $version);
-				unlink($filePath);
+			if( $this->fileManager->getDirectorySize() + $filesize>$this->configManager->getValue('quota') * 1024 * 1024 ){
 				throw new RuntimeException('Quota exceeded!', 507);
 			}
 		}
 
-		// set timestamp
-		$filePath = $this->fileManager->getFilePath($fileName, $version);
-		$this->fileManager->updateTimestamp($fileName, $version, $timestamp);
-		$result['timestamp'] = $timestamp;
-		// replicate
+		// store file locally
+		$version = $this->fileManager->storeFile($fileName, $tmpFilePath, $timestamp);
+		$result['version'] = $version;
+
+		# delete outimed versions
+		$result['versions'] = $this->executeRetention($fileName, $retention);
+
+		// replicate to cluster server
 		if( !$noSync ){
+			$filePath = $this->fileManager->getFilePath($fileName, $version);
 			$syncResult = $this->clusterManager->syncFile($fileName, $filePath, $retention);
 			if( $syncResult!='' ){
 				throw new RuntimeException('sync uploaded file failed: '.$syncResult.' (file is locally saved!)');
 			}
 		}
-		# delete outimed version
-		$result['versions'] = $this->executeRetention($fileName, $retention);
 
 		$response = new Ric_Server_Response();
 		$response->addHeader('HTTP/1.1 201 Created', 201);
