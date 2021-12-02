@@ -23,6 +23,11 @@ class Ric_Server_Server {
 	protected $clusterManager;
 
 	/**
+	 * @var Ric_Server_Logger
+	 */
+	protected $logger = null;
+
+	/**
 	 * construct
 	 * @param Ric_Server_ConfigManager $configManager
 	 * @throws RuntimeException
@@ -35,6 +40,7 @@ class Ric_Server_Server {
 		}
 		$this->fileManager = new Ric_Server_File_Manager($this->configManager->getValue('storeDir'));
 		$this->clusterManager = new Ric_Server_Cluster_Manager($this->configManager);
+		$this->logger = new Ric_Server_Logger($configManager, '[SERVER]');
 
 		// set tmp dir to store dir, to create the uploaded files on the store drive (to avoid copying to final destination, they will be renamed)
 		$this->setTmpDir($this->configManager->getValue('storeDir'));
@@ -58,6 +64,8 @@ class Ric_Server_Server {
 	public function saveFileInCloud($tmpFilePath, $fileName, $retention, $timestamp, $noSync){
 		$filesize = filesize($tmpFilePath);
 
+		$this->logger->debug(__METHOD__.':'.' file: '.$fileName.' size: '.$filesize.' retention: '.$retention.' timestamp: '.$timestamp.' noSync: '.$noSync);
+
 		$result = [
 				'status'    => 'OK',
 				'fileName'  => $fileName,
@@ -67,13 +75,17 @@ class Ric_Server_Server {
 
 		// check quota
 		if( $this->configManager->getValue('quota')>0 ){
-			if( $this->fileManager->getDirectorySize() + $filesize>$this->configManager->getValue('quota') * 1024 * 1024 ){
+			$storeSize = $this->fileManager->getDirectorySize();
+			$quotaBytes = $this->configManager->getValue('quota') * 1024 * 1024;
+			if( $storeSize + $filesize>$quotaBytes ){
+				$this->logger->warn(__METHOD__.':'.'Quota exceeded! store: '.$storeSize.' + file: '.$filesize.' > quota: '.$quotaBytes);
 				throw new RuntimeException('Quota exceeded!', 507);
 			}
 		}
 
 		// store file locally
 		$version = $this->fileManager->storeFile($fileName, $tmpFilePath, $timestamp);
+		$this->logger->warn(__METHOD__.':'.'Quota exceeded! store: '.$storeSize.' + file: '.$filesize.' > quota: '.$quotaBytes);
 		$result['version'] = $version;
 
 		# delete outimed versions
@@ -82,11 +94,16 @@ class Ric_Server_Server {
 		// replicate to cluster server
 		if( !$noSync ){
 			$filePath = $this->fileManager->getFilePath($fileName, $version);
+			$this->logger->debug(__METHOD__.':'.' syncFile file: '.$fileName);
 			$syncResult = $this->clusterManager->syncFile($fileName, $filePath, $retention);
 			if( $syncResult!='' ){
-				throw new RuntimeException('sync uploaded file failed: '.$syncResult.' (file is locally saved!)');
+				$msg = 'sync uploaded file failed: '.$syncResult.' (file is locally saved!)';
+				$this->logger->warn(__METHOD__.':'.$msg);
+				throw new RuntimeException($msg);
 			}
 		}
+
+		$this->logger->info(__METHOD__.':'.' successfully stored: '.$fileName.' size: '.$filesize.' retention: '.$retention.' timestamp: '.$timestamp.' noSync: '.$noSync);
 
 		$response = new Ric_Server_Response();
 		$response->addHeader('HTTP/1.1 201 Created', 201);
@@ -114,7 +131,9 @@ class Ric_Server_Server {
 			if( !$noSync ){
 				$syncResult = $this->clusterManager->syncFile($fileName, $filePath, $retention = Ric_Server_Definition::RETENTION__ALL);
 				if( $syncResult!='' ){
-					throw new RuntimeException('sync file failed: '.$syncResult);
+					$msg = 'sync file failed: '.$syncResult;
+					$this->logger->info(__METHOD__.':'.$msg);
+					throw new RuntimeException($msg);
 				}
 			}
 			$result['status'] = 'OK';
@@ -137,7 +156,9 @@ class Ric_Server_Server {
 		$filePath = $this->fileManager->getFilePath($fileName, $version);
 		$syncResult = $this->clusterManager->pushFileToServer($server, $fileName, $filePath, Ric_Server_Definition::RETENTION__ALL);
 		if( $syncResult!='' ){
-			throw new RuntimeException('pushFileToServer failed: '.$syncResult);
+			$msg = 'pushFileToServer failed: '.$syncResult;
+			$this->logger->info(__METHOD__.':'.$msg);
+			throw new RuntimeException($msg);
 		}
 		$result['status'] = 'OK';
 		$response = new Ric_Server_Response();
@@ -158,7 +179,9 @@ class Ric_Server_Server {
 		if( !$noSync ){
 			$deleteCount += $this->clusterManager->deleteFile($fileName, $version, $error);
 			if( $error ){
-				throw new RuntimeException('delete file from cluster failed: '.$error.' files deleted: '.$deleteCount, 500);
+				$msg = 'delete file from cluster failed: '.$error.' files deleted: '.$deleteCount;
+				$this->logger->info(__METHOD__.':'.$msg);
+				throw new RuntimeException($msg, 500);
 			}
 		}
 		$response = new Ric_Server_Response();
@@ -552,14 +575,18 @@ class Ric_Server_Server {
 		$wantedVersions = Ric_Server_Helper_RetentionCalculator::getVersionsForRetentionString($allVersions, $retention);
 		$unwantedVersions = array_diff(array_keys($allVersions), array_values($wantedVersions));
 		if( count($unwantedVersions)>=count($allVersions) ){
-			throw new RuntimeException('count($unwantedVersions)>=$allVersions this must be really really wrong! retention:'.$retention);
+			$msg = 'count($unwantedVersions)>=$allVersions this must be really really wrong! retention:'.$retention;
+			$this->logger->info(__METHOD__.':'.$msg);
+			throw new RuntimeException($msg);
 		}
 		// ensure we are not deleting the latest/current/newest version
 		arsort($allVersions);
 		$currentVersion = key($allVersions);
 		foreach( $unwantedVersions as $version ){
 			if( $version==$currentVersion ){
-				throw new RuntimeException('whoa we will delete the newest version this must be really really wrong! retention:'.$retention);
+				$msg = 'whoa we will delete the newest version this must be really really wrong! retention:'.$retention;
+				$this->logger->info(__METHOD__.':'.$msg);
+				throw new RuntimeException($msg);
 			}
 			$this->fileManager->deleteFile($fileName, $version);
 		}
