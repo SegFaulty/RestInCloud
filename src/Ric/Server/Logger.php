@@ -66,7 +66,7 @@ class Ric_Server_Logger {
 				$logDir = rtrim($logDir, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR;
 				$baseFileName = $logDir.'ricServerLog-'.$this->configManager->getValue('serverId');
 				$logfilePath = $baseFileName.'-'.date('Ymd').'.log';
-				$message = $this->msgPrefix.'['.$level.']'.$message;
+				$message = date('Y-m-d H:i:s').':'.$this->msgPrefix.'['.$level.']'.$message;
 				$garbageCollectionDeletedFiles = null;
 				if( !file_exists($logfilePath) ){ // a new day, lets start the garbage collection
 					// garbage collection
@@ -81,7 +81,7 @@ class Ric_Server_Logger {
 					}
 				}
 				if( $garbageCollectionDeletedFiles!==null and $this->configManager->getValue('logLevel')=='debug' ){
-					$message = $this->msgPrefix.'[debug]'.'dailyGarbageCollection deleted logFiles: '.$garbageCollectionDeletedFiles."\n".$message;
+					$message = date('Y-m-d H:i:s').':'.$this->msgPrefix.'[debug]'.'dailyGarbageCollection deleted logFiles: '.$garbageCollectionDeletedFiles."\n".$message;
 				}
 				file_put_contents($logfilePath, $message."\n", FILE_APPEND);
 			} // loglevel not reached
