@@ -3,15 +3,18 @@
 class Ric_Server_ConfigManager {
 
 	protected $defaultConfig = [
-			'hostPort'    => '', // if empty use autoDetectSource host with default port
-			'storeDir'    => '/nonExistingDir/ric/',
-			'quota'       => 0,
-			'servers'     => [],
-			'adminToken'  => 'admin',
-			'writerToken' => 'writer',
-			'readerToken' => '',
+			'hostPort'         => '', // if empty use autoDetectSource host with default port
+			'storeDir'         => '/nonExistingDir/ric/',
+			'quota'            => 0,
+			'servers'          => [],
+			'adminToken'       => 'admin',
+			'writerToken'      => 'writer',
+			'readerToken'      => '',
 			'defaultRetention' => Ric_Server_Definition::RETENTION__LAST3,
-			'serverId'    => '',
+			'serverId'         => '',
+			'logDir'           => '', // if empty no log is written
+			'logLevel'         => 'warn', // debug,info,warn,error
+			'logRetentionDays' => '10', // days to keep the daily logfiles
 	];
 	protected $config = [];
 
@@ -77,7 +80,7 @@ class Ric_Server_ConfigManager {
 	/**
 	 * set, update, remove (null) a value in runtimeConfig (and config)
 	 * @param string $key
-	 * @param string $value
+	 * @param mixed $value
 	 */
 	public function setRuntimeValue($key, $value){
 		$runtimeConfig = [];

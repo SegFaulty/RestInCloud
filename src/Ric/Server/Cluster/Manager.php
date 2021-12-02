@@ -15,11 +15,17 @@ class Ric_Server_Cluster_Manager {
 	protected $configManager;
 
 	/**
+	 * @var Ric_Server_Logger
+	 */
+	protected $logger = null;
+
+	/**
 	 * Ric_Server_Cluster_Manager constructor.
 	 * @param Ric_Server_ConfigManager $configManager
 	 */
 	public function __construct(Ric_Server_ConfigManager $configManager){
 		$this->configManager = $configManager;
+		$this->logger = new Ric_Server_Logger($configManager, '[CLUSTER]');
 	}
 
 	/**
@@ -30,15 +36,19 @@ class Ric_Server_Cluster_Manager {
 		$response = Ric_Rest_Client::get('http://'.$server.'/', ['info' => 1, 'token' => $this->configManager->getValue('readerToken')]);
 		$info = json_decode($response, true);
 		if( !H::getIKS($info, 'serverTimestamp') ){
+			$this->logger->error(__METHOD__.':'.'server is not responding properly: '.$response);
 			throw new RuntimeException('server is not responding properly', 400);
 		}
 		$remoteServerId = $info['serverId'];
 		if( $remoteServerId=='' ){
+			$this->logger->error(__METHOD__.':'.'server ('.$server.')has no serverId');
 			throw new RuntimeException('server ('.$server.')has no serverId', 400);
 		}
 		$myServerId = $this->configManager->getValue('serverId');
 		if( $remoteServerId==$myServerId ){
-			throw new RuntimeException('whoaa, the server you want to add ('.$server.') is the same as me('.$this->getOwnHostPort().') because we both have the same serverId ('.$myServerId.')', 400);
+			$msg = 'whoaa, the server you want to add ('.$server.') is the same as me('.$this->getOwnHostPort().') because we both have the same serverId ('.$myServerId.')';
+			$this->logger->error(__METHOD__.':'.$msg);
+			throw new RuntimeException($msg, 400);
 		}
 		$servers = $this->configManager->getValue('servers');
 		if( !in_array($server, $servers) ){
@@ -69,12 +79,15 @@ class Ric_Server_Cluster_Manager {
 			foreach( $serversToJoin as $clusterServer ){
 				$response = Ric_Rest_Client::post('http://'.$clusterServer.'/', ['action' => 'addServer', 'addServer' => $ownServer, 'token' => $this->configManager->getValue('adminToken')]);
 				if( !$this->isResponseStatusOk($response) ){
-					throw new RuntimeException('join cluster failed! addServer to '.$clusterServer.' failed! ['.$response.'] Inconsitent cluster state! I\'m added to this servers (please remove me): '.join('; ', $joinedServers), 400);
+					$msg = 'join cluster failed! addServer to '.$clusterServer.' failed! ['.$response.'] Inconsitent cluster state! I\'m added to this servers (please remove me): '.join('; ', $joinedServers);
+					$this->logger->error(__METHOD__.':'.$msg);
+					throw new RuntimeException($msg, 400);
 				}
 				$joinedServers[] = $clusterServer;
 			}
 			$this->configManager->setRuntimeValue('servers', $serversToJoin);
 		}else{
+			$this->logger->error(__METHOD__.':'.'cluster node is not responding properly: '.$response);
 			throw new RuntimeException('cluster node is not responding properly', 400);
 		}
 	}
@@ -99,6 +112,7 @@ class Ric_Server_Cluster_Manager {
 		$this->configManager->setRuntimeValue('servers', []);
 
 		if( $errorMsg!='' ){
+			$this->logger->error(__METHOD__.':'.'leaveCluster failed! '.$errorMsg.' Inconsitent cluster state! (please remove me manually) succesfully removed from: '.join('; ', $leavedServers));
 			throw new RuntimeException('leaveCluster failed! '.$errorMsg.' Inconsitent cluster state! (please remove me manually) succesfully removed from: '.join('; ', $leavedServers), 400);
 		}
 	}
@@ -112,7 +126,9 @@ class Ric_Server_Cluster_Manager {
 	public function removeFromCluster($server){
 		list($leavedServers, $errorMsg) = $this->removeServerFromCluster($server);
 		if( $errorMsg!='' ){
-			throw new RuntimeException('removeFromCluster failed! '.$errorMsg.' Inconsitent cluster state! (please remove me manually) succesfully removed from: '.join('; ', $leavedServers), 400);
+			$msg = 'removeFromCluster failed! '.$errorMsg.' Inconsitent cluster state! (please remove me manually) succesfully removed from: '.join('; ', $leavedServers);
+			$this->logger->error(__METHOD__.':'.$msg);
+			throw new RuntimeException($msg, 400);
 		}
 	}
 
@@ -130,6 +146,7 @@ class Ric_Server_Cluster_Manager {
 			$response = Ric_Rest_Client::post('http://'.$clusterServer.'/', ['action' => 'removeServer', 'removeServer' => $server, 'token' => $this->configManager->getValue('adminToken')]);
 			if( !$this->isResponseStatusOk($response) ){
 				$errorMsg .= 'removeServer failed from '.$clusterServer.' failed! ['.$response.']';
+				$this->logger->error(__METHOD__.':'.$errorMsg);
 			}else{
 				$leftServers[] = $clusterServer;
 			}
@@ -187,10 +204,13 @@ class Ric_Server_Cluster_Manager {
 	public function syncFile($fileName, $filePath, $retention){
 		$result = '';
 		$sha1 = sha1_file($filePath);
+		$this->logger->debug(__METHOD__.':'.'file: '.$fileName.' retention: '.$retention.' sha1: '.$sha1);
 		foreach( $this->configManager->getValue('servers') as $server ){
 			try{
+				$this->logger->debug(__METHOD__.':'.'pushFileToServer: '.$server.' '.$fileName.' '.$retention.' '.$sha1);
 				$result .= $this->pushFileToServer($server, $fileName, $filePath, $retention, $sha1);
 			}catch(Exception $e){
+				$this->logger->error(__METHOD__.':'.'failed pushFileToServer: '.$server.' '.$fileName.' '.$retention.' '.$sha1.' Error:'.$e->getMessage());
 				$result .= 'failed to upload to '.$server.PHP_EOL;
 			}
 		}
@@ -218,11 +238,17 @@ class Ric_Server_Cluster_Manager {
 		$response = Ric_Rest_Client::post($url);
 		if( !$this->isResponseStatusOk($response) ){
 			// refresh failed, upload
+			$this->logger->debug(__METHOD__.':'.'refreshFile not ok, push file to server: '.$server.' file: '.$fileName.' retention:'.$retention.' sha1:'.$sha1);
 			$url = $serverUrl.$fileName.'?sha1='.$sha1.'&timestamp='.$timestamp.'&retention='.$retention.'&noSync=1&token='.$this->configManager->getValue('writerToken');
 			$response = Ric_Rest_Client::putFile($url, $filePath);
 			if( !$this->isResponseStatusOk($response) ){
 				$result = 'failed to upload '.basename($filePath).' to '.$server.' :'.$response.PHP_EOL;
+				$this->logger->error(__METHOD__.':'.'failed to push file '.$server.' file: '.$fileName.' retention:'.$retention.' sha1:'.$sha1.' response: '.$response);
+			}else{
+				$this->logger->info(__METHOD__.':'.'file successfully pushed server: '.$server.' file: '.$fileName.' retention:'.$retention.' sha1:'.$sha1);
 			}
+		}else{
+			$this->logger->debug(__METHOD__.':'.'refreshFile was ok, no upload: server: '.$server.' file: '.$fileName.' retention:'.$retention.' sha1:'.$sha1);
 		}
 		return $result;
 	}
@@ -247,9 +273,11 @@ class Ric_Server_Cluster_Manager {
 					$deletedCount += $serverResult['filesDeleted'];
 				}else{
 					$error = trim($error."\n".'failed at delete from '.$server.' :'.$serverResponse);
+					$this->logger->error(__METHOD__.':'.$error);
 				}
 			}catch(Exception $e){
 				$error = trim($error."\n".'failed to delete from '.$server.'!');
+				$this->logger->error(__METHOD__.':'.$error.' msg: '.$e->getMessage());
 			}
 		}
 		return $deletedCount;
@@ -275,7 +303,9 @@ class Ric_Server_Cluster_Manager {
 				$this->configManager->setRuntimeValue('hostPort', $hostName);
 			}
 			if( empty($hostName) ){
-				throw new RuntimeException('wrong hostname: ['.$hostName.'] - hostPort in config is missing and "hostname"-command returns not an host name with ".", and autodetection faileds $_SERVER[HTTP_HOST], so can not perform remote operation, please set "hostPort" in config or hostname on host to a reachable value (FQH: ric.example.com:3333)');
+				$msg = 'wrong hostname: ['.$hostName.'] - hostPort in config is missing and "hostname"-command returns not an host name with ".", and autodetection faileds $_SERVER[HTTP_HOST], so can not perform remote operation, please set "hostPort" in config or hostname on host to a reachable value (FQH: ric.example.com:3333)';
+				$this->logger->error(__METHOD__.':'.$msg);
+				throw new RuntimeException($msg);
 			}
 		}
 		return $hostName;

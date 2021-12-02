@@ -4,5 +4,8 @@
   "quota": 10000,
   "adminToken": "yourAdminToken",
   "writerToken": "yourWriterToken",
-  "readerToken": "yourReaderToken"
+  "readerToken": "yourReaderToken",
+  "logDir": "",
+  "logLevel": "warn",
+  "logRetentionDays": "10"
 }

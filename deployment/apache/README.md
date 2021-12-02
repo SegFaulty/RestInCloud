@@ -17,7 +17,7 @@ create data dir an set permissions
 	chown www-data.www-data var/ -R
 
 
-change: tokens, path, quota
+change: tokens, path, quota, logging
 
     vi config/config.json
 
