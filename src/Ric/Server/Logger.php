@@ -70,6 +70,7 @@ class Ric_Server_Logger {
 				$garbageCollectionDeletedFiles = null;
 				if( !file_exists($logfilePath) ){ // a new day, lets start the garbage collection
 					// garbage collection
+					$garbageCollectionDeletedFiles = 0;
 					$retentionTimestamp = time() - 86400 * max(1, $this->configManager->getValue('logRetentionDays'));
 					foreach( glob($baseFileName.'*') as $fileName ){
 						$filePath = $logDir.$fileName;
