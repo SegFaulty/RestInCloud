@@ -63,7 +63,7 @@ class Ric_Server_Logger {
 		$logDir = $this->configManager->getValue('logDir');
 		if( $logDir ){ // else no logging
 			if( $logLevels[$this->configManager->getValue('logLevel')]>=$logLevels[$level] ){
-				$logDir = rtrim($logDir, PATH_SEPARATOR).PATH_SEPARATOR;
+				$logDir = rtrim($logDir, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR;
 				$baseFileName = $logDir.'ricServerLog-'.$this->configManager->getValue('serverId');
 				$logfilePath = $baseFileName.'-'.date('Ymd').'.log';
 				$message = $this->msgPrefix.'['.$level.']'.$message;
