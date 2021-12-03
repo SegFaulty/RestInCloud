@@ -72,8 +72,7 @@ class Ric_Server_Logger {
 					// garbage collection
 					$garbageCollectionDeletedFiles = 0;
 					$retentionTimestamp = time() - 86400 * max(1, $this->configManager->getValue('logRetentionDays'));
-					foreach( glob($baseFileName.'*') as $fileName ){
-						$filePath = $logDir.$fileName;
+					foreach( glob($baseFileName.'*') as $filePath ){
 						if( filemtime($filePath)<$retentionTimestamp ){
 							unlink($filePath);
 							$garbageCollectionDeletedFiles++;
