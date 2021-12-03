@@ -11,7 +11,7 @@
 class Ric_Client_Client {
 
 	const MIN_SERVER_VERSION = '0.8.0'; // server needs to be on this or a higher version, BUT on the same MAJOR version  ok: 1.4.0 < 1.8.3  but fail:  1.4.0 < 2.3.0  because client is to old
-	const CLIENT_VERSION = '0.8.0'; //
+	const CLIENT_VERSION = '0.8.1'; //
 
 	const MAGIC_DELETION_TIMESTAMP = 1422222222; // 2015-01-25 22:43:42
 
@@ -252,7 +252,9 @@ class Ric_Client_Client {
 			}
 			$fileUrl = $this->buildUrl($targetFileName, '', $params);
 			$headers = [];
-			$response = Ric_Rest_Client::putFile($fileUrl, $filePath, $headers);
+			$curlOptions = [];
+			$curlOptions[CURLOPT_TIMEOUT] = max(180, intval(filesize($filePath) / 1024 / 1024)); // speed: 1 MB pro sekunde
+			$response = Ric_Rest_Client::putFile($fileUrl, $filePath, $headers, null, $curlOptions);
 			$this->checkServerResponse($response, $headers);
 			$this->logInfo(' result:'.$response);
 		}else{

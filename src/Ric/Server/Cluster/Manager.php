@@ -240,7 +240,9 @@ class Ric_Server_Cluster_Manager {
 			// refresh failed, upload
 			$this->logger->debug(__METHOD__.':'.'refreshFile not ok, push file to server: '.$server.' file: '.$fileName.' retention:'.$retention.' sha1:'.$sha1);
 			$url = $serverUrl.$fileName.'?sha1='.$sha1.'&timestamp='.$timestamp.'&retention='.$retention.'&noSync=1&token='.$this->configManager->getValue('writerToken');
-			$response = Ric_Rest_Client::putFile($url, $filePath);
+			$curlOptions = [];
+			$curlOptions[CURLOPT_TIMEOUT] = max(180, intval(filesize($filePath) / 1024 / 1024)); // speed: 1 MB pro sekunde
+			$response = Ric_Rest_Client::putFile($url, $filePath, $headers, null, $curlOptions);
 			if( !$this->isResponseStatusOk($response) ){
 				$result = 'failed to upload '.basename($filePath).' to '.$server.' :'.$response.PHP_EOL;
 				$this->logger->error(__METHOD__.':'.'failed to push file '.$server.' file: '.$fileName.' retention:'.$retention.' sha1:'.$sha1.' response: '.$response);

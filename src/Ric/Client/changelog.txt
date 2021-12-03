@@ -2,3 +2,4 @@ v0.5 2019-05-09 "admin health" and "admin checkConsistency" now supports cli exi
 v0.6 2019-05-27 logs direct to STDOUT (suppress with --quiet)
 v0.7 2019-05-28 restore writes direct to targetDirectory prevents 2 filecopies (if --tempDir omitted), checks sha1 file sum, encrypts in place; updated Rest_Client, --tempDir option for slow target drives
 v0.8 2019-06-06 add --timeout option and remove curl slow transfer settings
+v0.8 2021-12-03 putFile operation now with dynamic timeout 1 sec per MB (min 180s) (before: 60s fix)
