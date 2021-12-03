@@ -85,7 +85,7 @@ class Ric_Server_Server {
 
 		// store file locally
 		$version = $this->fileManager->storeFile($fileName, $tmpFilePath, $timestamp);
-		$this->logger->warn(__METHOD__.':'.'Quota exceeded! store: '.$storeSize.' + file: '.$filesize.' > quota: '.$quotaBytes);
+		$this->logger->debug(__METHOD__.':'.' file stored');
 		$result['version'] = $version;
 
 		# delete outimed versions
@@ -132,7 +132,7 @@ class Ric_Server_Server {
 				$syncResult = $this->clusterManager->syncFile($fileName, $filePath, $retention = Ric_Server_Definition::RETENTION__ALL);
 				if( $syncResult!='' ){
 					$msg = 'sync file failed: '.$syncResult;
-					$this->logger->info(__METHOD__.':'.$msg);
+					$this->logger->error(__METHOD__.':'.$msg);
 					throw new RuntimeException($msg);
 				}
 			}
@@ -157,7 +157,7 @@ class Ric_Server_Server {
 		$syncResult = $this->clusterManager->pushFileToServer($server, $fileName, $filePath, Ric_Server_Definition::RETENTION__ALL);
 		if( $syncResult!='' ){
 			$msg = 'pushFileToServer failed: '.$syncResult;
-			$this->logger->info(__METHOD__.':'.$msg);
+			$this->logger->error(__METHOD__.':'.$msg);
 			throw new RuntimeException($msg);
 		}
 		$result['status'] = 'OK';
@@ -180,7 +180,7 @@ class Ric_Server_Server {
 			$deleteCount += $this->clusterManager->deleteFile($fileName, $version, $error);
 			if( $error ){
 				$msg = 'delete file from cluster failed: '.$error.' files deleted: '.$deleteCount;
-				$this->logger->info(__METHOD__.':'.$msg);
+				$this->logger->error(__METHOD__.':'.$msg);
 				throw new RuntimeException($msg, 500);
 			}
 		}
@@ -576,7 +576,7 @@ class Ric_Server_Server {
 		$unwantedVersions = array_diff(array_keys($allVersions), array_values($wantedVersions));
 		if( count($unwantedVersions)>=count($allVersions) ){
 			$msg = 'count($unwantedVersions)>=$allVersions this must be really really wrong! retention:'.$retention;
-			$this->logger->info(__METHOD__.':'.$msg);
+			$this->logger->error(__METHOD__.':'.$msg);
 			throw new RuntimeException($msg);
 		}
 		// ensure we are not deleting the latest/current/newest version
@@ -585,7 +585,7 @@ class Ric_Server_Server {
 		foreach( $unwantedVersions as $version ){
 			if( $version==$currentVersion ){
 				$msg = 'whoa we will delete the newest version this must be really really wrong! retention:'.$retention;
-				$this->logger->info(__METHOD__.':'.$msg);
+				$this->logger->error(__METHOD__.':'.$msg);
 				throw new RuntimeException($msg);
 			}
 			$this->fileManager->deleteFile($fileName, $version);
