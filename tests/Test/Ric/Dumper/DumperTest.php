@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/../../../bootstrap.php';
 
-class Test_Ric_Sumper_DumperTest extends \PHPUnit\Framework\TestCase {
+class Test_Ric_Dumper_DumperTest extends \PHPUnit\Framework\TestCase {
 
 	public function test_dumpFile(){
 		$dumper = new Test_Ric_Dumper_Dumper();

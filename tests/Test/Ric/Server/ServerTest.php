@@ -2,14 +2,14 @@
 
 require_once __DIR__ . '/../../../bootstrap.php';
 
-class Test_Ric_Server_ServerTest extends \PHPUnit_Framework_TestCase {
+class Test_Ric_Server_ServerTest extends \PHPUnit\Framework\TestCase {
 	protected $storageDir;
 	protected $configManager;
 
 	/**
 	 * Test_Ric_Server_ServerTest constructor.
 	 */
-	public function __construct($name = null, array $data = array(), $dataName = ''){
+	public function setup($name = null, array $data = array(), $dataName = ''){
 		parent::__construct($name, $data, $dataName);
 		$testsDir = PROJECT_ROOT.'var/tests/';
 		if( !is_writeable($testsDir) ){
@@ -19,10 +19,14 @@ class Test_Ric_Server_ServerTest extends \PHPUnit_Framework_TestCase {
 		if( !mkdir($this->storageDir) ){
 			throw new Exception('failed to create tmp test dir '.$this->storageDir);
 		}
-		$this->configManager = new Test_Ric_Server_TestConfigManager(__DIR__ . '/config.json');
+		$this->configManager = new Test_Ric_Server_TestConfigManager(__DIR__.'/config.json');
 		$this->configManager->set('storeDir', $this->storageDir);
 	}
 
+	public function tearDown(){
+		self::delTree($this->storageDir);
+		parent::tearDown();
+	}
 
 	/**
 	 * @return Ric_Server_Server
@@ -156,7 +160,7 @@ class Test_Ric_Server_ServerTest extends \PHPUnit_Framework_TestCase {
 		self::assertEquals(null, $this->configManager->getFromRuntimeConfig('servers'));
 
 		// server will not respond correctly
-		self::setExpectedException('RuntimeException', 'curl request failed');
+		self::setExpectedException('Ric_Rest_CurlException', 'Connection refused');
 		$server = $this->getServer();
 		$server->addServer($serverHostPort);
 	}
@@ -213,12 +217,12 @@ class Test_Ric_Server_ServerTest extends \PHPUnit_Framework_TestCase {
 	 * @param string $dir
 	 * @param bool $deleteParent
 	 * @throws RuntimeException
-	 * @return bool
 	 */
 	public static function delTree($dir, $deleteParent=true) {
-		if( realpath($dir)<realpath(PROJECT_ROOT) ){
+		if( substr(realpath($dir), 0, strlen(realpath(PROJECT_ROOT)))!=realpath(PROJECT_ROOT) ){
 			throw new RuntimeException('unexpected path: '.$dir.' expected under: '.PROJECT_ROOT);
 		}
+
 		$files = array_diff(scandir($dir), array('.','..'));
 		foreach( $files as $file ){
 			$path = $dir.'/'.$file;
@@ -233,8 +237,4 @@ class Test_Ric_Server_ServerTest extends \PHPUnit_Framework_TestCase {
 		}
 	}
 
-	public function tearDown(){
-		self::delTree($this->storageDir);
-		parent::tearDown();
-	}
 }

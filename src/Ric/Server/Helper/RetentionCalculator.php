@@ -76,20 +76,41 @@ class Ric_Server_Helper_RetentionCalculator {
 	}
 
 	/**
+	 * returns best matching version for this time span,
+	 *
+	 * the newest in requested time span
+	 * OR the oldest before requested time span if there is no version IN time span
+	 * OR false if there is no version before the $endTimestamp_excluded
+	 *
+	 *
+	 * this means, if ther is no version in time span, the oldest version before this time span will returned,
+	 * to keep this version in retention until it reaches the requested time span
+	 *
+	 * e.g. retention "2m"   two month, if we have version 15.thisMonth and 03 thisMonth   and here comes the request for last (2.) month,
+	 *      we have no version in last month  BUT her we retrun 03.thisMonth  because this is best version to keep
+	 *
 	 * $endTimestamp_excluded is not IN the Range, eg next day 00:00:00
+	 *
+	 * 2022-10-16: there was A MEGA CRiTiCAL MIND BUG until now
+	 * we keept only version included in the given time span,
+	 * but if we have no version in this time span we have TO keep the next version to this time span,
+	 * so wenn time goes by this version wir come in these requested time
+	 * other wise we never get a version in this time span
+	 *
 	 * @param string[] $allVersions
 	 * @param int $startTimestamp
 	 * @param int $endTimestamp_excluded
-	 * @param string $firstOrLast
 	 * @return string
 	 */
-	static protected function getVersionForTimePeriod($allVersions, $startTimestamp, $endTimestamp_excluded, $firstOrLast = 'last'){
+	static protected function getVersionForTimePeriod($allVersions, $startTimestamp, $endTimestamp_excluded){
 		$resultVersion = false;
-		$timestampVersions = array_flip($allVersions);
-		ksort($timestampVersions);
-		if( $firstOrLast!='last' ){
-			krsort($timestampVersions);
+		if( $startTimestamp>=$endTimestamp_excluded ){
+			throw new RuntimeException('$startTimestamp '.date('Y-m-d H:i:s', $startTimestamp).' must less / earlier then $endTimestamp '.date('Y-m-d H:i:s', $endTimestamp_excluded));
 		}
+
+		$timestampVersions = array_flip($allVersions);
+		krsort($timestampVersions); // newest first
+
 		if( self::$debug ){
 			echo 'start: '.$startTimestamp.' '.date('Y-m-d H:i:s', $startTimestamp).PHP_EOL;
 			echo 'end: '.$endTimestamp_excluded.' '.date('Y-m-d H:i:s', $endTimestamp_excluded).PHP_EOL;
@@ -98,9 +119,13 @@ class Ric_Server_Helper_RetentionCalculator {
 				echo $timestamp.' '.date('Y-m-d H:i:s', $timestamp).' '.$version.PHP_EOL;
 			}
 		}
+
 		foreach( $timestampVersions as $timestamp => $version ){
-			if( $timestamp<$endTimestamp_excluded AND $timestamp>=$startTimestamp ){
+			if( $timestamp>=$startTimestamp ){
 				$resultVersion = $version;
+				if( $timestamp<$endTimestamp_excluded ){ // if not in request range it is the fall back version
+					break; // the latest/newest version in time span
+				}
 			}
 		}
 		if( self::$debug ){
@@ -122,7 +147,7 @@ class Ric_Server_Helper_RetentionCalculator {
 			$endTimestamp = $startTimestamp;
 			$startTimestamp = strtotime($diffString, $endTimestamp);
 			$version = self::getVersionForTimePeriod($allVersions, $startTimestamp, $endTimestamp);
-			if( $version ){
+			if( $version and !in_array($version, $versions) ){
 				$versions[] = $version;
 			}
 		}
