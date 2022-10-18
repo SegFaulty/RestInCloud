@@ -2,12 +2,33 @@
 
 class Ric_Server_Helper_RetentionCalculator {
 	protected static $debug = false;
+	protected static $now = null;
 
 	/**
 	 * @param boolean $debug
 	 */
 	public static function setDebug($debug){
 		self::$debug = $debug;
+	}
+
+	/**
+	 * for test purposes
+	 * @param $time
+	 */
+	static public function setNow($time){
+		self::$now = $time;
+	}
+
+	/**
+	 * enable set now for testing
+	 * @return int|null
+	 */
+	static protected function time(){
+		$time = self::$now;
+		if( $time===null ){
+			$time = time();
+		}
+		return $time;
 	}
 
 	/**
@@ -20,6 +41,8 @@ class Ric_Server_Helper_RetentionCalculator {
 		$retentionVersions = array_keys($allVersions); // for safety reason, default is allVersions if $retentionString is empty
 		if( preg_match_all('~(\d+)([a-z])~', $retentionString, $matches) ){
 			$retentionVersions = []; // okay retention found, clear the list, no problem if its completely wrong, because this will throw an exception in getVersionsForRetention, so we are save
+			// for safety we always keep the newest version
+			#		$retentionVersions[] = key($allVersions);
 			foreach( $matches[1] as $index => $retentionCount ){
 				$retentionType = $matches[2][$index];
 				$retentionVersions = array_merge($retentionVersions, self::getVersionsForRetention($allVersions, $retentionType, $retentionCount));
@@ -30,11 +53,12 @@ class Ric_Server_Helper_RetentionCalculator {
 	}
 
 	/**
+	 * for time related retentions we keep n versions in the past, plus current version : 2m => current version AND -1 month AND -2 month
 	 * @param array $allVersions
 	 * @param string $retentionType
 	 * @param int $retentionCount
-	 * @throws RuntimeException
 	 * @return array
+	 * @throws RuntimeException
 	 */
 	static public function getVersionsForRetention($allVersions, $retentionType, $retentionCount){
 		$versions = [];
@@ -43,19 +67,19 @@ class Ric_Server_Helper_RetentionCalculator {
 				$versions = array_slice(array_keys($allVersions), 0, $retentionCount);
 				break;
 			case Ric_Server_Definition::RETENTION_TYPE__DAYS:
-				$startTimestamp = strtotime("next day", mktime(0, 0, 0));
+				$startTimestamp = strtotime("tomorrow", self::time());
 				$versions = self::getVersionsForTimePeriods($allVersions, $retentionCount, $startTimestamp, '-1 day');
 				break;
 			case Ric_Server_Definition::RETENTION_TYPE__WEEKS:
 				$startTimestamp = strtotime("+1 week", self::getStartOfWeek());
 				$versions = self::getVersionsForTimePeriods($allVersions, $retentionCount, $startTimestamp, '-1 week');
 				break;
-			case Ric_Server_Definition::RETENTION_TYPE__MONTHS:
-				$startTimestamp = strtotime("next month", mktime(0, 0, 0, date('m'), 1));
+			case Ric_Server_Definition::RETENTION_TYPE__MONTHS: // first day of this month
+				$startTimestamp = strtotime("today", strtotime("first day of next month", self::time()));
 				$versions = self::getVersionsForTimePeriods($allVersions, $retentionCount, $startTimestamp, '-1 month');
 				break;
 			case Ric_Server_Definition::RETENTION_TYPE__YEARS:
-				$startTimestamp = strtotime("next year", mktime(0, 0, 0, 1, 1));
+				$startTimestamp = strtotime("today", strtotime("first day of january next year", self::time()));
 				$versions = self::getVersionsForTimePeriods($allVersions, $retentionCount, $startTimestamp, '-1 year');
 				break;
 			default:
@@ -70,7 +94,7 @@ class Ric_Server_Helper_RetentionCalculator {
 	 */
 	static public function getStartOfWeek($refTimestamp = 0){
 		if( $refTimestamp==0 ){
-			$refTimestamp = time();
+			$refTimestamp = self::time();
 		}
 		return strtotime('last monday', strtotime('next monday', $refTimestamp));
 	}
@@ -143,7 +167,7 @@ class Ric_Server_Helper_RetentionCalculator {
 	 */
 	protected static function getVersionsForTimePeriods($allVersions, $retentionCount, $startTimestamp, $diffString){
 		$versions = [];
-		for( ; $retentionCount--; ){
+		for( ; $retentionCount>=0; $retentionCount-- ){
 			$endTimestamp = $startTimestamp;
 			$startTimestamp = strtotime($diffString, $endTimestamp);
 			$version = self::getVersionForTimePeriod($allVersions, $startTimestamp, $endTimestamp);

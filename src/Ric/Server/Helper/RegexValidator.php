@@ -12,7 +12,7 @@ class Ric_Server_Helper_RegexValidator {
 	static public function isValid($regEx, &$errorMessage = ''){
 		$isValid = true;
 		// check is valid regex
-		set_error_handler(function ($errno, $errstr, $errfile, $errline, $errcontext) use (&$errorMessage){
+		set_error_handler(function ($errno, $errstr, $errfile = null, $errline = null, $errcontext = null) use (&$errorMessage){
 			$errorMessage = $errstr;
 		});
 		preg_match($regEx, '');

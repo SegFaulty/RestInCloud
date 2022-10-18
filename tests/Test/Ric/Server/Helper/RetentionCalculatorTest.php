@@ -41,9 +41,9 @@ class Test_Ric_Server_Helper_RetentionCalculatorTest extends \PHPUnit\Framework\
 				'v0' => strtotime('today -8 day'),
 		];
 		$versionsForRetention = Test_Ric_Server_Helper_RetentionCalculator::getVersionsForRetention($allVersions, Ric_Server_Definition::RETENTION_TYPE__DAYS, 2);
-		self::assertEquals(['v4','v2'], $versionsForRetention);
+		self::assertEquals(['v4', 'v2', 'v1'], $versionsForRetention);
 		$versionsForRetention = Test_Ric_Server_Helper_RetentionCalculator::getVersionsForRetention($allVersions, Ric_Server_Definition::RETENTION_TYPE__DAYS, 1);
-		self::assertEquals(['v4'], $versionsForRetention);
+		self::assertEquals(['v4', 'v2'], $versionsForRetention);
 		$versionsForRetention = Test_Ric_Server_Helper_RetentionCalculator::getVersionsForRetention($allVersions, Ric_Server_Definition::RETENTION_TYPE__DAYS, 3);
 		self::assertEquals(['v4', 'v2', 'v1'], $versionsForRetention);
 		$versionsForRetention = Test_Ric_Server_Helper_RetentionCalculator::getVersionsForRetention($allVersions, Ric_Server_Definition::RETENTION_TYPE__DAYS, 5);
@@ -110,50 +110,72 @@ class Test_Ric_Server_Helper_RetentionCalculatorTest extends \PHPUnit\Framework\
 		self::assertEquals(['v4', 'v2', 'v1', 'v0'], $versionsForRetention);
 	}
 
-	public function test_getVersionsForRetention_month2022(){
+	public function test_getVersionsForRetention_monthLongTerm(){
 		$allVersions = [];
-		$timestamp = strtotime('2022-10-16');
-		for( $i = 1; $i<35; $i++ ){
-			$allVersions['v'.$i] = $timestamp;
-			$timestamp = strtotime('-1 day', $timestamp);
+
+		$testTimestamp = strtotime('2022-10-17 10:06:15');
+		for( $i = 1; $i<=60; $i++ ){
+			$testTimestamp = strtotime('+3 day', $testTimestamp);
+			$allVersions['v'.$i] = $testTimestamp;
+			Ric_Server_Helper_RetentionCalculator::setNow($testTimestamp + 10);
+			$versionsForRetention = Test_Ric_Server_Helper_RetentionCalculator::getVersionsForRetentionString($allVersions, '3m');
+			foreach( $allVersions as $version => $timestamp ){
+				if( !in_array($version, $versionsForRetention) ){
+					unset($allVersions[$version]);
+				}
+			}
+			if( $i==2 ){
+				self::assertSame(['v1', 'v2'], array_keys($allVersions), date('Y-m-d', $testTimestamp).' wrong version: '.print_R($allVersions, true));
+			}
+			if( $i==6 ){
+				self::assertSame(['v1', 'v4', 'v6'], array_keys($allVersions), date('Y-m-d', $testTimestamp).' wrong version: '.print_R($allVersions, true));
+			}
+			if( $i==12 ){
+				self::assertSame(['v1', 'v4', 'v12'], array_keys($allVersions), date('Y-m-d', $testTimestamp).' wrong version: '.print_R($allVersions, true));
+			}
+			if( $i==15 ){
+				self::assertSame(['v1', 'v4', 'v14', 'v15'], array_keys($allVersions), date('Y-m-d', $testTimestamp).' wrong version: '.print_R($allVersions, true));
+			}
+			if( $i==26 ){
+				self::assertSame(['v4', 'v14', 'v25', 'v26'], array_keys($allVersions), date('Y-m-d', $testTimestamp).' wrong version: '.print_R($allVersions, true));
+			}
+
 		}
-		$versionsForRetention = Test_Ric_Server_Helper_RetentionCalculator::getVersionsForRetention($allVersions, Ric_Server_Definition::RETENTION_TYPE__MONTHS, 1);
-		self::assertEquals(['v1'], $versionsForRetention);
-		$versionsForRetention = Test_Ric_Server_Helper_RetentionCalculator::getVersionsForRetention($allVersions, Ric_Server_Definition::RETENTION_TYPE__MONTHS, 2);
-		self::assertEquals(2, count($versionsForRetention));
-		self::assertEquals(['v1', 'v17'], $versionsForRetention);
-		$versionsForRetention = Test_Ric_Server_Helper_RetentionCalculator::getVersionsForRetention($allVersions, Ric_Server_Definition::RETENTION_TYPE__MONTHS, 3);
-		self::assertEquals(3, count($versionsForRetention));
-		self::assertEquals(['v1', 'v17', 'v34'], $versionsForRetention);
+		self::assertSame(['v35', 'v44', 'v55', 'v60'], array_keys($allVersions), date('Y-m-d', $testTimestamp).' wrong version: '.print_R($allVersions, true));
 	}
 
 	public function test_getVersionsForRetentionString(){
 		$allVersions = [];
-		$timestamp = time();
-		for($i=35; $i>0; $i-- ){
+		$timestamp = strtotime('2022-10-18 11:54:45'); // DIENSTAG
+		Ric_Server_Helper_RetentionCalculator::setNow($timestamp);
+		for( $i = 35; $i>0; $i-- ){
 			$allVersions['v'.$i] = $timestamp;
 			$timestamp = strtotime('-1 day', $timestamp);
 		}
 		$versionsForRetention = Test_Ric_Server_Helper_RetentionCalculator::getVersionsForRetentionString($allVersions, '3l');
-		self::assertEquals(['v35','v34','v33'], $versionsForRetention);
+		self::assertEquals(['v35', 'v34', 'v33'], $versionsForRetention);
 		// same versions
 		$versionsForRetention = Test_Ric_Server_Helper_RetentionCalculator::getVersionsForRetentionString($allVersions, '3l2l');
-		self::assertEquals(['v35','v34','v33'], $versionsForRetention);
-		// same version, because of daily
-		$versionsForRetention = Test_Ric_Server_Helper_RetentionCalculator::getVersionsForRetentionString($allVersions, '3l3d');
-		self::assertEquals(['v35','v34','v33'], $versionsForRetention);
+		self::assertEquals(['v35', 'v34', 'v33'], $versionsForRetention);
+		// same version, because of daily   2 days back
+		$versionsForRetention = Test_Ric_Server_Helper_RetentionCalculator::getVersionsForRetentionString($allVersions, '3l2d');
+		self::assertEquals(['v35', 'v34', 'v33'], $versionsForRetention);
 		// same version, because same week
 		$versionsForRetention = Test_Ric_Server_Helper_RetentionCalculator::getVersionsForRetentionString($allVersions, '3l2d1w');
-		self::assertEquals(['v35','v34','v33'], $versionsForRetention);
+		self::assertEquals(['v35', 'v34', 'v33'], $versionsForRetention);
 		$versionsForRetention = Test_Ric_Server_Helper_RetentionCalculator::getVersionsForRetentionString($allVersions, '3l2d1w1m');
-		self::assertEquals(['v35','v34','v33'], $versionsForRetention);
+		self::assertEquals(['v35', 'v34', 'v33', 'v17'], array_values($versionsForRetention));
 		$versionsForRetention = Test_Ric_Server_Helper_RetentionCalculator::getVersionsForRetentionString($allVersions, '3l2d1w1y');
-		self::assertEquals(['v35','v34','v33'], $versionsForRetention);
+		self::assertEquals(['v35', 'v34', 'v33', 'v1'], array_values($versionsForRetention));
 		$versionsForRetention = Test_Ric_Server_Helper_RetentionCalculator::getVersionsForRetentionString($allVersions, '1y');
-		self::assertEquals(['v35'], $versionsForRetention);
+		self::assertEquals(['v35', 'v1'], $versionsForRetention);
 		#3l7d4w12m
 #		$versionsForRetention = Test_Ric_Server_Helper_RetentionCalculator::getVersionsForRetentionString($allVersions, '3l7d4w12m');
 #		self::assertEquals(['v35'], $versionsForRetention);
+	}
+
+	protected function tearDown(){
+		Ric_Server_Helper_RetentionCalculator::setNow(null);
 	}
 
 }

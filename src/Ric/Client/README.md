@@ -68,11 +68,21 @@ procedure:
 
 * --pass Password
 * --passFile {passFilePath} read pass from file default: ENV ricPassFile -> ''
-* --retention default: last3
+* --retention default: last 3 versions see below:
 * --timestamp as int or 'now' or 'file' default: file (modification time of source file)
 * --minReplicas default: max(1, count(servers)-1)
 * --minSize default: 1
 * --prefix
+
+* retention options:
+* l - last versions count
+* d - days
+* w - weeks
+* m - months
+* y - year
+* usage:   "3l4w3m" => 3 newest version PLUS a version in week -1,-2,-3,-4 PLUS a version in month -1,-2,-3
+* (for time related retentions we keep n versions in the past, plus current version : 2m => current version AND -1 month
+  AND -2 month)
 
 ## Help check
 
