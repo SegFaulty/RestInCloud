@@ -33,34 +33,36 @@ class Ric_Server_Helper_RetentionCalculator {
 
 	/**
 	 * returns wanted versions by retentionsString (like: 3l7d4w12m)
-	 * @param array $allVersions
+	 * @param array $allVersions ['version' => timestamp, ...]
 	 * @param string $retentionString
 	 * @return array
 	 */
 	static public function getVersionsForRetentionString($allVersions, $retentionString){
+		arsort($allVersions); // newest version first
 		$retentionVersions = array_keys($allVersions); // for safety reason, default is allVersions if $retentionString is empty
 		if( preg_match_all('~(\d+)([a-z])~', $retentionString, $matches) ){
 			$retentionVersions = []; // okay retention found, clear the list, no problem if its completely wrong, because this will throw an exception in getVersionsForRetention, so we are save
 			// for safety we always keep the newest version
-			#		$retentionVersions[] = key($allVersions);
+			$retentionVersions[] = key($allVersions);
 			foreach( $matches[1] as $index => $retentionCount ){
 				$retentionType = $matches[2][$index];
 				$retentionVersions = array_merge($retentionVersions, self::getVersionsForRetention($allVersions, $retentionType, $retentionCount));
 			}
 		}
-		$retentionVersions = array_unique($retentionVersions);
+		$retentionVersions = array_values(array_unique($retentionVersions));
 		return $retentionVersions;
 	}
 
 	/**
 	 * for time related retentions we keep n versions in the past, plus current version : 2m => current version AND -1 month AND -2 month
-	 * @param array $allVersions
+	 * @param array $allVersions ['version' => timestamp, ...]
 	 * @param string $retentionType
 	 * @param int $retentionCount
 	 * @return array
 	 * @throws RuntimeException
 	 */
-	static public function getVersionsForRetention($allVersions, $retentionType, $retentionCount){
+	static protected function getVersionsForRetention($allVersions, $retentionType, $retentionCount){
+		arsort($allVersions); // newest version first
 		$versions = [];
 		switch($retentionType){
 			case Ric_Server_Definition::RETENTION_TYPE__LAST:
@@ -71,7 +73,7 @@ class Ric_Server_Helper_RetentionCalculator {
 				$versions = self::getVersionsForTimePeriods($allVersions, $retentionCount, $startTimestamp, '-1 day');
 				break;
 			case Ric_Server_Definition::RETENTION_TYPE__WEEKS:
-				$startTimestamp = strtotime("+1 week", self::getStartOfWeek());
+				$startTimestamp = strtotime("+1 week", strtotime('last monday', strtotime('next monday', self::time())));
 				$versions = self::getVersionsForTimePeriods($allVersions, $retentionCount, $startTimestamp, '-1 week');
 				break;
 			case Ric_Server_Definition::RETENTION_TYPE__MONTHS: // first day of this month
@@ -89,14 +91,23 @@ class Ric_Server_Helper_RetentionCalculator {
 	}
 
 	/**
-	 * @param int $refTimestamp
-	 * @return int
+	 * @param array $allVersions
+	 * @param int $retentionCount
+	 * @param int $startTimestamp
+	 * @param string $diffString
+	 * @return array
 	 */
-	static public function getStartOfWeek($refTimestamp = 0){
-		if( $refTimestamp==0 ){
-			$refTimestamp = self::time();
+	static protected function getVersionsForTimePeriods($allVersions, $retentionCount, $startTimestamp, $diffString){
+		$versions = [];
+		for( ; $retentionCount>=0; $retentionCount-- ){
+			$endTimestamp = $startTimestamp;
+			$startTimestamp = strtotime($diffString, $endTimestamp);
+			$version = self::getVersionForTimePeriod($allVersions, $startTimestamp, $endTimestamp);
+			if( $version and !in_array($version, $versions) ){
+				$versions[] = $version;
+			}
 		}
-		return strtotime('last monday', strtotime('next monday', $refTimestamp));
+		return $versions;
 	}
 
 	/**
@@ -121,7 +132,7 @@ class Ric_Server_Helper_RetentionCalculator {
 	 * so wenn time goes by this version wir come in these requested time
 	 * other wise we never get a version in this time span
 	 *
-	 * @param string[] $allVersions
+	 * @param string[] $allVersions ['version' => timestamp, ...]
 	 * @param int $startTimestamp
 	 * @param int $endTimestamp_excluded
 	 * @return string
@@ -132,8 +143,8 @@ class Ric_Server_Helper_RetentionCalculator {
 			throw new RuntimeException('$startTimestamp '.date('Y-m-d H:i:s', $startTimestamp).' must less / earlier then $endTimestamp '.date('Y-m-d H:i:s', $endTimestamp_excluded));
 		}
 
+		arsort($allVersions); // newest version first
 		$timestampVersions = array_flip($allVersions);
-		krsort($timestampVersions); // newest first
 
 		if( self::$debug ){
 			echo 'start: '.$startTimestamp.' '.date('Y-m-d H:i:s', $startTimestamp).PHP_EOL;
@@ -158,23 +169,4 @@ class Ric_Server_Helper_RetentionCalculator {
 		return $resultVersion;
 	}
 
-	/**
-	 * @param array $allVersions
-	 * @param int $retentionCount
-	 * @param int $startTimestamp
-	 * @param string $diffString
-	 * @return array
-	 */
-	protected static function getVersionsForTimePeriods($allVersions, $retentionCount, $startTimestamp, $diffString){
-		$versions = [];
-		for( ; $retentionCount>=0; $retentionCount-- ){
-			$endTimestamp = $startTimestamp;
-			$startTimestamp = strtotime($diffString, $endTimestamp);
-			$version = self::getVersionForTimePeriod($allVersions, $startTimestamp, $endTimestamp);
-			if( $version and !in_array($version, $versions) ){
-				$versions[] = $version;
-			}
-		}
-		return $versions;
-	}
 }

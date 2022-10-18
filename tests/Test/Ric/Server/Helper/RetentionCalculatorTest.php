@@ -56,7 +56,7 @@ class Test_Ric_Server_Helper_RetentionCalculatorTest extends \PHPUnit\Framework\
 				'v2' => 1438853184,
 				'v1' => 1438835877,
 		];
-		self::assertEquals('v3', Test_Ric_Server_Helper_RetentionCalculator::getVersionForTimeRange_public($allVersions, 1438840000, 1500000000));
+		self::assertEquals('v3', Test_Ric_Server_Helper_RetentionCalculator::getVersionForTimeRange($allVersions, 1438840000, 1500000000));
 	}
 
 	public function test_getVersionForTimeRange2022MindBugTest(){
@@ -65,7 +65,7 @@ class Test_Ric_Server_Helper_RetentionCalculatorTest extends \PHPUnit\Framework\
 				'v2' => strtotime('2022-10-15'),
 				'v1' => strtotime('2022-10-14'),
 		];
-		self::assertEquals('v1', Test_Ric_Server_Helper_RetentionCalculator::getVersionForTimeRange_public($allVersions, strtotime('2022-09-01'), strtotime('2022-10-01')));
+		self::assertEquals('v1', Test_Ric_Server_Helper_RetentionCalculator::getVersionForTimeRange($allVersions, strtotime('2022-09-01'), strtotime('2022-10-01')));
 	}
 
 	public function test_getVersionForTimeRange2022(){
@@ -79,24 +79,24 @@ class Test_Ric_Server_Helper_RetentionCalculatorTest extends \PHPUnit\Framework\
 				'v2' => strtotime('2022-10-15'),
 				'v1' => strtotime('2022-10-14'),
 		];
-		self::assertEquals('v1', Test_Ric_Server_Helper_RetentionCalculator::getVersionForTimeRange_public($allVersions, strtotime('2022-09-01'), strtotime('2022-10-01')));
+		self::assertEquals('v1', Test_Ric_Server_Helper_RetentionCalculator::getVersionForTimeRange($allVersions, strtotime('2022-09-01'), strtotime('2022-10-01')));
 	}
 
 	public function test_getStartOfWeek(){
-		self::assertEquals(1438552800, Test_Ric_Server_Helper_RetentionCalculator::getStartOfWeek(1439136385));
-		self::assertEquals(1438552800, Test_Ric_Server_Helper_RetentionCalculator::getStartOfWeek(1439036385));
-		self::assertEquals(1437948000, Test_Ric_Server_Helper_RetentionCalculator::getStartOfWeek(1438552799));
-		self::assertEquals(1437948000, Test_Ric_Server_Helper_RetentionCalculator::getStartOfWeek(1437948001));
-		self::assertEquals(1437948000, Test_Ric_Server_Helper_RetentionCalculator::getStartOfWeek(1438048001));
+		self::assertEquals(1438552800, self::getStartOfWeek(1439136385));
+		self::assertEquals(1438552800, self::getStartOfWeek(1439036385));
+		self::assertEquals(1437948000, self::getStartOfWeek(1438552799));
+		self::assertEquals(1437948000, self::getStartOfWeek(1437948001));
+		self::assertEquals(1437948000, self::getStartOfWeek(1438048001));
 	}
 
 	public function test_getVersionsForRetention_week(){
 		$allVersions = [
 				'v4' => strtotime('-1 hour', strtotime('2022-10-16')), // 2022-10-16 sunday -> 23:00 sat
 				'v3' => strtotime('-2 hour', strtotime('2022-10-16')), // -> 22:00 sat
-				'v2' => strtotime('-1 week +3 days', Ric_Server_Helper_RetentionCalculator::getStartOfWeek(strtotime('2022-10-16'))),  // ->  thursday 2. week
-				'v1' => strtotime('-3 week +2 day', Ric_Server_Helper_RetentionCalculator::getStartOfWeek(strtotime('2022-10-16'))), // ->  mittwoch 4. week
-				'v0' => strtotime('-4 week +4 day', Ric_Server_Helper_RetentionCalculator::getStartOfWeek(strtotime('2022-10-16'))), // ->  friday 5. week
+				'v2' => strtotime('-1 week +3 days', self::getStartOfWeek(strtotime('2022-10-16'))),  // ->  thursday 2. week
+				'v1' => strtotime('-3 week +2 day', self::getStartOfWeek(strtotime('2022-10-16'))), // ->  mittwoch 4. week
+				'v0' => strtotime('-4 week +4 day', self::getStartOfWeek(strtotime('2022-10-16'))), // ->  friday 5. week
 		];
 		$versionsForRetention = Test_Ric_Server_Helper_RetentionCalculator::getVersionsForRetention($allVersions, Ric_Server_Definition::RETENTION_TYPE__WEEKS, 1);
 		self::assertEquals(['v4'], $versionsForRetention);
@@ -144,6 +144,19 @@ class Test_Ric_Server_Helper_RetentionCalculatorTest extends \PHPUnit\Framework\
 		self::assertSame(['v35', 'v44', 'v55', 'v60'], array_keys($allVersions), date('Y-m-d', $testTimestamp).' wrong version: '.print_R($allVersions, true));
 	}
 
+	public function test_getVersionsForRetentionString_keepLastVersion(){
+		$allVersions = [];
+		$timestamp = strtotime('2020-10-18 11:54:45'); // 2 jahre vor now
+		Ric_Server_Helper_RetentionCalculator::setNow(strtotime('2022-10-18 11:54:45')); // now
+		// write some urlalt versions
+		for( $i = 5; $i>0; $i-- ){
+			$allVersions['v'.$i] = $timestamp;
+			$timestamp = strtotime('-1 day', $timestamp);
+		}
+		$versionsForRetention = Test_Ric_Server_Helper_RetentionCalculator::getVersionsForRetentionString($allVersions, '3d');
+		self::assertEquals(['v5'], $versionsForRetention);
+	}
+
 	public function test_getVersionsForRetentionString(){
 		$allVersions = [];
 		$timestamp = strtotime('2022-10-18 11:54:45'); // DIENSTAG
@@ -178,12 +191,23 @@ class Test_Ric_Server_Helper_RetentionCalculatorTest extends \PHPUnit\Framework\
 		Ric_Server_Helper_RetentionCalculator::setNow(null);
 	}
 
+	/**
+	 * @param int $refTimestamp
+	 * @return int
+	 */
+	static public function getStartOfWeek($refTimestamp){
+		return strtotime('last monday', strtotime('next monday', $refTimestamp));
+	}
+
 }
 
 class Test_Ric_Server_Helper_RetentionCalculator extends Ric_Server_Helper_RetentionCalculator {
 
-	static public function getVersionForTimeRange_public($allVersions, $startTimestamp, $endTimestamp_excluded){
+	static public function getVersionForTimeRange($allVersions, $startTimestamp, $endTimestamp_excluded){
 		return parent::getVersionForTimePeriod($allVersions, $startTimestamp, $endTimestamp_excluded);
 	}
 
+	static public function getVersionsForRetention($allVersions, $retentionType, $retentionCount){
+		return parent::getVersionsForRetention($allVersions, $retentionType, $retentionCount);
+	}
 }
