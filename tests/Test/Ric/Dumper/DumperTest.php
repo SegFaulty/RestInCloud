@@ -30,9 +30,9 @@ class Test_Ric_Dumper_DumperTest extends \PHPUnit\Framework\TestCase {
 				['command' => 'dump dir', 'status' => 1, 'contains' => 'min 3 arguments required'],
 				['command' => 'dump dir testfile', 'status' => 1, 'contains' => 'source dir not found'],
 				['command' => 'dump dir '.__DIR__.'/DumperTest --test', 'status' => 1, 'contains' => 'source dir not found'],
-				['command' => 'dump dir '.__DIR__.' --test', 'status' => 0, 'contains' => '"tar -C '.__DIR__.' -cp . | bzip2 -9"'],
-				['command' => 'dump dir '.__DIR__.' STDOUT --test', 'status' => 0, 'contains' => '"tar -C '.__DIR__.' -cp . | bzip2 -9"'],
-				['command' => 'dump dir '.__DIR__.' /data/backup/foo.tar.bz2 --pass=secrET --test', 'status' => 0, 'contains' => '"tar -C '.__DIR__.' -cp . | bzip2 -9| openssl enc -aes-256-cbc -S 5f73646666484765 -k \'secrET\' > /data/backup/foo.tar.bz2"'],
+				['command' => 'dump dir '.__DIR__.' --test', 'status' => 0, 'contains' => '"umask 0077 && tar -C '.__DIR__.' -cp . | bzip2 -9"'],
+				['command' => 'dump dir '.__DIR__.' STDOUT --test', 'status' => 0, 'contains' => '"umask 0077 && tar -C '.__DIR__.' -cp . | bzip2 -9"'],
+				['command' => 'dump dir '.__DIR__.' /data/backup/foo.tar.bz2 --pass=secrET --test', 'status' => 0, 'contains' => '"umask 0077 && tar -C '.__DIR__.' -cp . | bzip2 -9| openssl enc -aes-256-cbc -S 5f73646666484765 -k \'secrET\' > /data/backup/foo.tar.bz2"'],
 		];
 		foreach( $tests as $test ){
 			$args = explode(' ', $test['command']);
@@ -48,15 +48,16 @@ class Test_Ric_Dumper_DumperTest extends \PHPUnit\Framework\TestCase {
 	public function test_dumpDir_commands(){
 		$dumper = new Test_Ric_Dumper_Dumper();
 		$tests = [
-				['command' => 'dump dir '.__DIR__.' /data/backup/foo.tar.bz2 --pass=secrET --test', 'status' => 0, 'contains' => '"tar -C '.__DIR__.' -cp . | bzip2 -9| openssl enc -aes-256-cbc -S 5f73646666484765 -k \'secrET\' > /data/backup/foo.tar.bz2"'],
-				['command' => 'dump dir plopp plopp.tar --exclude="phperror.log|tmp.file" --test', 'status' => 0, 'contains' => 'tar -C plopp -cp . --exclude=phperror.log --exclude=tmp.file'],
+				['command' => 'dump dir '.__DIR__.' /data/backup/foo.tar.bz2 --pass=secrET --test', 'status' => 0, 'contains' => '"umask 0077 && tar -C '.__DIR__.' -cp . | bzip2 -9| openssl enc -aes-256-cbc -S 5f73646666484765 -k \'secrET\' > /data/backup/foo.tar.bz2"'],
+				['command' => 'dump dir '.__DIR__.' plopp.tar --exclude=phperror.log|tmp.file --test', 'status' => 0, 'contains' => 'tar -C '.__DIR__.' -cp . --exclude=phperror.log --exclude=tmp.file'],
 		];
 		foreach( $tests as $test ){
 			$args = explode(' ', $test['command']);
 			array_unshift($args, 'dumperScript');
 			ob_start();
-			self::assertSame($test['status'], $dumper->handleExecute($args, [], 'helpString'), 'failed: '.$test['command']);
+			$result = $dumper->handleExecute($args, [], 'helpString');
 			$out = ob_get_contents();
+			self::assertSame($test['status'], $result, 'failed: '.$test['command'].' $out:'.$out);
 			ob_end_clean();
 			self::assertContains($test['contains'], $out);
 		}
