@@ -31,21 +31,29 @@ you can define every option as environment variable with prefix "ric" (server ->
 * --configFile={configFilePath} (you can define all options in this config file, one per line "option: value" ...
 * --verbose show debug details default: false
 * --quite don't print anything except failures default: false
-* --auth={tokenString}  default: ENV ricAuth -> ''
+* --auth={tokenString} default: ENV ricAuth -> ''
 * --authFile={tokenFilePath} read auth from file default: ENV ricAuthFile -> ''
 * --server={host} RicServer default: ENV ricServer -> ''
 * --prefix={prefix} all target/backup names default: ENV ricPrefix -> ''
 * --ignoreVersion={version} ignore no matching server version errors
-* --tempDir={path} if given this is usend instead of System-Temp-Dir AND it forces "restore" to download to tmpdDir (and decrypt in tmpDir) and then copy to target location instead of create a tmpFile at target location und rename it (use this if you have a slow target drive like usb stick)
-* --timeout={seconds} sets curl timeout (be aware that for GB-Files the backup process can take plenty of minutes) default is no timeout
+* --tempDir={path} if given this is usend instead of System-Temp-Dir AND it forces "restore" to download to tmpdDir (and
+  decrypt in tmpDir) and then copy to target location instead of create a tmpFile at target location und rename it (use
+  this if you have a slow target drive like usb stick)
+* --timeout={seconds} sets curl timeout (be aware that for GB-Files the backup process can take plenty of minutes)
+  default is no timeout
+
+pattern: (method: contains)    REGEX:  e.g. "/mysql-.*/i"   OR   (if first character is AlphaNum )   e.g. "bla" or with
+wildcard  "bl?" or "2022-*-01"
 
 the configuration order is
+
 * use commandline option if present,
 * if not use option from config file if given and option present
 * if not use ric* environment variable if set
 * if not use application default
 
 ## Help backup
+
     ric backup {sourceFilePath} [{targetFileName}] [options]
 
     ric backup /etc/apache.conf
@@ -136,19 +144,26 @@ procedure:
 
 ## Help admin
 
-* list - list all file(name)s; or all matching fileNames if (regex-)pattern given e.g. "admin list /mysql-.*/i"
+* list - list all file(name)s; or all matching fileNames if pattern (see below for pattern)
 * inventory - list files with version and size informations
 * info - sever info, as admin config included
-* health - cluster info, as admin with quota infos and failure details  "OK" / "WARNING" / "CRITICAL" // command exit status and STDERR supported
-* joinCluster - join/build a cluster (join the connected server to an existing cluster (via clusterServer), or build a cluster with the other server)
+* health - cluster info, as admin with quota infos and failure details  "OK" / "WARNING" / "CRITICAL" // command exit
+  status and STDERR supported
+* joinCluster - join/build a cluster (join the connected server to an existing cluster (via clusterServer), or build a
+  cluster with the other server)
 * leaveCluster - disconnect the server from a cluster and remove from all clusterNodes
 * removeFromCluster - remove given server from all clusterNodes
 * addServer - add a replication client
 * removeServer - remove a replication client
 * copyServer - connected server to targetServer
-* checkConsistency - check files and version off all servers (optionally only for {pattern} matching files)  // command exit status and STDERR supported
+* checkConsistency - check files and version off all servers (optionally only for {pattern} matching files)  // command
+  exit status and STDERR supported
 
-a cluster is a bunch of servers, where all of them are added (addServer) to all servers, every server is a replicant of every server .. u got it
+a cluster is a bunch of servers, where all of them are added (addServer) to all servers, every server is a replicant of
+every server .. u got it
+
+pattern: (method: contains)    REGEX:  e.g. "/mysql-.*/i"   OR   (if first character is AlphaNum )   e.g. "bla" or with
+wildcard  "bl?" or "2022-*-01"
 
     ric admin list [{pattern}]
     ric admin inventory [{pattern}] [{sortby:[file]|time|versions|size|allsize}]

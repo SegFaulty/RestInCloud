@@ -167,22 +167,32 @@ class Ric_Client_CliHandler {
 		if( count($versions)>0 ){
 			$msg .= $targetFileName.PHP_EOL;
 			$msg .= 'Date       Time     Version (sha1)                           Size'.PHP_EOL;
-			$msg .= '----------|--------|----------------------------------------|--------------'.PHP_EOL;
+			$msg .= '----------|--------|----------------------------------------|--------------|----------'.PHP_EOL;
 			$size = 0;
 			foreach( $versions as $fileVersion ){
 				$date = date('Y-m-d H:i:s', $fileVersion['timestamp']);
 				if( $fileVersion['timestamp']==1422222222 ){
 					$date = '-- D E L E T E D --';
 				}
-				$msg .= $date.' '.$fileVersion['version'].' '.sprintf('%14d', $fileVersion['size']).PHP_EOL;
+				$msg .= $date.' '.$fileVersion['version'].' '.sprintf('%14d', $fileVersion['size']).' '.sprintf('%10s', self::convertMemory($fileVersion['size'])).PHP_EOL;
 				$size += $fileVersion['size'];
 			}
-			$msg .= '------------------------------------------------------------|--------------'.PHP_EOL;
-			$msg .= sprintf('versions: %-4d ', count($versions)).'                                              '.sprintf('%14d', $size).PHP_EOL;
+			$msg .= '------------------------------------------------------------|--------------|----------'.PHP_EOL;
+			$msg .= sprintf('versions: %-4d ', count($versions)).'                                              '.sprintf('%14d', $size).' '.sprintf('%10s', self::convertMemory($size)).PHP_EOL;
 		}else{
 			$msg .= 'no version of "'.$targetFileName.'" found!'.PHP_EOL;
 		}
 		return $msg;
+	}
+
+	/**
+	 * inspired https://gist. github. com/mehdichaouch/341a151dd5f469002a021c9396aa2615
+	 * @param $byte
+	 * @return string
+	 */
+	static protected function convertMemory($byte){
+		$unit = array('B', 'kB', 'MB', 'GB', 'TB', 'PB');
+		return round($byte / pow(1000, ($i = floor(log($byte, 1000)))), 2).' '.$unit[$i];
 	}
 
 	/**
@@ -236,10 +246,10 @@ class Ric_Client_CliHandler {
 		if( $adminCommand=='info' ){
 			$msg = json_encode($client->info(), JSON_PRETTY_PRINT);
 		}elseif( $adminCommand=='list' ){
-			$pattern = $cli->getArgument(3, '');
+			$pattern = self::checkPattern($cli->getArgument(3, ''));
 			$msg = join(PHP_EOL, $client->listFiles($pattern));
 		}elseif( $adminCommand=='inventory' ){
-			$pattern = $cli->getArgument(3, '');
+			$pattern = self::checkPattern($cli->getArgument(3, ''));
 			$sort = $cli->getArgument(4, 'file');
 			$msg = self::adminBuildInventory($client, $pattern, $sort);
 		}elseif( $adminCommand=='health' ){
@@ -272,14 +282,14 @@ class Ric_Client_CliHandler {
 			}
 			$msg = json_encode($client->copyServer($cli->getArgument(3)));
 		}elseif( $adminCommand=='checkConsistency' ){
-			$pattern = $cli->getArgument(3, '');
+			$pattern = self::checkPattern($cli->getArgument(3, ''));
 			$msg = $client->checkConsistency($pattern, $status, $stderrMsg);
 		}elseif( $adminCommand=='snapshot' ){
 			if( $cli->getArgumentCount()<3 ){
 				throw new RuntimeException('needs one arg (targetDir)');
 			}
 			$localSnapshotDir = $cli->getArgument(3);
-			$pattern = $cli->getArgument(4, '');
+			$pattern = self::checkPattern($cli->getArgument(4, ''));
 			$msg = json_encode($client->takeSnapshot($pattern, $localSnapshotDir));
 		}else{
 			throw new RuntimeException('unknown admin command');
@@ -288,9 +298,21 @@ class Ric_Client_CliHandler {
 	}
 
 	/**
+	 * wildcard pattern * ? to REGEX pattern
+	 * @param string $pattern
+	 * @return string
+	 */
+	static protected function checkPattern($pattern){
+		if( $pattern and ctype_alnum(substr($pattern, 0, 1)) ){ // detect non REGEX pattern
+			$pattern = "#".strtr(preg_quote($pattern, '#'), array('\*' => '.*', '\?' => '.'))."#i"; // and make it REGEX
+		}
+		return $pattern;
+	}
+
+	/**
 	 * @param Ric_Client_Cli $cli
 	 */
-	static protected  function dumpParameters($cli){
+	static protected function dumpParameters($cli){
 		echo $cli->dumpParameters();
 	}
 
