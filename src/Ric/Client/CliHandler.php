@@ -284,6 +284,9 @@ class Ric_Client_CliHandler {
 		}elseif( $adminCommand=='checkConsistency' ){
 			$pattern = self::checkPattern($cli->getArgument(3, ''));
 			$msg = $client->checkConsistency($pattern, $status, $stderrMsg);
+		}elseif( $adminCommand=='healConsistency' ){
+			$pattern = self::checkPattern($cli->getArgument(3, ''));
+			$msg = $client->checkConsistency($pattern, $status, $stderrMsg, true);
 		}elseif( $adminCommand=='snapshot' ){
 			if( $cli->getArgumentCount()<3 ){
 				throw new RuntimeException('needs one arg (targetDir)');

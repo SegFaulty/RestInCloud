@@ -158,6 +158,7 @@ procedure:
 * copyServer - connected server to targetServer
 * checkConsistency - check files and version off all servers (optionally only for {pattern} matching files)  // command
   exit status and STDERR supported
+* healConsistency - same as check checkConsistency - but will actively pushing missing version between servers
 
 a cluster is a bunch of servers, where all of them are added (addServer) to all servers, every server is a replicant of
 every server .. u got it

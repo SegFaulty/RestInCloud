@@ -11,7 +11,7 @@
 class Ric_Client_Client {
 
 	const MIN_SERVER_VERSION = '0.8.0'; // server needs to be on this or a higher version, BUT on the same MAJOR version  ok: 1.4.0 < 1.8.3  but fail:  1.4.0 < 2.3.0  because client is to old
-	const CLIENT_VERSION = '0.8.3'; //
+	const CLIENT_VERSION = '0.9'; //
 
 	const MAGIC_DELETION_TIMESTAMP = 1422222222; // 2015-01-25 22:43:42
 
@@ -555,7 +555,7 @@ class Ric_Client_Client {
 	 * @param string $targetServerHostPort
 	 * @return void
 	 */
-	protected function pushFileToServer($fileName, $version, $targetServerHostPort){
+	public function pushFileToServer($fileName, $version, $targetServerHostPort){
 		$url = $this->buildUrl($fileName, '', ['action' => 'push', 'server' => $targetServerHostPort, 'version' => $version]);
 		$headers = [];
 		$response = Ric_Rest_Client::post($url, [], $headers);
@@ -568,12 +568,14 @@ class Ric_Client_Client {
 	 * @param string $stderrMsg
 	 * @return string
 	 */
-	public function checkConsistency($pattern, &$cliStatus, &$stderrMsg, $fixCritical = false){
+	public function checkConsistency($pattern, &$cliStatus, &$stderrMsg, $pushMissingVersions = false){
 		$response = '';
 		$info = $this->info();
 		$status = 'OK';
+		$stats = [];
 		$servers = H::getIKS($info, ['config', 'servers'], []);
 		array_unshift($servers, $info['config']['hostPort']); // add current server
+		$stats['servers'] = count($servers);
 		if( count($servers)>1 ){
 			// check all files from all servers
 			$allKnownFiles = [];
@@ -588,12 +590,17 @@ class Ric_Client_Client {
 				$allFilesToHostingServer = $allFilesToHostingServer + array_fill_keys($files, $server);
 				$allKnownFiles = array_unique(array_merge($allKnownFiles, $files));
 			}
+			$stats['files'] = count($allKnownFiles);
+			$stats['missingFiles'] = 0;
+			$stats['missingFilesServers'] = 0;
 			$missingFilesPerServer = [];
 			foreach( $knownFilesPerServer as $server => $files ){
 				$serverMissingFiles = array_diff($allKnownFiles, $files);
 				if( $serverMissingFiles ){
+					$stats['missingFiles'] += count($serverMissingFiles);
+					$stats['missingFilesServers']++;
 					$missingFilesPerServer[$server] = $serverMissingFiles;
-					$stderrMsg .= '[CRITICAL] '.count($serverMissingFiles).' files missing on server: '.$server.PHP_EOL.'  '.join(PHP_EOL.'  ', $serverMissingFiles).PHP_EOL;
+					$stderrMsg .= '[CRITICAL] '.count($serverMissingFiles).' files missing on server: '.$server.PHP_EOL.'  '.join(PHP_EOL.'  ', $serverMissingFiles).' its not fixed automatically yet!'.PHP_EOL;
 					foreach( $serverMissingFiles as $serverMissingFile ){
 						$stderrMsg .= '  [TODO] '.' push '.$serverMissingFile.' from '.$allFilesToHostingServer[$serverMissingFile].' to '.$server.PHP_EOL;
 					}
@@ -604,13 +611,16 @@ class Ric_Client_Client {
 				$response .= '[OK] '.count($allKnownFiles).' files existing on all servers'.PHP_EOL;
 			}
 
+			$stats['filesWithMissingVersions'] = 0;
+			$stats['missingVersions'] = 0;
+			$stats['missingPrimaryVersions'] = 0;
 			// check versions
 			foreach( $allKnownFiles as $fileName ){
 				$allKnownVersions = [];
 				$knownVersionsPerServer = [];
 				$primaryFileVersion = null;
 				$primaryFileTimestamp = null;
-				$primaryFilesHostingServer = null;
+				$versionFileHostingServer = [];
 				foreach( $servers as $server ){
 					$versionInfos = $clients[$server]->versions($fileName);
 					$versions = [];
@@ -618,9 +628,11 @@ class Ric_Client_Client {
 						if( !$primaryFileVersion or $versionInfo['timestamp']>$primaryFileTimestamp ){
 							$primaryFileVersion = $versionInfo['version'];
 							$primaryFileTimestamp = $versionInfo['timestamp'];
-							$primaryFilesHostingServer = $server; // usually this is the contacted server, if he is it not missing, so we can later try to fix it via contacted server
 						}
 						$versions[] = $versionInfo['version'];
+						if( !isset($versionFileHostingServer[$versionInfo['version']]) ){ // yeah we want set it only once so there is a chance thats alwas the contacted server, ya ya is not imported but why not ;)
+							$versionFileHostingServer[$versionInfo['version']] = $server;
+						}
 					}
 					$knownVersionsPerServer[$server] = $versions;
 					$allKnownVersions = array_unique(array_merge($allKnownVersions, $versions));
@@ -629,31 +641,45 @@ class Ric_Client_Client {
 				foreach( $knownVersionsPerServer as $server => $versions ){
 					$serverMissingVersions = array_diff($allKnownVersions, $versions);
 					if( $serverMissingVersions ){
-						if( !in_array($primaryFileVersion, $versions) ){
-
-							$stderrMsg .= '[CRITICAL] primary version ['.$primaryFileVersion.'] from '.date('Y-m-d H:i:s', $primaryFileTimestamp).' missing of file: '.$fileName.' on server: '.$server.PHP_EOL;
-							$stderrMsg .= '  TODO '.' push '.$fileName.' '.$primaryFileVersion.' from '.$primaryFilesHostingServer.' to '.$server.' or implement auto fix here ;)'.PHP_EOL;
-							$fixCritical = FALSE;
-							if( $fixCritical AND $primaryFilesHostingServer==$this->server ){
-								self::pushFileToServer($fileName, $primaryFileVersion, $server);
-								$stderrMsg .= 'FIXED - file pushed from '.$this->server.' STATUS NOT TOUCHED';
-							}else{
-								$status = 'CRITICAL';
-							}
-
-						}
+						$stats['missingVersions'] += count($serverMissingVersions);
 						if( $status=='OK' ){
 							$status = 'WARNING';
 						}
+						if( !in_array($primaryFileVersion, $versions) ){
+							$stats['missingPrimaryVersions']++;
+							$stderrMsg .= '[CRITICAL] primary version ['.$primaryFileVersion.'] from '.date('Y-m-d H:i:s', $primaryFileTimestamp).' missing of file: '.$fileName.' on server: '.$server.PHP_EOL;
+							$status = 'CRITICAL';
+						}
 						$stderrMsg .= '[WARNING] '.count($serverMissingVersions).' versions missing of file: '.$fileName.' on server: '.$server.PHP_EOL.'  '.join(PHP_EOL.'  ', $serverMissingVersions).PHP_EOL;
 						$missingVersionsPerServer[$server] = $serverMissingVersions;
+
+						foreach( $serverMissingVersions as $serverMissingVersion ){
+							if( $pushMissingVersions ){
+								if( !in_array($primaryFileVersion, $versions) and $primaryFileTimestamp<time() - 3600 ){ // we dont fix to fresh versions
+									$stderrMsg .= 'NOT FIXED: because its a fresh (<1h) primary Version maybe the transfer is already in progress'.PHP_EOL;
+								}else{
+									$sourceServer = $versionFileHostingServer[$serverMissingVersion];
+									$clients[$sourceServer]->pushFileToServer($fileName, $serverMissingVersion, $server);
+									$stderrMsg .= 'FIXED: '.$serverMissingVersion.' pushed from '.$sourceServer.PHP_EOL;
+								}
+							}else{
+								$stderrMsg .= '  TODO '.' push '.$fileName.' '.$serverMissingVersion.' from '.$versionFileHostingServer[$serverMissingVersion].' to '.$server.PHP_EOL;
+							}
+						}
 					}
 				}
 				if( empty($missingVersionsPerServer) ){
 					$response .= '[OK] '.count($allKnownVersions).' versions for '.$fileName.' existing on all servers'.PHP_EOL;
+				}else{
+					$stats['filesWithMissingVersions']++;
 				}
 
 			}
+			$response .= 'Stats: ';
+			foreach( $stats as $key => $value ){
+				$response .= '  '.$key.':'.' '.$value;
+			}
+			$response .= PHP_EOL;
 			$response .= 'Status: '.$status.PHP_EOL;
 #			$response .= print_r($knownFilesPerServer, true);
 		}else{
