@@ -11,7 +11,7 @@
 class Ric_Client_Client {
 
 	const MIN_SERVER_VERSION = '0.8.0'; // server needs to be on this or a higher version, BUT on the same MAJOR version  ok: 1.4.0 < 1.8.3  but fail:  1.4.0 < 2.3.0  because client is to old
-	const CLIENT_VERSION = '0.8.2'; //
+	const CLIENT_VERSION = '0.8.3'; //
 
 	const MAGIC_DELETION_TIMESTAMP = 1422222222; // 2015-01-25 22:43:42
 
@@ -541,15 +541,25 @@ class Ric_Client_Client {
 		foreach( $fileNames as $fileName ){
 			$versionInfos = $this->versions($fileName);
 			foreach( $versionInfos as $versionInfo ){
-				$version = $versionInfo['version'];
-				$url = $this->buildUrl($fileName, '', ['action' => 'push', 'server' => $targetServerHostPort, 'version' => $version]);
-				$headers = [];
-				$response = Ric_Rest_Client::post($url, [], $headers);
-				$this->checkServerResponse($response, $headers);
+				$this->pushFileToServer($fileName, $versionInfo['version'], $targetServerHostPort);
 				$filesCopied++;
 			}
 		}
 		return ['status' => 'OK', 'filesCopied' => $filesCopied];
+	}
+
+	/**
+	 * push a file version from contacted server to targetServer
+	 * @param string $fileName
+	 * @param string $version
+	 * @param string $targetServerHostPort
+	 * @return void
+	 */
+	protected function pushFileToServer($fileName, $version, $targetServerHostPort){
+		$url = $this->buildUrl($fileName, '', ['action' => 'push', 'server' => $targetServerHostPort, 'version' => $version]);
+		$headers = [];
+		$response = Ric_Rest_Client::post($url, [], $headers);
+		$this->checkServerResponse($response, $headers);
 	}
 
 	/**
@@ -558,21 +568,24 @@ class Ric_Client_Client {
 	 * @param string $stderrMsg
 	 * @return string
 	 */
-	public function checkConsistency($pattern, &$cliStatus, &$stderrMsg){
+	public function checkConsistency($pattern, &$cliStatus, &$stderrMsg, $fixCritical = false){
 		$response = '';
 		$info = $this->info();
 		$status = 'OK';
-		$servers = H::getIKS($info, ['config','servers'], []);
+		$servers = H::getIKS($info, ['config', 'servers'], []);
 		array_unshift($servers, $info['config']['hostPort']); // add current server
 		if( count($servers)>1 ){
 			// check all files from all servers
 			$allKnownFiles = [];
+			$allFilesToHostingServer = []; // [file => hosting server, ...]
 			$knownFilesPerServer = [];
-			$clients = []; /** @var Ric_Client_Client[] $clients */
+			$clients = [];
+			/** @var Ric_Client_Client[] $clients */
 			foreach( $servers as $server ){
 				$clients[$server] = new Ric_Client_Client($server, $info['config']['adminToken']);
 				$files = $clients[$server]->listFiles($pattern);
 				$knownFilesPerServer[$server] = $files;
+				$allFilesToHostingServer = $allFilesToHostingServer + array_fill_keys($files, $server);
 				$allKnownFiles = array_unique(array_merge($allKnownFiles, $files));
 			}
 			$missingFilesPerServer = [];
@@ -581,6 +594,9 @@ class Ric_Client_Client {
 				if( $serverMissingFiles ){
 					$missingFilesPerServer[$server] = $serverMissingFiles;
 					$stderrMsg .= '[CRITICAL] '.count($serverMissingFiles).' files missing on server: '.$server.PHP_EOL.'  '.join(PHP_EOL.'  ', $serverMissingFiles).PHP_EOL;
+					foreach( $serverMissingFiles as $serverMissingFile ){
+						$stderrMsg .= '  [TODO] '.' push '.$serverMissingFile.' from '.$allFilesToHostingServer[$serverMissingFile].' to '.$server.PHP_EOL;
+					}
 					$status = 'CRITICAL';
 				}
 			}
@@ -594,13 +610,15 @@ class Ric_Client_Client {
 				$knownVersionsPerServer = [];
 				$primaryFileVersion = null;
 				$primaryFileTimestamp = null;
+				$primaryFilesHostingServer = null;
 				foreach( $servers as $server ){
 					$versionInfos = $clients[$server]->versions($fileName);
 					$versions = [];
 					foreach( $versionInfos as $versionInfo ){
-						if( $primaryFileVersion OR $versionInfo['timestamp']>$primaryFileTimestamp ){
+						if( !$primaryFileVersion or $versionInfo['timestamp']>$primaryFileTimestamp ){
 							$primaryFileVersion = $versionInfo['version'];
 							$primaryFileTimestamp = $versionInfo['timestamp'];
+							$primaryFilesHostingServer = $server; // usually this is the contacted server, if he is it not missing, so we can later try to fix it via contacted server
 						}
 						$versions[] = $versionInfo['version'];
 					}
@@ -612,8 +630,17 @@ class Ric_Client_Client {
 					$serverMissingVersions = array_diff($allKnownVersions, $versions);
 					if( $serverMissingVersions ){
 						if( !in_array($primaryFileVersion, $versions) ){
-							$status = 'CRITICAL';
+
 							$stderrMsg .= '[CRITICAL] primary version ['.$primaryFileVersion.'] from '.date('Y-m-d H:i:s', $primaryFileTimestamp).' missing of file: '.$fileName.' on server: '.$server.PHP_EOL;
+							$stderrMsg .= '  TODO '.' push '.$fileName.' '.$primaryFileVersion.' from '.$primaryFilesHostingServer.' to '.$server.' or implement auto fix here ;)'.PHP_EOL;
+							$fixCritical = FALSE;
+							if( $fixCritical AND $primaryFilesHostingServer==$this->server ){
+								self::pushFileToServer($fileName, $primaryFileVersion, $server);
+								$stderrMsg .= 'FIXED - file pushed from '.$this->server.' STATUS NOT TOUCHED';
+							}else{
+								$status = 'CRITICAL';
+							}
+
 						}
 						if( $status=='OK' ){
 							$status = 'WARNING';
