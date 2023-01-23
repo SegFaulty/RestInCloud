@@ -336,7 +336,14 @@ class Ric_Client_CliHandler {
 			$overallCount += $entry['versions'];
 		}
 
-		array_multisort(array_column($inventory, $sort), SORT_ASC, $inventory);
+		if( $inventory ){
+			$firstEntry = current($inventory);
+			if( !isset($firstEntry[$sort])){
+				throw new RuntimeException('unknown sort parameter "'.$sort.'" valid paramaters: "'.implode('", "', array_keys(current($inventory))).'"');
+			}
+			// sort by $sort
+			array_multisort(array_column($inventory, $sort), SORT_ASC, $inventory);
+		}
 
 		$msg = count($inventory).' Files sorted by '.$sort.PHP_EOL;
 		$msg .= 'Date       Time               Size #Vers  all Vers Size  File'.PHP_EOL;
