@@ -11,7 +11,7 @@
 class Ric_Client_Client {
 
 	const MIN_SERVER_VERSION = '0.8.0'; // server needs to be on this or a higher version, BUT on the same MAJOR version  ok: 1.4.0 < 1.8.3  but fail:  1.4.0 < 2.3.0  because client is to old
-	const CLIENT_VERSION = '0.10'; //
+	const CLIENT_VERSION = '0.11'; //
 
 	const MAGIC_DELETION_TIMESTAMP = 1422222222; // 2015-01-25 22:43:42
 
@@ -655,7 +655,7 @@ class Ric_Client_Client {
 
 						foreach( $serverMissingVersions as $serverMissingVersion ){
 							if( $pushMissingVersions ){
-								if( !in_array($primaryFileVersion, $versions) and $primaryFileTimestamp<time() - 3600 ){ // we dont fix to fresh versions
+								if( !in_array($primaryFileVersion, $versions) and $primaryFileTimestamp>time() - 3600 ){ // we dont fix it the file is fresh (<1h)
 									$stderrMsg .= 'NOT FIXED: because its a fresh (<1h) primary Version maybe the transfer is already in progress'.PHP_EOL;
 								}else{
 									$sourceServer = $versionFileHostingServer[$serverMissingVersion];
