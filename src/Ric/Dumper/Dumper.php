@@ -2,7 +2,7 @@
 
 class Ric_Dumper_Dumper {
 
-	const VERSION = '0.4.0';
+	const VERSION = '0.5.0';
 
 	const SALT = '_sdffHGe'; // simple fixed salt for deterministic encryption
 
@@ -480,7 +480,12 @@ class Ric_Dumper_Dumper {
 				$passWordParameter = '-pass file:'.escapeshellarg((string)$passFilePath);
 			}
 
-			$command = '| openssl enc -aes-256-cbc -md sha256 -S '.bin2hex(self::SALT).' '.$passWordParameter;
+			// we select explicit the key digist vorteh because we dont know if openssl change the default again
+			if( self::isOpensslPrior111() ){
+				$command = '| openssl enc -aes-256-cbc -md md5 -S '.bin2hex(self::SALT).' '.$passWordParameter;
+			}else{
+				$command = '| openssl enc -aes-256-cbc -md sha256 -S '.bin2hex(self::SALT).' '.$passWordParameter;
+			}
 		}
 
 		return $command;
@@ -529,19 +534,7 @@ class Ric_Dumper_Dumper {
 			}
 
 			// check openssl version
-			$versionCommand = 'openssl version';
-			exec($versionCommand, $output, $status);
-			if( $status!==0 ){
-				throw new RuntimeException('openssl version check failed! :'.implode(';', $output));
-			}
-			$version = reset($output);  // OpenSSL 1.0.2g  1 Mar 2016    or    OpenSSL 3.0.2 15 Mar 2022 (Library: OpenSSL 3.0.2 15 Mar 2022)::
-			if( preg_match('~^OpenSSL\s+(\d+\.\d+\.\d+).*~', $version, $matches) ){
-				$version = $matches[1];
-				$isMinOpenssl111 = version_compare($version, '1.1.1', '>='); // openssl 1.1.1 changed the default behaviour
-			}else{
-				// 'can not detect openssl version: '.$version.' assume its a newer version >(3.0.2) '.PHP_EOL;   but we can not uotput this info :-/
-				$isMinOpenssl111 = true;
-			}
+			$isPrior111 = self::isOpensslPrior111();
 
 			// we read the first 4 bytes of the file to determine the situation
 			$handle = fopen($dumpFilePath, "rb");
@@ -551,21 +544,21 @@ class Ric_Dumper_Dumper {
 
 			if( $oldSaltedFile ){
 				// "Salt"  means old file from prior v1.1.1 is prefix with sort and -md md5
-				if( $isMinOpenssl111 ){
-					// on version3 we have to omit the -S parameter and must set the -md md5
+				if( $isPrior111 ){
+					// i think we can omit the salt too because its in the file
 					$command = 'cat '.$dumpFilePath.' | openssl enc -d -aes-256-cbc -md md5 '.$passWordParameter;
 				}else{
-					// i think we can omit the salt too because its in the file
+					// on version3 we have to omit the -S parameter and must set the -md md5
 					$command = 'cat '.$dumpFilePath.' | openssl enc -d -aes-256-cbc -md md5 '.$passWordParameter;
 				}
 			}else{
-				if( $isMinOpenssl111 ){
-					// no "salt" means is not prefixed and -md sha256 .. we give the -dm sha256 this have to work before and after v1.1.1.
-					$command = 'cat '.$dumpFilePath.' | openssl enc -d -aes-256-cbc -md sha256 -S '.bin2hex(self::SALT).' '.$passWordParameter;
-				}else{
+				if( $isPrior111 ){
 					// we have a big problem here we must prepend the salt self::SALT to the file, lets try somes´thing crazy
 					// so we write the public known salt to a file and cat this file and the dumpfile to openssl
 					$command = 'echo -n "Salted__'.self::SALT.'" > /tmp/dumpersalt; cat /tmp/dumpersalt '.$dumpFilePath.' | openssl enc -d -aes-256-cbc -md sha256 -S '.bin2hex(self::SALT).' '.$passWordParameter;
+				}else{
+					// no "salt" means is not prefixed and -md sha256 .. we give the -dm sha256 this have to work before and after v1.1.1.
+					$command = 'cat '.$dumpFilePath.' | openssl enc -d -aes-256-cbc -md sha256 -S '.bin2hex(self::SALT).' '.$passWordParameter;
 				}
 			}
 
@@ -578,6 +571,24 @@ class Ric_Dumper_Dumper {
 			$command = 'cat '.$dumpFilePath.' | openssl smime -decrypt -inform D -binary -inkey '.escapeshellarg((string) $privateKey);
 		}
 		return $command;
+	}
+
+	static protected function isOpensslPrior111(){
+		$isPrior111 = false;
+		// check openssl version
+		$versionCommand = 'openssl version';
+		exec($versionCommand, $output, $status);
+		if( $status!==0 ){
+			throw new RuntimeException('openssl version check failed! :'.implode(';', $output));
+		}
+		$version = reset($output);  // OpenSSL 1.0.2g  1 Mar 2016    or    OpenSSL 3.0.2 15 Mar 2022 (Library: OpenSSL 3.0.2 15 Mar 2022)::
+		if( preg_match('~^OpenSSL\s+(\d+\.\d+\.\d+).*~', $version, $matches) ){
+			$version = $matches[1];
+			$isPrior111 = version_compare($version, '1.1.1', '<'); // openssl 1.1.1 changed the default behaviour
+		}else{
+			// 'can not detect openssl version: '.$version.' assume its a newer version >(3.0.2) '.PHP_EOL;   but we can not uotput this info :-/
+		}
+		return $isPrior111;
 	}
 
 	/**
