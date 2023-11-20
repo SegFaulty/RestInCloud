@@ -2,7 +2,10 @@
 
 class Ric_Dumper_Dumper {
 
-	const VERSION = '0.3.0';
+	const VERSION = '0.4.0';
+
+	const SALT = '_sdffHGe'; // simple fixed salt for deterministic encryption
+
 	/**
 	 * @param array $argv
 	 * @param array $env
@@ -107,13 +110,12 @@ class Ric_Dumper_Dumper {
 	 * @throws RuntimeException
 	 * @return string
 	 */
-	static protected function resolveSecretFile($filePath){
+	static protected function checkSecretFile($filePath){
 		$secret = '';
 		if( $filePath!='' ){
 			if( !file_exists($filePath) OR !is_readable($filePath) ){
 				throw new RuntimeException('authFile not found or not readable: '.$filePath);
 			}
-			$secret = trim(file_get_contents($filePath));
 		}
 		return $secret;
 	}
@@ -167,7 +169,7 @@ class Ric_Dumper_Dumper {
 			throw new RuntimeException('source must be "STDIN or STDOUT" ');
 		}
 		$command = 'cat '.$dumpFilePath;
-		$command .= self::getDecryptionCommand($cli);
+		$command .= self::getDecryptionCommand($cli, $dumpFilePath);
 		$command .= self::getDecompressionCommand($cli);
 		// geht nach stdout  da es
 
@@ -212,7 +214,7 @@ class Ric_Dumper_Dumper {
 			throw new RuntimeException('restore file already exists: '.$resourceFilePath.' use --force to overwrite');
 		}
 		$command = 'cat '.$dumpFilePath;
-		$command .= self::getDecryptionCommand($cli);
+		$command .= self::getDecryptionCommand($cli, $dumpFilePath);
 		$command .= self::getDecompressionCommand($cli);
 		$command .= ' > '.$resourceFilePath;
 
@@ -256,7 +258,7 @@ class Ric_Dumper_Dumper {
 		}
 		$dumpFilePath = self::getDumpFileForRestore($cli);
 		$command .= 'cat '.$dumpFilePath;
-		$command .= self::getDecryptionCommand($cli);
+		$command .= self::getDecryptionCommand($cli, $dumpFilePath);
 		$command .= self::getDecompressionCommand($cli);
 		$command .= ' | tar -C '.$resourceFilePath.' -xp'; // change dir to target dir
 		if( !$cli->getOption('force') ){
@@ -331,7 +333,7 @@ class Ric_Dumper_Dumper {
 
 		$dumpFilePath = self::getDumpFileForRestore($cli);
 		$command = 'cat '.$dumpFilePath;
-		$command .= self::getDecryptionCommand($cli);
+		$command .= self::getDecryptionCommand($cli, $dumpFilePath);
 		$command .= self::getDecompressionCommand($cli);
 		$command .= ' | '.self::getMysqlCommandString('mysql', $mysqlDefaultFile, $host, $port, $user, $pass, $database);
 
@@ -426,14 +428,12 @@ class Ric_Dumper_Dumper {
 	 */
 	static protected function getEncryptionCommand($cli){
 		$command = '';
-		// password
-		$password = $cli->getOption('pass', self::resolveSecretFile($cli->getOption('passFile')));
-		if( $password!='' ){
-			$salt = '_sdffHGetdsga';
-			$command = '| openssl enc -aes-256-cbc -S '.bin2hex(substr($salt, 0, 8)).' -k '.escapeshellarg((string) $password);
-		}
 
-		/*
+		$publicCert = $cli->getOption('publicCert');
+		if( $publicCert!='' ){
+			//  update 202311 - TODO change this to gpg - https://www.gnupg.org/gph/en/manual/x110.html
+
+			/*
 				 # public key // inspired by https://www.devco.net/archives/2006/02/13/public_-_private_key_encryption_using_openssl.php
 				 # create privatekey and cert ("-nodes" disabled password for privatekey)
 				 openssl req -x509 -sha256 -days 10000 -newkey rsa:2048 -keyout backupEncryptionPrivateKey.pem -out backupEncryptionPubCert.pem -nodes -subj '/'
@@ -443,20 +443,36 @@ class Ric_Dumper_Dumper {
 				 openssl smime -decrypt -inform D -binary -in phperror.log.bz2.der -inkey backupEncryptionPrivateKey.pem -out phperror.log.bz2.decrypted
 				 # check cert (todo Validity Not After : Feb 22 22:03:54 2044 GMT ... sollte noch lange halten?!, aber ich glaube es laesst sich immer decrypten
 				 openssl x509 -in backupEncryptionPubCert.pem -text
-		*/
-		$publicCert = $cli->getOption('publicCert');
-		if( $publicCert!='' ){
+			*/
 			$command = '| openssl smime -encrypt -aes256 -binary -outform D '.escapeshellarg((string) $publicCert);
+
+			// old comment:
+			// deterministic asyncronous ancryption
+			// 1. get sha1 of sourcefile
+			// 2. encrypt the sha1 with openssl async encryption
+			// 3. write the encrypted pw to targetfile  - we need a fixed len here ?!
+			// 4. use this sha1 as password for openssl enc -aes-256-cbc with fixed salt and append target file
+			// decrypt:
+			// 1. read the fixed len enxrypted key
+			// 2. decrypt with private key
+			// 3. use the result als password for openssl enc -d -aes-256-cbc for the rest of the file
 		}
-		// deterministic asyncronous ancryption
-		// 1. get sha1 of sourcefile
-		// 2. encrypt the sha1 with openssl async encryption
-		// 3. write the encrypted pw to targetfile  - we need a fixed len here ?!
-		// 4. use this sha1 as password for openssl enc -aes-256-cbc with fixed salt and append target file
-		// decrypt:
-		// 1. read the fixed len enxrypted key
-		// 2. decrypt with private key
-		// 3. use the result als password for openssl enc -d -aes-256-cbc for the rest of the file
+
+		// 2023-11 gpg is no solution for our symmetric deterministic encryption, because there is no way to provide a fixed salt
+
+		$passFilePath = $cli->getOption('passFile');
+		if( $passFilePath OR $cli->getOption('pass') ){
+
+			if( !$passFilePath ){
+				$passWordParameter = '-pass pass:'.escapeshellarg((string)$cli->getOption('pass'));
+			}else{
+				self::checkSecretFile($passFilePath);
+				$passWordParameter = '--pass file:'.escapeshellarg((string)$passFilePath);
+			}
+
+			$command = '| openssl enc -aes-256-cbc -md sha256 -S '.bin2hex(self::SALT).' '.$passWordParameter;
+		}
+
 		return $command;
 	}
 
@@ -465,14 +481,90 @@ class Ric_Dumper_Dumper {
 	 * @param Ric_Client_Cli $cli
 	 * @return string
 	 */
-	static protected function getDecryptionCommand($cli){
+	static protected function getDecryptionCommand($cli, $dumpFilePath){
 		$command = '';
-		// password
-		$password = $cli->getOption('pass', self::resolveSecretFile($cli->getOption('passFile')));
-		if( $password!='' ){
-			$salt = '_sdffHGetdsga';
-			$command = '| openssl enc -d -aes-256-cbc -S '.bin2hex(substr($salt, 0, 8)).' -k '.escapeshellarg((string) $password);
+
+		$passFilePath = $cli->getOption('passFile');
+		if( $passFilePath OR $cli->getOption('pass') ){
+
+			// DETECT wich opensll version
+			// because of this fukking opensll Schitt from https://www.openssl.org/docs/man3.1/man1/openssl-enc.html
+			/*
+			Please note that OpenSSL 3.0 changed the effect of the -S option.
+			Any explicit salt value specified via this option is no longer prepended to the ciphertext when encrypting, and must again be explicitly provided when decrypting.
+			Conversely, when the -S option is used during decryption, the ciphertext is expected to not have a prepended salt value.
+
+			When using OpenSSL 3.0 or later to decrypt data that was encrypted with an explicit salt under OpenSSL 1.1.1
+			do not use the -S option, the salt will then be read from the ciphertext.
+			To generate ciphertext that can be decrypted with OpenSSL 1.1.1 do not use the -S option,
+			the salt will be then be generated randomly and prepended to the output.
+
+
+			detect openssl version >= 1.1.1 $isMinOpenssl111
+			add parameter $dumpFilePath
+			detect if dumpfile  $iSaltPrefixed
+			use the right command for  slated
+			$detect if gpg header
+
+
+			*/
+
+
+
+			if( !$passFilePath ){
+				$passWordParameter = '-pass pass:'.escapeshellarg((string)$cli->getOption('pass'));
+			}else{
+				self::checkSecretFile($passFilePath);
+				$passWordParameter = '--pass file:'.escapeshellarg((string)$passFilePath);
+			}
+
+			// check openssl version
+			$command = 'openssl version';
+			exec($command, $output, $status);
+			if( $status!==0 ){
+				throw new RuntimeException('openssl version check failed! :'.implode(';', $output));
+			}
+			$version = reset($output);  // OpenSSL 1.0.2g  1 Mar 2016    or    OpenSSL 3.0.2 15 Mar 2022 (Library: OpenSSL 3.0.2 15 Mar 2022)::
+			if( preg_match('~^OpenSSL\s+(\d+\.\d+\.\d+).*~', $version, $matches) ){
+				$version = $matches[1];
+				$isMinOpenssl111 = version_compare($version, '1.1.1', '>='); // openssl 1.1.1 changed the default behaviour
+			}else{
+				// 'can not detect openssl version: '.$version.' assume its a newer version >(3.0.2) '.PHP_EOL;   but we can not uotput this info :-/
+				$isMinOpenssl111 = true;
+			}
+
+			// we read the first 4 bytes of the file to determine the situation
+			$handle = fopen($dumpFilePath, "rb");
+			$firstBytes = fread($handle, 4);
+			fclose($handle);
+			$oldSaltedFile = substr($firstBytes, 0, 4) == 'Salt';
+
+			if( $oldSaltedFile ){
+				// "Salt"  means old file from prior v1.1.1 is prefix with sort and -md md5
+				if( $isMinOpenssl111 ){
+					// on version3 we have to omit the -S parameter and must set the -md md5
+					$command = '| openssl enc -d -aes-256-cbc -md md5 '.$passWordParameter;
+				}else{
+					// i think we can omit the salt too because its in the file
+					$command = '| openssl enc -d -aes-256-cbc '.$passWordParameter;
+				}
+			}else{
+				// no "salt" means is not prefixed and -md sha256 .. we give the -dm sha256 this have to work before and after v1.1.1.
+				$command = '| openssl enc -d -aes-256-cbc -md sha256 -S '.bin2hex(self::SALT).' '.$passWordParameter;
+			}
+
+			echo 'firstBytes: '.bin2hex($firstBytes).PHP_EOL;
+			echo '$oldSaltedFile: '.$oldSaltedFile.PHP_EOL;
+			echo '$isMinOpenssl111: '.$isMinOpenssl111.PHP_EOL;
+			echo '$command: '.$command.PHP_EOL;
+
 		}
+
+
+
+
+
+		// password
 		// private key
 		$privateKey = $cli->getOption('privateKey');
 		if( $privateKey!='' ){

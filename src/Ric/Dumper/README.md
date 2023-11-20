@@ -156,7 +156,21 @@ choose the correct targetFile-suffix for the the used compression mode (example 
 
 ### symmetrically (deterministically) (password)
 use `--pass=secret` or `--passFile=/root/mysecret.txt` to encrypt the file (symmetrically with openssl (enc -aes-256-cbc)
+ATTENTION: WE USE A FIXED SALT (for deduplication) the will weaken the security - so please use a very strong and secret password
 
+## Openssl issues
+- we are in a tricky situation here
+- we really want do use deterministic encryption
+- because of deduplication, we dont want to have different encrypted files for the same input data and backup this files over and over again
+- so we need an encryption where the same input data are encrypted to the same output data (deterministically)
+- but only openssl does support deterministic encryption (with fixed salt), gpg does not it 
+- BUT openssl is a shitshow in terms of longtime consistent behaviour, so the same command on newer versions will produce different output
+- RANT: thats a fucklng bad noob unprofessional annoying unwanted and unexpected mind if you have new idea, give them new parameters, dont break the work of other  
+- they changed the default digest algorithm from md5 to sha256 in 1.1.0
+- and changed the salt behaviour in 3.  https://www.openssl.org/docs/man3.1/man1/openssl-enc.html  "Please note that OpenSSL 3.0 changed the effect of the -S option. Any explicit.."
+- so we build a workaround for this openssl issues
+- we detect the situation (how is the file encrpted and wich openssl version we are running on) 
+- so we use the correct openssl command for the given openssl version and file format
 
 ### asymmetrically (encrypt with public cert, decrypt with private key) (not deterministically) 
 * because of a random secret it will output every time called differentd data (not deterministically)
