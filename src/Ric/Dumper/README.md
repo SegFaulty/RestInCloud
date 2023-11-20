@@ -171,6 +171,10 @@ ATTENTION: WE USE A FIXED SALT (for deduplication) the will weaken the security 
 - so we build a workaround for this openssl issues
 - we detect the situation (how is the file encrpted and wich openssl version we are running on) 
 - so we use the correct openssl command for the given openssl version and file format
+- the highlight the best of the best is decrypting a file which was encrypted by new versions and has no prepend salt
+- there is "no way" to decrypt these files with old version
+- we build a way by  writing the salt to a tmp file and send the salt file and then the encrypted file to the old openssl version ... CRAZY!
+- if you know a better solution for long term suppoort of openssl encrypted files, please let us know
 
 ### asymmetrically (encrypt with public cert, decrypt with private key) (not deterministically) 
 * because of a random secret it will output every time called differentd data (not deterministically)

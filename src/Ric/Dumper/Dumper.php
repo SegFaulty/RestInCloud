@@ -21,15 +21,30 @@ class Ric_Dumper_Dumper {
 			$msg.= $cli->dumpParameters();
 		}
 
+
+
 		$mode = $cli->getArgument(1);
 		$resourceType = $cli->getArgument(2);
 
+		if( $mode=='' ){
+			$mode = 'help';
+		}
+		if( $cli->getOption('v') OR $cli->getOption('version') ){
+			$mode = 'version';
+		}
+
 		try{
-			if( !in_array($mode, ['dump', 'restore', 'help']) ){
-				throw new RuntimeException(' first arguments needs to be help, dump or restore'.PHP_EOL);
+			if( !in_array($mode, ['dump', 'restore', 'help', 'version']) ){
+				throw new RuntimeException(' first arguments needs to be version, help, dump or restore'.PHP_EOL);
 			}
 			if( $mode=='help' ){
-				$msg.= self::getHelp($cli->getArgument(2), $helpString);
+				$msg .= self::getHelp($cli->getArgument(2), $helpString);
+			}elseif( $mode=='version' ){
+				$msg .= ' v'.self::VERSION;
+				if( defined('BUILD_DATE') ){
+					$msg .= ' build: '.BUILD_DATE;
+				}
+				$msg .= PHP_EOL;
 			}else{
 				switch($resourceType){
 					case 'std':
@@ -131,7 +146,6 @@ class Ric_Dumper_Dumper {
 		}
 		if( $command=='' AND defined('BUILD_DATE') ){
 			$helpString = ' v'.self::VERSION.' build: '.BUILD_DATE.PHP_EOL.$helpString;
-
 		}
 		return $helpString;
 	}
@@ -168,8 +182,7 @@ class Ric_Dumper_Dumper {
 		if( $resourceFilePath!='STDIN' AND $resourceFilePath!='STDOUT' ){
 			throw new RuntimeException('source must be "STDIN or STDOUT" ');
 		}
-		$command = 'cat '.$dumpFilePath;
-		$command .= self::getDecryptionCommand($cli, $dumpFilePath);
+		$command = self::getDecryptionCommand($cli, $dumpFilePath);
 		$command .= self::getDecompressionCommand($cli);
 		// geht nach stdout  da es
 
@@ -213,8 +226,7 @@ class Ric_Dumper_Dumper {
 		if( is_file($resourceFilePath) AND !$cli->getOption('force') ){
 			throw new RuntimeException('restore file already exists: '.$resourceFilePath.' use --force to overwrite');
 		}
-		$command = 'cat '.$dumpFilePath;
-		$command .= self::getDecryptionCommand($cli, $dumpFilePath);
+		$command = self::getDecryptionCommand($cli, $dumpFilePath);
 		$command .= self::getDecompressionCommand($cli);
 		$command .= ' > '.$resourceFilePath;
 
@@ -257,7 +269,6 @@ class Ric_Dumper_Dumper {
 			$command .= 'mkdir -p '.$resourceFilePath.' && '; // create target dir if not exists
 		}
 		$dumpFilePath = self::getDumpFileForRestore($cli);
-		$command .= 'cat '.$dumpFilePath;
 		$command .= self::getDecryptionCommand($cli, $dumpFilePath);
 		$command .= self::getDecompressionCommand($cli);
 		$command .= ' | tar -C '.$resourceFilePath.' -xp'; // change dir to target dir
@@ -332,8 +343,7 @@ class Ric_Dumper_Dumper {
 		$mysqlDefaultFile = $cli->getOption('mysqlDefaultFile', '');
 
 		$dumpFilePath = self::getDumpFileForRestore($cli);
-		$command = 'cat '.$dumpFilePath;
-		$command .= self::getDecryptionCommand($cli, $dumpFilePath);
+		$command = self::getDecryptionCommand($cli, $dumpFilePath);
 		$command .= self::getDecompressionCommand($cli);
 		$command .= ' | '.self::getMysqlCommandString('mysql', $mysqlDefaultFile, $host, $port, $user, $pass, $database);
 
@@ -467,7 +477,7 @@ class Ric_Dumper_Dumper {
 				$passWordParameter = '-pass pass:'.escapeshellarg((string)$cli->getOption('pass'));
 			}else{
 				self::checkSecretFile($passFilePath);
-				$passWordParameter = '--pass file:'.escapeshellarg((string)$passFilePath);
+				$passWordParameter = '-pass file:'.escapeshellarg((string)$passFilePath);
 			}
 
 			$command = '| openssl enc -aes-256-cbc -md sha256 -S '.bin2hex(self::SALT).' '.$passWordParameter;
@@ -482,7 +492,7 @@ class Ric_Dumper_Dumper {
 	 * @return string
 	 */
 	static protected function getDecryptionCommand($cli, $dumpFilePath){
-		$command = '';
+		$command = 'cat '.$dumpFilePath; // default command if we have no encryption
 
 		$passFilePath = $cli->getOption('passFile');
 		if( $passFilePath OR $cli->getOption('pass') ){
@@ -515,12 +525,12 @@ class Ric_Dumper_Dumper {
 				$passWordParameter = '-pass pass:'.escapeshellarg((string)$cli->getOption('pass'));
 			}else{
 				self::checkSecretFile($passFilePath);
-				$passWordParameter = '--pass file:'.escapeshellarg((string)$passFilePath);
+				$passWordParameter = '-pass file:'.escapeshellarg((string)$passFilePath);
 			}
 
 			// check openssl version
-			$command = 'openssl version';
-			exec($command, $output, $status);
+			$versionCommand = 'openssl version';
+			exec($versionCommand, $output, $status);
 			if( $status!==0 ){
 				throw new RuntimeException('openssl version check failed! :'.implode(';', $output));
 			}
@@ -543,32 +553,29 @@ class Ric_Dumper_Dumper {
 				// "Salt"  means old file from prior v1.1.1 is prefix with sort and -md md5
 				if( $isMinOpenssl111 ){
 					// on version3 we have to omit the -S parameter and must set the -md md5
-					$command = '| openssl enc -d -aes-256-cbc -md md5 '.$passWordParameter;
+					$command = 'cat '.$dumpFilePath.' | openssl enc -d -aes-256-cbc -md md5 '.$passWordParameter;
 				}else{
 					// i think we can omit the salt too because its in the file
-					$command = '| openssl enc -d -aes-256-cbc '.$passWordParameter;
+					$command = 'cat '.$dumpFilePath.' | openssl enc -d -aes-256-cbc -md md5 '.$passWordParameter;
 				}
 			}else{
-				// no "salt" means is not prefixed and -md sha256 .. we give the -dm sha256 this have to work before and after v1.1.1.
-				$command = '| openssl enc -d -aes-256-cbc -md sha256 -S '.bin2hex(self::SALT).' '.$passWordParameter;
+				if( $isMinOpenssl111 ){
+					// no "salt" means is not prefixed and -md sha256 .. we give the -dm sha256 this have to work before and after v1.1.1.
+					$command = 'cat '.$dumpFilePath.' | openssl enc -d -aes-256-cbc -md sha256 -S '.bin2hex(self::SALT).' '.$passWordParameter;
+				}else{
+					// we have a big problem here we must prepend the salt self::SALT to the file, lets try somes´thing crazy
+					// so we write the public known salt to a file and cat this file and the dumpfile to openssl
+					$command = 'echo -n "Salted__'.self::SALT.'" > /tmp/dumpersalt; cat /tmp/dumpersalt '.$dumpFilePath.' | openssl enc -d -aes-256-cbc -md sha256 -S '.bin2hex(self::SALT).' '.$passWordParameter;
+				}
 			}
 
-			echo 'firstBytes: '.bin2hex($firstBytes).PHP_EOL;
-			echo '$oldSaltedFile: '.$oldSaltedFile.PHP_EOL;
-			echo '$isMinOpenssl111: '.$isMinOpenssl111.PHP_EOL;
-			echo '$command: '.$command.PHP_EOL;
-
 		}
-
-
-
-
 
 		// password
 		// private key
 		$privateKey = $cli->getOption('privateKey');
 		if( $privateKey!='' ){
-			$command = '| openssl smime -decrypt -inform D -binary -inkey '.escapeshellarg((string) $privateKey);
+			$command = 'cat '.$dumpFilePath.' | openssl smime -decrypt -inform D -binary -inkey '.escapeshellarg((string) $privateKey);
 		}
 		return $command;
 	}
