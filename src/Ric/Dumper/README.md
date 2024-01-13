@@ -37,17 +37,20 @@ restore
 
 	dumper restore {resource} {dumpFile}
 
-
 if _dumpFile_ is omitted or `STDOUT`, the content is piped to stdout
+
+dumper help
+dumper version    (use --verbose for OpenSSL version)
 
 ## Resources
 
 ### Help STDIN/STDOUT
+
 dump piped content or restore to stdout
 
 	dump std STDIN {dumpFile}
 
-restore  
+restore
 
 	restore std STDIN {dumpFile} 
 
@@ -199,9 +202,9 @@ deterministically means: same input data are encrypted to same output data (that
 
 ## Global options
 
-* `--test` only show commands, don't execute 
-* `--prefix=pref_` will added to dump file but will not add to restored resources (dir, file)   
+* `--test` only show commands, don't execute
+* `--prefix=pref_` will added to dump file but will not add to restored resources (dir, file)
 	* dump: `dump mysql.cnf mysql.cnf --prefix=server0815-`
-	* dump-file: `server0815-mysql.cnf`  
+	* dump-file: `server0815-mysql.cnf`
 	* restore: `restore mysql.cnf mysql.cnf --prefix=server0815-`
-* `--verbose` show more infos
+* `--verbose` show more info

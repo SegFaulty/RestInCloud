@@ -2,7 +2,7 @@
 
 class Ric_Dumper_Dumper {
 
-	const VERSION = '0.5.0';
+	const VERSION = '0.8.0';
 
 	const SALT = '_sdffHGe'; // simple fixed salt for deterministic encryption
 
@@ -44,6 +44,7 @@ class Ric_Dumper_Dumper {
 				if( defined('BUILD_DATE') ){
 					$msg .= ' build: '.BUILD_DATE;
 				}
+				$msg .= ' (OpenSLL Variant '.self::getOpensslVariant($cli).')';
 				$msg .= PHP_EOL;
 			}else{
 				switch($resourceType){
@@ -409,6 +410,7 @@ class Ric_Dumper_Dumper {
 	 * @return mixed
 	 */
 	static protected function executeCommand($cli, $command){
+		$command = 'set -e -o pipefail && '.$command; // exit on error in any piped command
 		if( $cli->getOption('verbose') ){
 			static::stdOut($command.PHP_EOL);
 		}
@@ -416,7 +418,7 @@ class Ric_Dumper_Dumper {
 			$output = 'command: "'.$command.'"';
 		}else{
 			$targetFileName = $cli->getArgument(4, '');
-			if( $targetFileName!='' AND $targetFileName!='STDOUT' ){
+			if( $targetFileName!='' and $targetFileName!='STDOUT' ){
 				exec($command, $output, $status);
 				$output = implode("\n", $output);
 			}else{
@@ -441,7 +443,8 @@ class Ric_Dumper_Dumper {
 
 		$publicCert = $cli->getOption('publicCert');
 		if( $publicCert!='' ){
-			//  update 202311 - TODO change this to gpg - https://www.gnupg.org/gph/en/manual/x110.html
+			// update 202311 - TODO change this to gpg - https://www.gnupg.org/gph/en/manual/x110.html
+			// update 202401 - There is now way to gpg, because of ... i forget ... maybe there is no possibility to inject the password
 
 			/*
 				 # public key // inspired by https://www.devco.net/archives/2006/02/13/public_-_private_key_encryption_using_openssl.php
@@ -474,17 +477,23 @@ class Ric_Dumper_Dumper {
 		if( $passFilePath OR $cli->getOption('pass') ){
 
 			if( !$passFilePath ){
-				$passWordParameter = '-pass pass:'.escapeshellarg((string)$cli->getOption('pass'));
+				$passWordParameter = '-pass pass:'.escapeshellarg((string) $cli->getOption('pass'));
 			}else{
 				self::checkSecretFile($passFilePath);
-				$passWordParameter = '-pass file:'.escapeshellarg((string)$passFilePath);
+				$passWordParameter = '-pass file:'.escapeshellarg((string) $passFilePath);
 			}
 
-			// we select explicit the key digist vorteh because we dont know if openssl change the default again
-			if( self::isOpensslPrior111() ){
+			// we select explicit the key digist because we don't know if openssl change the default again
+			if( self::getOpensslVariant($cli)==1 ){
 				$command = '| openssl enc -aes-256-cbc -md md5 -S '.bin2hex(self::SALT).' '.$passWordParameter;
-			}else{
+				if( $cli->getOption('verbose') ){
+					static::stdOut('encryption: old OpenSSL (default and forced: -md md5 with prepend salt)'.PHP_EOL);
+				}
+			}else{ // for variant 2 and 3 we use the sha256 and -S parameter   (variant 2 will prepend the salt, variant 3 wil not prepend the salt)
 				$command = '| openssl enc -aes-256-cbc -md sha256 -S '.bin2hex(self::SALT).' '.$passWordParameter;
+				if( $cli->getOption('verbose') ){
+					static::stdOut('encryption: new OpenSSL (default and forced: -md sha256 with (1.1.1+) or without (3.0.0+) prepend salt)'.PHP_EOL);
+				}
 			}
 		}
 
@@ -502,8 +511,8 @@ class Ric_Dumper_Dumper {
 		$passFilePath = $cli->getOption('passFile');
 		if( $passFilePath OR $cli->getOption('pass') ){
 
-			// DETECT wich opensll version
-			// because of this fukking opensll Schitt from https://www.openssl.org/docs/man3.1/man1/openssl-enc.html
+			// DETECT wich OpenSSL version
+			// because of this fukking OpenSSL Schitt from https://www.openssl.org/docs/man3.1/man1/openssl-enc.html
 			/*
 			Please note that OpenSSL 3.0 changed the effect of the -S option.
 			Any explicit salt value specified via this option is no longer prepended to the ciphertext when encrypting, and must again be explicitly provided when decrypting.
@@ -513,54 +522,90 @@ class Ric_Dumper_Dumper {
 			do not use the -S option, the salt will then be read from the ciphertext.
 			To generate ciphertext that can be decrypted with OpenSSL 1.1.1 do not use the -S option,
 			the salt will be then be generated randomly and prepended to the output.
-
-
-			detect openssl version >= 1.1.1 $isMinOpenssl111
-			add parameter $dumpFilePath
-			detect if dumpfile  $iSaltPrefixed
-			use the right command for  slated
-			$detect if gpg header
-
-
 			*/
-
-
 
 			if( !$passFilePath ){
 				$passWordParameter = '-pass pass:'.escapeshellarg((string)$cli->getOption('pass'));
 			}else{
 				self::checkSecretFile($passFilePath);
-				$passWordParameter = '-pass file:'.escapeshellarg((string)$passFilePath);
+				$passWordParameter = '-pass file:'.escapeshellarg((string) $passFilePath);
 			}
-
-			// check openssl version
-			$isPrior111 = self::isOpensslPrior111();
 
 			// we read the first 4 bytes of the file to determine the situation
 			$handle = fopen($dumpFilePath, "rb");
 			$firstBytes = fread($handle, 4);
 			fclose($handle);
-			$oldSaltedFile = substr($firstBytes, 0, 4) == 'Salt';
+			$saltedFile = substr($firstBytes, 0, 4)=='Salt';
 
-			if( $oldSaltedFile ){
-				// "Salt"  means old file from prior v1.1.1 is prefix with sort and -md md5
-				if( $isPrior111 ){
-					// i think we can omit the salt too because its in the file
+			$openSllVariant = self::getOpensslVariant($cli);
+			if( $openSllVariant==1 ){ // < 1.1.1
+				if( $saltedFile ){
+					// we can omit the -S parameter and set the -md sha256 because this is our default, if this file is prioir 1.1.1 this will fail!
 					$command = 'cat '.$dumpFilePath.' | openssl enc -d -aes-256-cbc -md md5 '.$passWordParameter;
+					if( $cli->getOption('verbose') ){
+						static::stdOut('decryption: salted file, we are on an old OpenSSL version (default: -md md5)'.PHP_EOL);
+					}
 				}else{
-					// on version3 we have to omit the -S parameter and must set the -md md5
-					$command = 'cat '.$dumpFilePath.' | openssl enc -d -aes-256-cbc -md md5 '.$passWordParameter;
+					throw new RuntimeException('OpenSLL problem, your OpenSLL Version is to old to decrypt an not salted (created with OpenSLL 3.0.0+) file, please decrypt this file on a server with new OpenSLL (3.0.0+) lib'.PHP_EOL);
 				}
-			}else{
-				if( $isPrior111 ){
-					// we have a big problem here we must prepend the salt self::SALT to the file, lets try somes´thing crazy
-					// so we write the public known salt to a file and cat this file and the dumpfile to openssl
-					$command = 'echo -n "Salted__'.self::SALT.'" > /tmp/dumpersalt; cat /tmp/dumpersalt '.$dumpFilePath.' | openssl enc -d -aes-256-cbc -md sha256 -S '.bin2hex(self::SALT).' '.$passWordParameter;
+			}elseif( $openSllVariant==2 ){ // 1.1.1+
+				if( $saltedFile ){
+					// we have to omit the -S parameter and must set the -md sha256
+					$command = 'cat '.$dumpFilePath.' | openssl enc -d -aes-256-cbc -md sha256 '.$passWordParameter;
+					if( $cli->getOption('verbose') ){
+						static::stdOut('decryption: salted file, we are on an older OpenSSL version (default: -md sha256) so we try with sha256 if the file is older then OpenSLL 1.1.1 then this will fail and you have to decrypt it with -md md5'.PHP_EOL);
+					}
 				}else{
-					// no "salt" means is not prefixed and -md sha256 .. we give the -dm sha256 this have to work before and after v1.1.1.
-					$command = 'cat '.$dumpFilePath.' | openssl enc -d -aes-256-cbc -md sha256 -S '.bin2hex(self::SALT).' '.$passWordParameter;
+					throw new RuntimeException('OpenSLL problem, your OpenSLL Version is to old to decrypt an not salted (created with OpenSLL 3.0.0+) file, please decrypt this file on a server with new OpenSLL (3.0.0+) lib'.PHP_EOL);
+				}
+			}else{ // 3.0.0+
+				if( $saltedFile ){
+					// we have to omit the -S parameter and must set the -md sha256
+					$command = 'cat '.$dumpFilePath.' | openssl enc -d -aes-256-cbc -md sha256 '.$passWordParameter;
+					if( $cli->getOption('verbose') ){
+						static::stdOut('decryption: salted file, we are on an new OpenSSL version but have an old (salt prepended) file (default: -md sha256)'.PHP_EOL);
+					}
+				}else{
+					// no salt, this is default 3.0.0+ we must use the -S parameter
+					$command = 'cat '.$dumpFilePath.' | openssl enc -d -aes-256-cbc -md sha256 -S '.bin2hex(self::SALT).''.$passWordParameter;
+					if( $cli->getOption('verbose') ){
+						static::stdOut('decryption: not salted file, we are on an newer OpenSSL version (default: -md sha256)'.PHP_EOL);
+					}
 				}
 			}
+
+// THE OLD (2023-11)    NO WORKING Code for reference .... jaja
+//			if( $saltedFile ){
+//				// "Salt"  means old file from prior v1.1.1 is prefix with sort and -md md5
+//				if( $isPrior111 ){
+//					// i think we can omit the salt too because its in the file
+//					$command = 'cat '.$dumpFilePath.' | openssl enc -d -aes-256-cbc -md md5 '.$passWordParameter;
+//					if( $cli->getOption('verbose') ){
+//						static::stdOut('decryption: salted (old md5) file, old OpenSSL (default: -md md5)'.PHP_EOL);
+//					}
+//				}else{
+//					// on version3 we have to omit the -S parameter and must set the -md md5
+//					$command = 'cat '.$dumpFilePath.' | openssl enc -d -aes-256-cbc -md md5 '.$passWordParameter;
+//					if( $cli->getOption('verbose') ){
+//						static::stdOut('decryption: salted (old md5) file, new OpenSSL (force: -md md5)'.PHP_EOL);
+//					}
+//				}
+//			}else{
+//				if( $isPrior111 ){
+//					// we have a big problem here we must prepend the salt self::SALT to the file, lets try something crazy
+//					// so we write the public known salt to a file and cat this file and the dumpfile to openssl
+//					$command = 'echo -n "Salted__'.self::SALT.'" > /tmp/dumpersalt; cat /tmp/dumpersalt '.$dumpFilePath.' | openssl enc -d -aes-256-cbc -md sha256 -S '.bin2hex(self::SALT).' '.$passWordParameter;
+//					if( $cli->getOption('verbose') ){
+//						static::stdOut('decryption: not salted (new, sha256) file, old OpenSSL (force: -md sha256 and prepend the salt to the file)'.PHP_EOL);
+//					}
+//				}else{
+//					// no "salt" means is not prefixed and -md sha256 .. we give the -dm sha256 this have to work before and after v1.1.1.
+//					$command = 'cat '.$dumpFilePath.' | openssl enc -d -aes-256-cbc -md sha256 -S '.bin2hex(self::SALT).' '.$passWordParameter;
+//					if( $cli->getOption('verbose') ){
+//						static::stdOut('decryption: not salted (new, sha256) file, new OpenSSL (default: -md sha256)'.PHP_EOL);
+//					}
+//				}
+//			}
 
 		}
 
@@ -573,8 +618,8 @@ class Ric_Dumper_Dumper {
 		return $command;
 	}
 
-	static protected function isOpensslPrior111(){
-		$isPrior111 = false;
+	static protected function getOpensslVariant($cli){
+		$variant = false;
 		// check openssl version
 		$versionCommand = 'openssl version';
 		exec($versionCommand, $output, $status);
@@ -584,11 +629,31 @@ class Ric_Dumper_Dumper {
 		$version = reset($output);  // OpenSSL 1.0.2g  1 Mar 2016    or    OpenSSL 3.0.2 15 Mar 2022 (Library: OpenSSL 3.0.2 15 Mar 2022)::
 		if( preg_match('~^OpenSSL\s+(\d+\.\d+\.\d+).*~', $version, $matches) ){
 			$version = $matches[1];
-			$isPrior111 = version_compare($version, '1.1.1', '<'); // openssl 1.1.1 changed the default behaviour
+			if( $cli->getOption('verbose') ){
+				static::stdOut('OpenSSl Version detected: '.$version.PHP_EOL);
+			}
+			if( version_compare($version, '1.1.1', '<') ){ // openssl 1.1.1 changed the default digst md5 -> sha256
+				$variant = 1;
+				if( $cli->getOption('verbose') ){
+					static::stdOut('OpenSSl Version with -md md5 and prepend salt ['.$variant.']'.PHP_EOL);
+				}
+			}elseif( version_compare($version, '3.0.0', '>=') ){ // openssl 3.0.0 changed the default salt
+				$variant = 3;
+				if( $cli->getOption('verbose') ){
+					static::stdOut('OpenSSl Version with -md sha256 and no longer prepend salt ['.$variant.']'.PHP_EOL);
+				}
+			}else{
+				$variant = 2;
+				if( $cli->getOption('verbose') ){
+					static::stdOut('OpenSSl Version with -md sha256 and prepend salt ['.$variant.']'.PHP_EOL);
+				}
+			}
 		}else{
-			// 'can not detect openssl version: '.$version.' assume its a newer version >(3.0.2) '.PHP_EOL;   but we can not uotput this info :-/
+			if( $cli->getOption('verbose') ){
+				static::stdOut('we can not detect the OpenSSl Version, we assume its a newer version (>=3.0.2)'.PHP_EOL);
+			}
 		}
-		return $isPrior111;
+		return $variant;
 	}
 
 	/**
