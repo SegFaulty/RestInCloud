@@ -2,7 +2,7 @@
 
 class Ric_Dumper_Dumper {
 
-	const VERSION = '0.8.0';
+	const VERSION = '0.9.0';
 
 	const SALT = '_sdffHGe'; // simple fixed salt for deterministic encryption
 
@@ -410,7 +410,9 @@ class Ric_Dumper_Dumper {
 	 * @return mixed
 	 */
 	static protected function executeCommand($cli, $command){
-		$command = 'set -e -o pipefail && '.$command; // exit on error in any piped command
+		// does not work: putenv('SHELL=/bin/bash'); // set shell to /bin/bash
+		$command = 'set -e -o pipefail && '.$command; // exit on error in any piped command / this only work in bash
+		$command = "/bin/bash -c '".$command."'"; // use explicit the bash shell
 		if( $cli->getOption('verbose') ){
 			static::stdOut($command.PHP_EOL);
 		}
