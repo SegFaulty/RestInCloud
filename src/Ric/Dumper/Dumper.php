@@ -2,7 +2,7 @@
 
 class Ric_Dumper_Dumper {
 
-	const VERSION = '0.9.0';
+	const VERSION = '0.11.0';
 
 	const SALT = '_sdffHGe'; // simple fixed salt for deterministic encryption
 
@@ -20,8 +20,6 @@ class Ric_Dumper_Dumper {
 		if( $cli->getOption('verbose') ){
 			$msg.= $cli->dumpParameters();
 		}
-
-
 
 		$mode = $cli->getArgument(1);
 		$resourceType = $cli->getArgument(2);
@@ -247,10 +245,11 @@ class Ric_Dumper_Dumper {
 		}
 		$excludes = array_filter(explode('|', $cli->getOption('exclude', '')));
 		$command = self::getPrefixDumpCommand($cli);
-		$command .= 'tar -C '.$resourceFilePath.' -cp .'; // keep fileowners, we change to the given dir
+		$command .= 'tar';
 		if( $excludes ){
 			$command .= ' --exclude='.implode(' --exclude=', $excludes);
 		}
+		$command .= ' -C '.$resourceFilePath.' -cp .'; // keep fileowners, we change to the given dir
 		$command .= self::getCompressionCommand($cli);
 		$command .= self::getEncryptionCommand($cli);
 		$command .= self::getDumpFileForDumpCommand($cli);
@@ -322,9 +321,12 @@ class Ric_Dumper_Dumper {
 			}
 			$tableList = array_unique($tableList);
 		}
-		$command =  self::getPrefixDumpCommand($cli);
+		$command = self::getPrefixDumpCommand($cli);
 		$command .= self::getMysqlCommandString('mysqldump', $mysqlDefaultFile, $host, $port, $user, $pass, $database, $tableList);
-        $command .= ' --skip-dump-date'; // to be deterministic
+		$command .= ' --skip-dump-date'; // to be deterministic
+		if( $database=='mysql' ){
+			$command .= ' --skip-lock-tables'; // to avoid Got error: 1556: "You can't use locks with log tables" when doing LOCK TABLES
+		}
 		$command .= self::getCompressionCommand($cli);
 		$command .= self::getEncryptionCommand($cli);
 		$command .= self::getDumpFileForDumpCommand($cli);
