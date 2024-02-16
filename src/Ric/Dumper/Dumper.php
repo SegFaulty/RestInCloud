@@ -2,7 +2,7 @@
 
 class Ric_Dumper_Dumper {
 
-	const VERSION = '0.11.0';
+	const VERSION = '0.11.1';
 
 	const SALT = '_sdffHGe'; // simple fixed salt for deterministic encryption
 
@@ -571,7 +571,7 @@ class Ric_Dumper_Dumper {
 					}
 				}else{
 					// no salt, this is default 3.0.0+ we must use the -S parameter
-					$command = 'cat '.$dumpFilePath.' | openssl enc -d -aes-256-cbc -md sha256 -S '.bin2hex(self::SALT).''.$passWordParameter;
+					$command = 'cat '.$dumpFilePath.' | openssl enc -d -aes-256-cbc -md sha256 -S '.bin2hex(self::SALT).' '.$passWordParameter;
 					if( $cli->getOption('verbose') ){
 						static::stdOut('decryption: not salted file, we are on an newer OpenSSL version (default: -md sha256)'.PHP_EOL);
 					}
