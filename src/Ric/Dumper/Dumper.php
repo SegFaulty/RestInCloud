@@ -2,7 +2,7 @@
 
 class Ric_Dumper_Dumper {
 
-	const VERSION = '0.11.1';
+	const VERSION = '0.11.2';
 
 	const SALT = '_sdffHGe'; // simple fixed salt for deterministic encryption
 
@@ -324,6 +324,8 @@ class Ric_Dumper_Dumper {
 		$command = self::getPrefixDumpCommand($cli);
 		$command .= self::getMysqlCommandString('mysqldump', $mysqlDefaultFile, $host, $port, $user, $pass, $database, $tableList);
 		$command .= ' --skip-dump-date'; // to be deterministic
+		$command .= ' --complete-insert'; // inserts with column names, because you can copy the insert statement without the create table and ensure that the insert uses the correct columns at different table structure
+		$command .= ' --extended-insert'; // multi line inserts, (seems default, but with complete-insert we make sure)
 		if( $database=='mysql' ){
 			$command .= ' --skip-lock-tables'; // to avoid Got error: 1556: "You can't use locks with log tables" when doing LOCK TABLES
 		}
