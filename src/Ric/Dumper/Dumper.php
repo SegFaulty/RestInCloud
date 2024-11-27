@@ -2,7 +2,7 @@
 
 class Ric_Dumper_Dumper {
 
-	const VERSION = '0.11.2';
+	const VERSION = '0.11.3';
 
 	const SALT = '_sdffHGe'; // simple fixed salt for deterministic encryption
 
@@ -350,9 +350,16 @@ class Ric_Dumper_Dumper {
 		$dumpFilePath = self::getDumpFileForRestore($cli);
 		$command = self::getDecryptionCommand($cli, $dumpFilePath);
 		$command .= self::getDecompressionCommand($cli);
+		if( $cli->getOption('mysqlSkipFirstLine') ){
+			$command .= ' | tail -n +2'; // skip first line
+		}
 		$command .= ' | '.self::getMysqlCommandString('mysql', $mysqlDefaultFile, $host, $port, $user, $pass, $database);
-
-		return self::executeCommand($cli, $command);
+		$output = self::executeCommand($cli, $command);
+		if( strstr($output, 'ERROR at line 1: Unknown command')!==false ){
+			$output .= 'Seems like you are affected of the "sandbox" backward incompatible change see https://mariadb.org/mariadb-dump-file-compatibility-change/,';
+			$output .= 'please use --mysqlSkipFirstLine to skip the first line of the dump'.PHP_EOL;
+		}
+		return $output;
 	}
 
 	/**

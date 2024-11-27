@@ -118,8 +118,11 @@ restore works only on database level
 
 you can restore the dump as plain sql file as well (makes only sense if the dumpFile ist encrypted and/or compressed):
 
-	restore file dump.sql {dumpFile}
+	restore file dump.sql {dumpFile}  
 
+starting with MariaDB 10.5.25 there is an mysqldump restore backward incompatible error:    "ERROR at line 1: Unknown command ..."
+see: https://mariadb.org/mariadb-dump-file-compatibility-change/
+use `--mysqlSkipFirstLine` to skip the incompatible first line of newer dumps on older mysql/mariadb versions 
 
 ### Help InfluxDb
 dump influx instance (meta and all databases) or meta or single database
