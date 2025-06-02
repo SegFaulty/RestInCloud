@@ -11,7 +11,7 @@
 class Ric_Client_Client {
 
 	const MIN_SERVER_VERSION = '0.8.0'; // server needs to be on this or a higher version, BUT on the same MAJOR version  ok: 1.4.0 < 1.8.3  but fail:  1.4.0 < 2.3.0  because client is to old
-	const CLIENT_VERSION = '0.12'; //
+	const CLIENT_VERSION = '0.13'; //
 
 	const MAGIC_DELETION_TIMESTAMP = 1422222222; // 2015-01-25 22:43:42
 
@@ -731,6 +731,17 @@ class Ric_Client_Client {
 		if( !is_dir($targetDir) ){
 			throw new RuntimeException($targetDir.' is not a writable targetDir');
 		}
+
+		// garbage collection: delete all '*__temp__*' files older than a week in targetDir
+		$files = glob($targetDir.'*__temp__*');
+		foreach( $files as $file ){
+			if( is_file($file) AND time()-filemtime($file)>604800 ){ // 7 days
+				$this->logDebug('delete old tmp file: '.$file);
+				unlink($file);
+			}
+		}
+
+		// load the ric inventory
 		$inventory = $this->getInventory($pattern);
 
 		$this->logInfo('start snapshot of '.count($inventory).' server files'.($pattern ? ' with pattern "'.$pattern.'"' : ''));
