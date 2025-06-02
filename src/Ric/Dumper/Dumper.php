@@ -2,7 +2,7 @@
 
 class Ric_Dumper_Dumper {
 
-	const VERSION = '0.11.3';
+	const VERSION = '0.11.4';
 
 	const SALT = '_sdffHGe'; // simple fixed salt for deterministic encryption
 
@@ -551,6 +551,12 @@ class Ric_Dumper_Dumper {
 			$saltedFile = substr($firstBytes, 0, 4)=='Salt';
 
 			$openSllVariant = self::getOpensslVariant($cli);
+			if( $cli->getOption('decryptSSL1') ){
+				if( $cli->getOption('verbose') ){
+					static::stdOut('decryption: force prior OpenSSL 1.1.1 with -md md5)'.PHP_EOL);
+				}
+				$openSllVariant=1;
+			}
 			if( $openSllVariant==1 ){ // < 1.1.1
 				if( $saltedFile ){
 					// we can omit the -S parameter and set the -md sha256 because this is our default, if this file is prioir 1.1.1 this will fail!

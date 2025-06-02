@@ -182,6 +182,9 @@ ATTENTION: WE USE A FIXED SALT (for deduplication) the will weaken the security 
 - we build a way by  writing the salt to a tmp file and send the salt file and then the encrypted file to the old openssl version ... CRAZY!
 - if you know a better solution for long term suppoort of openssl encrypted files, please let us know
 
+### Old OpenSSL Versions Prior 1.1.1 Encrypted Files
+- if you have an file which was encrypted with openssl 1.0.2 or older use option `--decryptSSL1` to decrypt it on modern systems (will use md5 digest)
+
 ### asymmetrically (encrypt with public cert, decrypt with private key) (not deterministically) 
 * because of a random secret it will output every time called differentd data (not deterministically)
 * use `--publicCert=/root/backupPublicCert.pem` to encrypt the file asymetrically with a public certificate 
