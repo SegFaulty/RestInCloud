@@ -11,7 +11,7 @@
 class Ric_Client_Client {
 
 	const MIN_SERVER_VERSION = '0.8.0'; // server needs to be on this or a higher version, BUT on the same MAJOR version  ok: 1.4.0 < 1.8.3  but fail:  1.4.0 < 2.3.0  because client is to old
-	const CLIENT_VERSION = '0.13'; //
+	const CLIENT_VERSION = '0.14'; //
 
 	const MAGIC_DELETION_TIMESTAMP = 1422222222; // 2015-01-25 22:43:42
 
@@ -743,6 +743,7 @@ class Ric_Client_Client {
 
 		// load the ric inventory
 		$inventory = $this->getInventory($pattern);
+		self::shuffle_assoc($inventory); // shuffle the inventory to prevent: if failing at the same files we never doing the following files
 
 		$this->logInfo('start snapshot of '.count($inventory).' server files'.($pattern ? ' with pattern "'.$pattern.'"' : ''));
 		$transferredFiles = 0;
@@ -876,5 +877,15 @@ class Ric_Client_Client {
 				unlink($tmpFilePath);
 			}
 		}
+	}
+
+	protected function shuffle_assoc(&$array) {
+		$keys = array_keys($array);
+		shuffle($keys);
+		foreach($keys as $key) {
+			$new[$key] = $array[$key];
+		}
+		$array = $new;
+		return $array;
 	}
 }
