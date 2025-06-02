@@ -11,7 +11,7 @@
 class Ric_Client_Client {
 
 	const MIN_SERVER_VERSION = '0.8.0'; // server needs to be on this or a higher version, BUT on the same MAJOR version  ok: 1.4.0 < 1.8.3  but fail:  1.4.0 < 2.3.0  because client is to old
-	const CLIENT_VERSION = '0.11'; //
+	const CLIENT_VERSION = '0.12'; //
 
 	const MAGIC_DELETION_TIMESTAMP = 1422222222; // 2015-01-25 22:43:42
 
@@ -739,6 +739,7 @@ class Ric_Client_Client {
 		$fileNumber = 0;
 		$fileCount = count($inventory);
 		$indent = str_repeat(' ', strlen($fileCount) * 2 + 2);
+		$remainingFailingSanityChecks = 3;
 		foreach( $inventory as $fileEntry ){
 			$fileNumber++;
 			$fileName = $fileEntry['file'];
@@ -754,7 +755,7 @@ class Ric_Client_Client {
 
 			if( $localFileTimestamp>0 AND $localFileSize==$fileEntry['size'] AND sha1_file($localFile)==$fileEntry['version'] ){ // check if file already exists and is uptodate, check first szie then (if necessary check sha1)
 				if( $localFileTimestamp===$fileEntry['time'] ){
-					$this->logInfo($indent.' is already on latest version');
+					$this->logDebug($indent.' is already on latest version');
 				}else{
 					touch($localFile, $fileEntry['time']); // is in sync, only update modification date
 					$this->logInfo($indent.' file not changed, file time updated to '.date('Y-m-d H:i:s', $fileEntry['time']));
@@ -769,14 +770,30 @@ class Ric_Client_Client {
 				$this->quiet = true; // quiete restore
 				$this->restore($fileName, $localFile); // overwrite active
 				$this->quiet = $quiet;
-				if( file_exists($localFile) AND filesize($localFile)==$fileEntry['size'] AND sha1_file($localFile)==$fileEntry['version'] ){ // check again
+
+				// sanity check
+				$fileIsFine = false;
+				$restoredLocalFileSha1 = sha1_file($localFile);
+				if( file_exists($localFile) AND filesize($localFile)==$fileEntry['size'] AND $restoredLocalFileSha1==$fileEntry['version'] ){ // check again
+					$fileIsFine = true;
+				}else{
+					// because the initial gathered information maybe stale, because of a long running loop here, and the file is already overwritten in REST, we check the file again
+					$fileInventory = $this->getInventory($fileName);
+					if( H::getIKS($fileInventory, [$fileName, 'size'])==filesize($localFile) AND H::getIKS($fileInventory, [$fileName, 'version'])==$restoredLocalFileSha1 ){
+						$fileIsFine = true;
+					}
+				}
+				if( $fileIsFine ){
 					// fine
 					touch($localFile, $fileEntry['time']); // is in sync, only update modification date
 					$transferredFiles++;
 					$transferredBytes += $fileEntry['size'];
 					$this->logInfo($indent.' updated successfully to version '.$fileEntry['version']);
 				}else{
-					throw new RuntimeException('sanity check after restore file '.$fileName.' to '.$localFile.' failed! WHoops!');
+					$this->logInfo($indent.' sanity check after restore file '.$fileName.' to '.$localFile.' failed! WHoops! We skip this one. Remaining sanity checks: '.$remainingFailingSanityChecks);
+					if( --$remainingFailingSanityChecks==0 ){
+						throw new RuntimeException('to many sanity checks failed! Maybe there is systematic issue! So we break here. Last fail after restore file '.$fileName.' to '.$localFile.' failed!');
+					}
 				}
 			}
 		}
