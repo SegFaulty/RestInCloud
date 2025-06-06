@@ -11,7 +11,7 @@
 class Ric_Client_Client {
 
 	const MIN_SERVER_VERSION = '0.8.0'; // server needs to be on this or a higher version, BUT on the same MAJOR version  ok: 1.4.0 < 1.8.3  but fail:  1.4.0 < 2.3.0  because client is to old
-	const CLIENT_VERSION = '0.16'; //
+	const CLIENT_VERSION = '0.17'; //
 
 	const MAGIC_DELETION_TIMESTAMP = 1422222222; // 2015-01-25 22:43:42
 
@@ -326,7 +326,27 @@ class Ric_Client_Client {
 		$oFH = fopen($tmpFilePath, 'wb+');
 		$this->logDebug('get: '.$fileUrl);
 		$startTime = microtime(true);
-		Ric_Rest_Client::get($fileUrl, [], $headers, $oFH);
+
+		$robustDownloadOptions = [ // added to to prevent stalled downloads
+			CURLOPT_LOW_SPEED_LIMIT => 1024,    // Min. 1KB/s
+			CURLOPT_LOW_SPEED_TIME => 300,      // 5 Minuten bei zu langsamer Geschwindigkeit = Abbruch
+
+			// TCP Keep-Alive
+			CURLOPT_TCP_KEEPALIVE => 1,
+			CURLOPT_TCP_KEEPIDLE => 120,
+			CURLOPT_TCP_KEEPINTVL => 60,
+
+			// Buffer-Optimierung
+			CURLOPT_BUFFERSIZE => 524288,       // 512KB Buffer
+
+			// Verbindungsoptimierung
+			CURLOPT_FRESH_CONNECT => false,     // Verbindung wiederverwenden
+			CURLOPT_FORBID_REUSE => false,      // Verbindung nicht sofort schließen
+		];
+
+
+
+		Ric_Rest_Client::get($fileUrl, [], $headers, $oFH, $robustDownloadOptions);
 		$runTime = microtime(true) - $startTime;
 		$sha1 = (isset($headers['ETag']) ? $headers['ETag'] : null);
 		$this->checkServerResponse('', $headers, $tmpFilePath);
@@ -745,7 +765,7 @@ class Ric_Client_Client {
 		$inventory = $this->getInventory($pattern);
 		self::shuffle_assoc($inventory); // shuffle the inventory to prevent: if failing at the same files we never doing the following files
 
-		$this->logInfo('start snapshot of '.count($inventory).' server files'.($pattern ? ' with pattern "'.$pattern.'"' : ''));
+		$this->logInfo(date('Y-m-d H:i:s').' start snapshot of '.count($inventory).' server files'.($pattern ? ' with pattern "'.$pattern.'"' : ''));
 		$transferredFiles = 0;
 		$transferredBytes = 0;
 		$fileNumber = 0;
@@ -776,7 +796,7 @@ class Ric_Client_Client {
 				if( $localFileTimestamp==0 ){
 					$this->logInfo($indent.' does not exists locally, get file from server');
 				}else{
-					$this->logInfo($indent.' update local version ('.date('Y-m-d H:i:s', $localFileTimestamp).' - '.$localFileSize['size'].' Byte)');
+					$this->logInfo($indent.' update local version ('.date('Y-m-d H:i:s', $localFileTimestamp).' - '.$localFileSize.' Byte)');
 				}
 				$quiet = $this->quiet;
 				$this->quiet = true; // quiete restore
@@ -811,7 +831,7 @@ class Ric_Client_Client {
 		}
 
 		$result = ['status' => 'OK', 'serverFiles' => $fileCount, 'transferredFiles' => $transferredFiles, 'transferredBytes' => $transferredBytes, 'runTime' => time() - $startTime];
-		$this->logInfo('end snapshot '.H::implodeKeyValue($result));
+		$this->logInfo(date('Y-m-d H:i:s').' end snapshot '.H::implodeKeyValue($result));
 
 		return $result;
 	}
