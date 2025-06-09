@@ -11,7 +11,7 @@
 class Ric_Client_Client {
 
 	const MIN_SERVER_VERSION = '0.8.0'; // server needs to be on this or a higher version, BUT on the same MAJOR version  ok: 1.4.0 < 1.8.3  but fail:  1.4.0 < 2.3.0  because client is to old
-	const CLIENT_VERSION = '0.17'; //
+	const CLIENT_VERSION = '0.18'; //
 
 	const MAGIC_DELETION_TIMESTAMP = 1422222222; // 2015-01-25 22:43:42
 
@@ -747,6 +747,7 @@ class Ric_Client_Client {
 	 */
 	public function takeSnapshot($pattern, $localSnapshotDir){
 		$startTime = time();
+		$status = 'OK';
 		$targetDir = rtrim($localSnapshotDir, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR; // ensure we have a trailing /
 		if( !is_dir($targetDir) ){
 			throw new RuntimeException($targetDir.' is not a writable targetDir');
@@ -771,7 +772,7 @@ class Ric_Client_Client {
 		$fileNumber = 0;
 		$fileCount = count($inventory);
 		$indent = str_repeat(' ', strlen($fileCount) * 2 + 2);
-		$remainingFailingSanityChecks = 3;
+		$fileIsFine = true;
 		foreach( $inventory as $fileEntry ){
 			$fileNumber++;
 			$fileName = $fileEntry['file'];
@@ -793,44 +794,62 @@ class Ric_Client_Client {
 					$this->logInfo($indent.' file not changed, file time updated to '.date('Y-m-d H:i:s', $fileEntry['time']));
 				}
 			}else{
-				if( $localFileTimestamp==0 ){
-					$this->logInfo($indent.' does not exists locally, get file from server');
-				}else{
-					$this->logInfo($indent.' update local version ('.date('Y-m-d H:i:s', $localFileTimestamp).' - '.$localFileSize.' Byte)');
+				if( $fileIsFine ){ // if last file was fine, we reset the consecutive restore errors
+					$remainingConsecutiveRestoreErrors = 3;
 				}
-				$quiet = $this->quiet;
-				$this->quiet = true; // quiete restore
-				$this->restore($fileName, $localFile); // overwrite active
-				$this->quiet = $quiet;
-
-				// sanity check
-				$fileIsFine = false;
-				$restoredLocalFileSha1 = sha1_file($localFile);
-				if( file_exists($localFile) AND filesize($localFile)==$fileEntry['size'] AND $restoredLocalFileSha1==$fileEntry['version'] ){ // check again
-					$fileIsFine = true;
-				}else{
-					// because the initial gathered information maybe stale, because of a long running loop here, and the file is already overwritten in REST, we check the file again
-					$fileInventory = $this->getInventory('/^'.preg_quote($fileName.'/').'$/');
-					if( H::getIKS($fileInventory, [$fileName, 'size'])==filesize($localFile) AND H::getIKS($fileInventory, [$fileName, 'version'])==$restoredLocalFileSha1 ){
-						$fileIsFine = true;
+				try{
+					if( $localFileTimestamp==0 ){
+						$this->logInfo($indent.' does not exists locally, get file from server');
+					}else{
+						$this->logInfo($indent.' update local version ('.date('Y-m-d H:i:s', $localFileTimestamp).' - '.$localFileSize.' Byte)');
 					}
-				}
-				if( $fileIsFine ){
-					// fine
-					touch($localFile, $fileEntry['time']); // is in sync, only update modification date
-					$transferredFiles++;
-					$transferredBytes += $fileEntry['size'];
-					$this->logInfo($indent.' updated successfully to version '.$fileEntry['version']);
-				}else{
-					$this->logInfo($indent.' sanity check after restore file '.$fileName.' to '.$localFile.' failed! WHoops! We skip this one. Remaining sanity checks: '.$remainingFailingSanityChecks);
-					if( --$remainingFailingSanityChecks==0 ){
-						throw new RuntimeException('to many sanity checks failed! Maybe there is systematic issue! So we break here. Last fail after restore file '.$fileName.' to '.$localFile.' failed!');
+					$quiet = $this->quiet;
+					$this->quiet = true; // quiete restore
+					try{
+						$this->restore($fileName, $localFile); // overwrite active
+					}catch(Exception $e){
+						if( stristr($e->getMessage(), 'Operation too slow') ){
+							$this->logInfo('download '.$fileName.' stalled at: '.filesize($localFile).'Bytes, retrying');
+							$this->restore($fileName, $localFile); // retry restore
+						}else{
+							throw $e; // rethrow
+						}
+					}
+					$this->quiet = $quiet;
+
+					// sanity check
+					$fileIsFine = false;
+					$restoredLocalFileSha1 = sha1_file($localFile);
+					if( file_exists($localFile) and filesize($localFile)==$fileEntry['size'] and $restoredLocalFileSha1==$fileEntry['version'] ){ // check again
+						$fileIsFine = true;
+					}else{
+						// because the initial gathered information maybe stale, because of a long running loop here, and the file is already overwritten in REST, we check the file again
+						$this->logInfo($indent.' recheck '.$fileName.' from inventory, because the sha1 does not match the initial version sha1');
+						$fileInventory = $this->getInventory('/^'.preg_quote($fileName.'/').'$/');
+						if( H::getIKS($fileInventory, [$fileName, 'size'])==filesize($localFile) and H::getIKS($fileInventory, [$fileName, 'version'])==$restoredLocalFileSha1 ){
+							$fileIsFine = true;
+						}
+					}
+					if( $fileIsFine ){
+						// fine
+						touch($localFile, $fileEntry['time']); // is in sync, only update modification date
+						$transferredFiles++;
+						$transferredBytes += $fileEntry['size'];
+						$this->logInfo($indent.' updated successfully to version '.$fileEntry['version']);
+					}else{
+						throw new RuntimeException('sanity check after restore file '.$fileName.' to '.$localFile.' failed! WHoops! We skip this one.');
+					}
+				}catch(Exception $e ){
+					$this->logInfo($indent.get_class($e).': '.$e->getMessage());
+					$status = 'CRITICAL';
+					if( --$remainingConsecutiveRestoreErrors==0 ){
+						throw new RuntimeException('to many errors! Maybe there is systematic issue! So we break here. current fail while restoring file '.$fileName);
 					}
 				}
 			}
 		}
 
-		$result = ['status' => 'OK', 'serverFiles' => $fileCount, 'transferredFiles' => $transferredFiles, 'transferredBytes' => $transferredBytes, 'runTime' => time() - $startTime];
+		$result = ['status' => $status, 'serverFiles' => $fileCount, 'transferredFiles' => $transferredFiles, 'transferredBytes' => $transferredBytes, 'runTime' => time() - $startTime];
 		$this->logInfo(date('Y-m-d H:i:s').' end snapshot '.H::implodeKeyValue($result));
 
 		return $result;
