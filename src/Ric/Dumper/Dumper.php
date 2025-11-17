@@ -2,7 +2,7 @@
 
 class Ric_Dumper_Dumper {
 
-	const VERSION = '0.11.4';
+	const VERSION = '0.11.5'; // added hint for old file decription
 
 	const SALT = '_sdffHGe'; // simple fixed salt for deterministic encryption
 
@@ -440,7 +440,7 @@ class Ric_Dumper_Dumper {
 				$output = '';
 			}
 			if( $status!=0 ){
-				throw new RuntimeException('command execution failed: '.$command, 500);
+				throw new RuntimeException('command execution failed! (hint for files of old servers CHECK HELP:: --decryptSSL1 ) : '.$command, 500);
 			}
 		}
 		return $output;
